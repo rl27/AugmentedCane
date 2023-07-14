@@ -72,12 +72,17 @@ public class DepthImage : MonoBehaviour
 
         // Check if device supports environment depth.
         var descriptor = m_OcclusionManager.descriptor;
-        if (descriptor.environmentDepthImageSupported == Supported.Supported)
+        if (descriptor.environmentDepthImageSupported == Supported.Supported) {
             LogText("Environment depth is supported!");
-        else if (descriptor == null || descriptor.environmentDepthImageSupported == Supported.Unsupported)
-            LogText("Environment depth is not supported on this device.");
-        else if (descriptor.environmentDepthImageSupported == Supported.Unknown)
-            LogText("Determining environment depth support...");
+        }
+        else {
+            if (descriptor == null || descriptor.environmentDepthImageSupported == Supported.Unsupported)
+                LogText("Environment depth is not supported on this device.");
+            else if (descriptor.environmentDepthImageSupported == Supported.Unknown)
+                LogText("Determining environment depth support...");
+            m_RawImage.texture = null;
+            return;
+        }
 
         // Acquire a depth image and update the displayed image.
         if (occlusionManager.TryAcquireEnvironmentDepthCpuImage(out XRCpuImage image)) {
@@ -99,6 +104,8 @@ public class DepthImage : MonoBehaviour
 
     private static void UpdateRawImage(RawImage rawImage, XRCpuImage cpuImage)
     {
+        Debug.Assert(rawImage != null, "no raw image");
+
         // Get the texture associated with the UI.RawImage that we wish to display on screen.
         var texture = rawImage.texture as Texture2D;
 
@@ -154,4 +161,13 @@ public class DepthImage : MonoBehaviour
         }
         rawImage.rectTransform.sizeDelta = rectSize;
     }
+
+    static int GetRotation() => Screen.orientation switch
+    {
+        ScreenOrientation.Portrait => 0,
+        ScreenOrientation.LandscapeLeft => 90,
+        ScreenOrientation.PortraitUpsideDown => 180,
+        ScreenOrientation.LandscapeRight => 270,
+        _ => 0
+    };
 }
