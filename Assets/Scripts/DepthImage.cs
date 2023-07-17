@@ -7,7 +7,7 @@ using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
 
-// References:
+// ARFoundation references:
 // https://github.com/Unity-Technologies/arfoundation-samples/blob/main/Assets/Scripts/Runtime/DisplayDepthImage.cs
 // https://github.com/Unity-Technologies/arfoundation-samples/blob/main/Assets/Scripts/Runtime/CpuImageSample.cs
 public class DepthImage : MonoBehaviour
@@ -65,10 +65,11 @@ public class DepthImage : MonoBehaviour
     int depthArrayLength = 0;
     int stride = 4;
 
-
+    // Depth image resolution
     int depthWidth = 0;
     int depthHeight = 0;
 
+    // Camera intrinsics
     Vector2 focalLength = Vector2.zero;
     Vector2 principalPoint = Vector2.zero;
 
@@ -77,7 +78,7 @@ public class DepthImage : MonoBehaviour
 
     void OnEnable()
     {
-        Debug.Assert(m_CameraManager != null, "no camera manager");
+        Debug.Assert(m_CameraManager != null, "No camera manager");
         m_RawImage.material = m_DepthMaterial;
     }
 
@@ -86,7 +87,7 @@ public class DepthImage : MonoBehaviour
     {
         // Debug.Assert(m_OcclusionManager != null, "no occlusion manager");
         if (m_OcclusionManager == null) {
-            LogText("No occlusion manager!");
+            LogText("No occlusion manager");
             return;
         }
 
@@ -126,8 +127,10 @@ public class DepthImage : MonoBehaviour
                 image.GetPlane(0).data.CopyTo(depthArray);
             }
         }
-        else
+        else {
             rawImage.enabled = false;
+            return;
+        }
         
         // Display some distance info.
         m_StringBuilder.Clear();
@@ -136,7 +139,7 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"width: {depthHeight}");
         m_StringBuilder.AppendLine($"focalLength: {focalLength}");
         m_StringBuilder.AppendLine($"principalPoint: {principalPoint}");
-        // In portrait mode, (0.1,0.1) is top right, (0.5,0.5) is middle, (0.9,0.9) is bottom left.
+        // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
         // Phone orientation does not change coordinate locations on the screen.
         m_StringBuilder.AppendLine($"{GetDepth(new Vector2(0.1f, 0.1f), depthArray, stride)}");
         m_StringBuilder.AppendLine($"{GetDepth(new Vector2(0.5f, 0.5f), depthArray, stride)}");
@@ -144,7 +147,7 @@ public class DepthImage : MonoBehaviour
         LogText(m_StringBuilder.ToString());
     }
 
-    // Log the given text to the screen if the image info UI is set. Otherwise, log the string to debug.
+    // Log the given text to the screen if the image info UI is set. Otherwise, log the text to debug.
     void LogText(string text)
     {
         if (m_ImageInfo != null)
@@ -167,13 +170,11 @@ public class DepthImage : MonoBehaviour
         if (texture == null || texture.width != cpuImage.width || texture.height != cpuImage.height)
         {
             texture = new Texture2D(cpuImage.width, cpuImage.height, cpuImage.format.AsTextureFormat(), false);
-            // texture = new Texture2D(cpuImage.width, cpuImage.height, TextureFormat.RGBA64, false);
             rawImage.texture = texture;
         }
 
         // For display, we need to mirror about the vertical axis.
         var conversionParams = new XRCpuImage.ConversionParams(cpuImage, cpuImage.format.AsTextureFormat(), XRCpuImage.Transformation.MirrorY);
-        // var conversionParams = new XRCpuImage.ConversionParams(cpuImage, TextureFormat.RGBA64, XRCpuImage.Transformation.MirrorY);
 
         // Get the Texture2D's underlying pixel buffer.
         var rawTextureData = texture.GetRawTextureData<byte>();
@@ -213,6 +214,7 @@ public class DepthImage : MonoBehaviour
         }
         rawImage.rectTransform.sizeDelta = rectSize;
 
+        // Rotate the depth material to match screen orientation.
         Quaternion rotation = Quaternion.Euler(0, 0, GetRotation());
         Matrix4x4 rotMatrix = Matrix4x4.Rotate(rotation);
         m_RawImage.material.SetMatrix(Shader.PropertyToID("_DisplayRotationPerFrame"), rotMatrix);
