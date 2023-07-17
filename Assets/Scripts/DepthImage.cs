@@ -1,5 +1,5 @@
-using System.Collections;
-using System.Collections.Generic;
+// using System.Collections;
+// using System.Collections.Generic;
 // using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
@@ -59,6 +59,21 @@ public class DepthImage : MonoBehaviour
     [SerializeField]
     Material m_DepthMaterial;
 
+    // Arrays for getting distance from depth
+    short[] depthArray = new short[0];
+    int depthArrayLength = 0;
+    byte[] depthBuffer = new byte[0];
+    int depthBufferLength = 0;
+
+    int depthWidth = 0;
+    int depthHeight = 0;
+
+    Vector2 focalLength = Vector2.zero;
+    Vector2 principalPoint = Vector2.zero;
+
+    // StringBuilder for building strings to be logged.
+    readonly System.Text.StringBuilder m_StringBuilder = new System.Text.StringBuilder();
+
     void OnEnable()
     {
         Debug.Assert(m_CameraManager != null, "no camera manager");
@@ -68,12 +83,16 @@ public class DepthImage : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Debug.Assert(m_OcclusionManager != null, "no occlusion manager");
+        // Debug.Assert(m_OcclusionManager != null, "no occlusion manager");
+        if (m_OcclusionManager == null) {
+            LogText("No occlusion manager!");
+            return;
+        }
 
         // Check if device supports environment depth.
         var descriptor = m_OcclusionManager.descriptor;
-        if (descriptor.environmentDepthImageSupported == Supported.Supported) {
-            LogText("Environment depth is supported!");
+        if (descriptor != null && descriptor.environmentDepthImageSupported == Supported.Supported) {
+            // LogText("Environment depth is supported!");
         }
         else {
             if (descriptor == null || descriptor.environmentDepthImageSupported == Supported.Unsupported)
@@ -88,11 +107,52 @@ public class DepthImage : MonoBehaviour
         if (occlusionManager.TryAcquireEnvironmentDepthCpuImage(out XRCpuImage image)) {
             using (image) {
                 UpdateRawImage(m_RawImage, image);
-                // LogText(image.ToString());
+
+                // Get distance data into depthBuffer
+                // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/Common/Scripts/MotionStereoDepthDataSource.cs#L253
+                if (depthWidth != image.width || depthHeight != image.height) {
+                    depthWidth = image.width;
+                    depthHeight = image.height;
+                    UpdateCameraParams();
+                }
+
+                int numPixels = depthWidth * depthHeight;
+                int numBytes = numPixels * image.GetPlane(0).pixelStride;
+                if (depthBufferLength != numBytes) {
+                    depthBuffer = new byte[numBytes];
+                    depthBufferLength = numBytes;
+                }
+                image.GetPlane(0).data.CopyTo(depthBuffer);
             }
         }
         else
             rawImage.enabled = false;
+
+        
+        // var texture = m_RawImage.texture as Texture2D;
+        // depthBuffer = texture.GetRawTextureData();
+        if (depthArrayLength != depthBufferLength) {
+            depthArray = new short[depthBufferLength];
+            depthArrayLength = depthBufferLength;
+        }
+        System.Buffer.BlockCopy(depthBuffer, 0, depthArray, 0, depthBufferLength);
+        
+        // Display some distance info.
+        m_StringBuilder.Clear();
+        m_StringBuilder.AppendLine("testing...");
+        m_StringBuilder.AppendLine($"length: {depthArrayLength}");
+        m_StringBuilder.AppendLine($"width: {depthWidth}");
+        m_StringBuilder.AppendLine($"width: {depthHeight}");
+        m_StringBuilder.AppendLine($"test2: {depthArray[9]}");
+        Vector2 point1 = new Vector2(0.05f, 0.05f);
+        Vector2 point2 = new Vector2(0.5f, 0.5f);
+        Vector2 point3 = new Vector2(0.95f, 0.95f);
+        m_StringBuilder.AppendLine($"{GetDepth(point1, depthArray)}");
+        m_StringBuilder.AppendLine($"{GetDepth(point2, depthArray)}");
+        m_StringBuilder.AppendLine($"{GetDepth(point3, depthArray)}");
+        m_StringBuilder.AppendLine($"focalLength: {focalLength}");
+        m_StringBuilder.AppendLine($"principalPoint: {principalPoint}");
+        LogText(m_StringBuilder.ToString());
     }
 
     // Log the given text to the screen if the image info UI is set. Otherwise, log the string to debug.
@@ -167,8 +227,39 @@ public class DepthImage : MonoBehaviour
         m_RawImage.material.SetMatrix(Shader.PropertyToID("_DisplayRotationPerFrame"), rotMatrix);
     }
 
+    // Obtain the depth value in millimeters. [u,v] should range from 0 to 1.
+    // This function is based on: https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/OrientedReticle/Scripts/OrientedReticle.cs#L116
+    // Below are references for "GetDepthFromUV" functionality
+    // https://developers.google.com/ar/develop/unity-arf/depth/developer-guide#extract_distance_from_a_depth_image
+    // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/Common/Scripts/DepthSource.cs#L436
+    public float GetDepth(Vector2 uv, short[] arr)
+    {
+        int x = (int)(uv.x * (depthWidth - 1));
+        int y = (int)(uv.y * (depthHeight - 1));
+
+        Debug.Assert(x >= 0 && x < depthWidth && y >= 0 && y < depthHeight, "Invalid depth index");
+
+        // Depth in meters
+        float depthM = arr[(y * depthWidth) + x] * 0.001f;
+
+        // Valid depth
+        if (depthM > 0) {
+            Vector3 vertex = Vector3.negativeInfinity;
+            float vertex_x = (uv.x - principalPoint.x) * depthM / focalLength.x;
+            float vertex_y = (uv.y - principalPoint.y) * depthM / focalLength.y;
+            vertex.x = vertex_x;
+            vertex.y = -vertex_y;
+            vertex.z = depthM;
+            return vertex.magnitude;
+        }
+
+        // Invalid depth
+        // return float.NegativeInfinity;
+        return depthM;
+    }
+
     // https://github.com/Unity-Technologies/arfoundation-samples/issues/266#issuecomment-523316133
-    static int GetRotation() => Screen.orientation switch
+    private static int GetRotation() => Screen.orientation switch
     {
         ScreenOrientation.Portrait => 90,
         ScreenOrientation.LandscapeLeft => 180,
@@ -176,4 +267,25 @@ public class DepthImage : MonoBehaviour
         ScreenOrientation.LandscapeRight => 0,
         _ => 90
     };
+
+    // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/Common/Scripts/MotionStereoDepthDataSource.cs#L219
+    private void UpdateCameraParams()
+    {
+        // Gets the camera parameters to create the required number of vertices.
+        if (m_CameraManager.TryGetIntrinsics(out XRCameraIntrinsics cameraIntrinsics))
+        {
+            // Scales camera intrinsics to the depth map size.
+            Vector2 intrinsicsScale;
+            intrinsicsScale.x = depthWidth / (float)cameraIntrinsics.resolution.x;
+            intrinsicsScale.y = depthHeight / (float)cameraIntrinsics.resolution.y;
+
+            focalLength = MultiplyVector2(cameraIntrinsics.focalLength, intrinsicsScale);
+            principalPoint = MultiplyVector2(cameraIntrinsics.principalPoint, intrinsicsScale);
+        }
+    }
+
+    private static Vector2 MultiplyVector2(Vector2 v1, Vector2 v2)
+    {
+        return new Vector2(v1.x * v2.x, v1.y * v2.y);
+    }
 }
