@@ -1,6 +1,7 @@
 // using System.Collections;
 // using System.Collections.Generic;
-// using System.Text;
+using System;
+using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
@@ -59,11 +60,11 @@ public class DepthImage : MonoBehaviour
     [SerializeField]
     Material m_DepthMaterial;
 
-    // Arrays for getting distance from depth
-    short[] depthArray = new short[0];
+    // Array for holding distance
+    byte[] depthArray = new byte[0];
     int depthArrayLength = 0;
-    byte[] depthBuffer = new byte[0];
-    int depthBufferLength = 0;
+    int stride = 4;
+
 
     int depthWidth = 0;
     int depthHeight = 0;
@@ -72,7 +73,7 @@ public class DepthImage : MonoBehaviour
     Vector2 principalPoint = Vector2.zero;
 
     // StringBuilder for building strings to be logged.
-    readonly System.Text.StringBuilder m_StringBuilder = new System.Text.StringBuilder();
+    readonly StringBuilder m_StringBuilder = new StringBuilder();
 
     void OnEnable()
     {
@@ -108,50 +109,35 @@ public class DepthImage : MonoBehaviour
             using (image) {
                 UpdateRawImage(m_RawImage, image);
 
-                // Get distance data into depthBuffer
-                // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/Common/Scripts/MotionStereoDepthDataSource.cs#L253
-                if (depthWidth != image.width || depthHeight != image.height) {
-                    depthWidth = image.width;
-                    depthHeight = image.height;
-                    UpdateCameraParams();
-                }
+                // Get distance data into depthArray
+                // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/Common/Scripts/MotionStereoDepthDataSource.cs#L250
+                depthWidth = image.width;
+                depthHeight = image.height;
+                UpdateCameraParams();
 
                 int numPixels = depthWidth * depthHeight;
-                int numBytes = numPixels * image.GetPlane(0).pixelStride;
-                if (depthBufferLength != numBytes) {
-                    depthBuffer = new byte[numBytes];
-                    depthBufferLength = numBytes;
+                stride = image.GetPlane(0).pixelStride;
+                int numBytes = numPixels * stride;
+                if (depthArrayLength != numBytes) {
+                    depthArray = new byte[numBytes];
+                    depthArrayLength = numBytes;
                 }
-                image.GetPlane(0).data.CopyTo(depthBuffer);
+                image.GetPlane(0).data.CopyTo(depthArray);
             }
         }
         else
             rawImage.enabled = false;
-
-        
-        // var texture = m_RawImage.texture as Texture2D;
-        // depthBuffer = texture.GetRawTextureData();
-        if (depthArrayLength != depthBufferLength) {
-            depthArray = new short[depthBufferLength];
-            depthArrayLength = depthBufferLength;
-        }
-        System.Buffer.BlockCopy(depthBuffer, 0, depthArray, 0, depthBufferLength);
         
         // Display some distance info.
         m_StringBuilder.Clear();
-        m_StringBuilder.AppendLine("testing...");
         m_StringBuilder.AppendLine($"length: {depthArrayLength}");
         m_StringBuilder.AppendLine($"width: {depthWidth}");
         m_StringBuilder.AppendLine($"width: {depthHeight}");
-        m_StringBuilder.AppendLine($"test2: {depthArray[9]}");
-        Vector2 point1 = new Vector2(0.05f, 0.05f);
-        Vector2 point2 = new Vector2(0.5f, 0.5f);
-        Vector2 point3 = new Vector2(0.95f, 0.95f);
-        m_StringBuilder.AppendLine($"{GetDepth(point1, depthArray)}");
-        m_StringBuilder.AppendLine($"{GetDepth(point2, depthArray)}");
-        m_StringBuilder.AppendLine($"{GetDepth(point3, depthArray)}");
         m_StringBuilder.AppendLine($"focalLength: {focalLength}");
         m_StringBuilder.AppendLine($"principalPoint: {principalPoint}");
+        m_StringBuilder.AppendLine($"{GetDepth(new Vector2(0.1f, 0.1f), depthArray, stride)}");
+        m_StringBuilder.AppendLine($"{GetDepth(new Vector2(0.5f, 0.5f), depthArray, stride)}");
+        m_StringBuilder.AppendLine($"{GetDepth(new Vector2(0.9f, 0.9f), depthArray, stride)}");
         LogText(m_StringBuilder.ToString());
     }
 
@@ -178,11 +164,13 @@ public class DepthImage : MonoBehaviour
         if (texture == null || texture.width != cpuImage.width || texture.height != cpuImage.height)
         {
             texture = new Texture2D(cpuImage.width, cpuImage.height, cpuImage.format.AsTextureFormat(), false);
+            // texture = new Texture2D(cpuImage.width, cpuImage.height, TextureFormat.RGBA64, false);
             rawImage.texture = texture;
         }
 
-        // For display, we need to mirror about the vertical access.
+        // For display, we need to mirror about the vertical axis.
         var conversionParams = new XRCpuImage.ConversionParams(cpuImage, cpuImage.format.AsTextureFormat(), XRCpuImage.Transformation.MirrorY);
+        // var conversionParams = new XRCpuImage.ConversionParams(cpuImage, TextureFormat.RGBA64, XRCpuImage.Transformation.MirrorY);
 
         // Get the Texture2D's underlying pixel buffer.
         var rawTextureData = texture.GetRawTextureData<byte>();
@@ -227,12 +215,13 @@ public class DepthImage : MonoBehaviour
         m_RawImage.material.SetMatrix(Shader.PropertyToID("_DisplayRotationPerFrame"), rotMatrix);
     }
 
-    // Obtain the depth value in millimeters. [u,v] should range from 0 to 1.
+    // Obtain the depth value in meters. [u,v] should each range from 0 to 1. stride is the pixel stride of the acquired environment depth image.
     // This function is based on: https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/OrientedReticle/Scripts/OrientedReticle.cs#L116
-    // Below are references for "GetDepthFromUV" functionality
+    // Further references:
     // https://developers.google.com/ar/develop/unity-arf/depth/developer-guide#extract_distance_from_a_depth_image
     // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/Common/Scripts/DepthSource.cs#L436
-    public float GetDepth(Vector2 uv, short[] arr)
+    // Another distance example: https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/PointCloud/Scripts/RawPointCloudBlender.cs#L208
+    public float GetDepth(Vector2 uv, byte[] arr, int stride)
     {
         int x = (int)(uv.x * (depthWidth - 1));
         int y = (int)(uv.y * (depthHeight - 1));
@@ -240,22 +229,24 @@ public class DepthImage : MonoBehaviour
         Debug.Assert(x >= 0 && x < depthWidth && y >= 0 && y < depthHeight, "Invalid depth index");
 
         // Depth in meters
-        float depthM = arr[(y * depthWidth) + x] * 0.001f;
+        int index = (y * depthWidth) + x;
 
-        // Valid depth
+        // On an iPhone 12 Pro, the image data is in DepthFloat32 format.
+        // https://docs.unity3d.com/Packages/com.unity.xr.arsubsystems@4.1/api/UnityEngine.XR.ARSubsystems.XRCpuImage.Format.html
+        // See the following code if the XRCpuImage format is something different, e.g. DepthUint16: https://forum.unity.com/threads/how-to-measure-distance-from-depth-map.1440799
+        float depthM = BitConverter.ToSingle(arr, stride * index);
+
         if (depthM > 0) {
             Vector3 vertex = Vector3.negativeInfinity;
-            float vertex_x = (uv.x - principalPoint.x) * depthM / focalLength.x;
-            float vertex_y = (uv.y - principalPoint.y) * depthM / focalLength.y;
+            float vertex_x = (x - principalPoint.x) * depthM / focalLength.x;
+            float vertex_y = (y - principalPoint.y) * depthM / focalLength.y;
             vertex.x = vertex_x;
             vertex.y = -vertex_y;
             vertex.z = depthM;
             return vertex.magnitude;
         }
 
-        // Invalid depth
-        // return float.NegativeInfinity;
-        return depthM;
+        return float.NegativeInfinity;
     }
 
     // https://github.com/Unity-Technologies/arfoundation-samples/issues/266#issuecomment-523316133
