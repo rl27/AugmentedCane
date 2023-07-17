@@ -116,6 +116,7 @@ public class DepthImage : MonoBehaviour
                 UpdateCameraParams();
 
                 int numPixels = depthWidth * depthHeight;
+                Debug.Assert(image.planeCount == 1, "Plane count is not 1");
                 stride = image.GetPlane(0).pixelStride;
                 int numBytes = numPixels * stride;
                 if (depthArrayLength != numBytes) {
@@ -135,6 +136,8 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"width: {depthHeight}");
         m_StringBuilder.AppendLine($"focalLength: {focalLength}");
         m_StringBuilder.AppendLine($"principalPoint: {principalPoint}");
+        // In portrait mode, (0.1,0.1) is top right, (0.5,0.5) is middle, (0.9,0.9) is bottom left.
+        // Phone orientation does not change coordinate locations on the screen.
         m_StringBuilder.AppendLine($"{GetDepth(new Vector2(0.1f, 0.1f), depthArray, stride)}");
         m_StringBuilder.AppendLine($"{GetDepth(new Vector2(0.5f, 0.5f), depthArray, stride)}");
         m_StringBuilder.AppendLine($"{GetDepth(new Vector2(0.9f, 0.9f), depthArray, stride)}");
