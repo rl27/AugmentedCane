@@ -11,27 +11,23 @@ using UnityEngine;
 // https://docs.unity3d.com/ScriptReference/Compass.html
 public class SensorData : MonoBehaviour
 {
-    private bool isRemote = true; // For Unity Remote
- 
+    private bool isRemote = true; // For using Unity Remote
+    private bool active = false; // This is set to true when location.Start() succeeds
+
+    // GPS data
     public LocationInfo gps;
 
-    private bool active = false;
-
-
+    // IMU data
     public Vector3 accel;
     public Vector3 gyro;
     public float mag;
     public Vector3 attitude;
 
-    void Start() {
-        StartCoroutine(LocationStart());
-    }
-
     void Update() {
         UpdateData();
-        Debug.Log(Input.gyro.attitude.eulerAngles);
     }
 
+    // Update GPS and IMU data, or start location services if it hasn't been started
     public void UpdateData() {
         if (active) {
             accel.x = -Input.acceleration.y;
@@ -47,6 +43,7 @@ public class SensorData : MonoBehaviour
             StartCoroutine(LocationStart());
     }
 
+    // Start location services
     public IEnumerator LocationStart() {
         Debug.Log("Start called");
 
@@ -109,6 +106,7 @@ public class SensorData : MonoBehaviour
         }
     }
 
+    // Stop location services
     public IEnumerator LocationStop() {
         UnityEngine.Input.location.Stop();
         active = false;
@@ -117,10 +115,12 @@ public class SensorData : MonoBehaviour
         yield return null;
     }
 
+    // Format GPS data into string
     public string GPSstring() {
         return string.Format("Latitude: {0} \nLongitude: {1} \nAltitude: {2} \nHorizontal accuracy: {3} \nTimestamp: {4}", gps.latitude, gps.longitude, gps.altitude, gps.horizontalAccuracy, DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp));
     }
 
+    // Format IMU data into string
     public string IMUstring() {
         return string.Format("Accel: {0} \nGyro: {1} \nMag: {2} \nAttitude: {3}", accel, gyro, mag, attitude);
     }
