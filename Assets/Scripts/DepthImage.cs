@@ -76,10 +76,14 @@ public class DepthImage : MonoBehaviour
     // StringBuilder for building strings to be logged.
     readonly StringBuilder m_StringBuilder = new StringBuilder();
 
+    GPSLocation GPS;
+
     void OnEnable()
     {
         Debug.Assert(m_CameraManager != null, "No camera manager");
         m_RawImage.material = m_DepthMaterial;
+
+        GPS = GameObject.Find("GPSHandler").GetComponent<GPSLocation>();
     }
 
     // Update is called once per frame
@@ -128,7 +132,7 @@ public class DepthImage : MonoBehaviour
             }
         }
         else {
-            rawImage.enabled = false;
+            m_RawImage.enabled = false;
             return;
         }
         
@@ -144,6 +148,9 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"{GetDepth(new Vector2(0.1f, 0.1f), depthArray, stride)}");
         m_StringBuilder.AppendLine($"{GetDepth(new Vector2(0.5f, 0.5f), depthArray, stride)}");
         m_StringBuilder.AppendLine($"{GetDepth(new Vector2(0.9f, 0.9f), depthArray, stride)}");
+
+        // GPS data
+        m_StringBuilder.AppendLine($"GPS: {GPS.dataString()}");
         LogText(m_StringBuilder.ToString());
     }
 
