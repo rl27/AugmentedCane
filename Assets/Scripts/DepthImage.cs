@@ -41,7 +41,7 @@ public class DepthImage : MonoBehaviour
     [SerializeField]
     RawImage m_RawImage;
 
-    public RawImage cpuImage
+    public RawImage rawCameraImage
     {
         get => m_RawCameraImage;
         set => m_RawCameraImage = value;
@@ -120,7 +120,7 @@ public class DepthImage : MonoBehaviour
         // Acquire a depth image and update the displayed image.
         if (occlusionManager.TryAcquireEnvironmentDepthCpuImage(out XRCpuImage image)) {
             using (image) {
-                UpdateRawImage(m_RawImage, image);
+                UpdateRawImage(m_RawImage, image, true);
 
                 // Get distance data into depthArray
                 // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/Common/Scripts/MotionStereoDepthDataSource.cs#L250
@@ -144,16 +144,19 @@ public class DepthImage : MonoBehaviour
             return;
         }
 
+        int cameraPlanes = 0;
+        // Camera image
         if (m_CameraManager.TryAcquireLatestCpuImage(out XRCpuImage cameraImage))
         {
             using (cameraImage) {
-                UpdateRawImage(m_RawCameraImage, cameraImage);
+                UpdateRawImage(m_RawCameraImage, cameraImage, false);
+                cameraPlanes = cameraImage.planeCount;
             }
         }
         
         // Display some distance info.
         m_StringBuilder.Clear();
-        m_StringBuilder.AppendLine($"length: {depthArrayLength}");
+        m_StringBuilder.AppendLine($"camera planes: {cameraPlanes}");
         m_StringBuilder.AppendLine($"width: {depthWidth}");
         m_StringBuilder.AppendLine($"width: {depthHeight}");
         m_StringBuilder.AppendLine($"focalLength: {focalLength}");
@@ -178,7 +181,7 @@ public class DepthImage : MonoBehaviour
             Debug.Log(text);
     }
 
-    private void UpdateRawImage(RawImage rawImage, XRCpuImage cpuImage)
+    private void UpdateRawImage(RawImage rawImage, XRCpuImage cpuImage, bool isDepth)
     {
         Debug.Assert(rawImage != null, "no raw image");
 
@@ -189,14 +192,15 @@ public class DepthImage : MonoBehaviour
         // Note: Although texture dimensions do not normally change frame-to-frame, they can change in response to
         //    a change in the camera resolution (for camera images) or changes to the quality of the human depth
         //    and human stencil buffers.
+        TextureFormat format = isDepth ? cpuImage.format.AsTextureFormat() : TextureFormat.RGBA32;
         if (texture == null || texture.width != cpuImage.width || texture.height != cpuImage.height)
         {
-            texture = new Texture2D(cpuImage.width, cpuImage.height, cpuImage.format.AsTextureFormat(), false);
+            texture = new Texture2D(cpuImage.width, cpuImage.height, format, false);
             rawImage.texture = texture;
         }
 
         // For display, we need to mirror about the vertical axis.
-        var conversionParams = new XRCpuImage.ConversionParams(cpuImage, cpuImage.format.AsTextureFormat(), XRCpuImage.Transformation.MirrorY);
+        var conversionParams = new XRCpuImage.ConversionParams(cpuImage, format, XRCpuImage.Transformation.MirrorY);
 
         // Get the Texture2D's underlying pixel buffer.
         var rawTextureData = texture.GetRawTextureData<byte>();
@@ -214,32 +218,34 @@ public class DepthImage : MonoBehaviour
         // Make sure it's enabled.
         rawImage.enabled = true;
 
-        // Get the aspect ratio for the current texture.
-        var textureAspectRatio = (float)texture.width / texture.height;
+        if (isDepth) {
+            // Get the aspect ratio for the current texture.
+            var textureAspectRatio = (float)texture.width / texture.height;
 
-        // Determine the raw image rectSize preserving the texture aspect ratio, matching the screen orientation,
-        // and keeping a minimum dimension size.
-        float minDimension = 480.0f;
-        float maxDimension = Mathf.Round(minDimension * textureAspectRatio);
-        Vector2 rectSize;
-        switch (Screen.orientation)
-        {
-            case ScreenOrientation.LandscapeRight:
-            case ScreenOrientation.LandscapeLeft:
-                rectSize = new Vector2(maxDimension, minDimension);
-                break;
-            case ScreenOrientation.PortraitUpsideDown:
-            case ScreenOrientation.Portrait:
-            default:
-                rectSize = new Vector2(minDimension, maxDimension);
-                break;
+            // Determine the raw image rectSize preserving the texture aspect ratio, matching the screen orientation,
+            // and keeping a minimum dimension size.
+            float minDimension = 480.0f;
+            float maxDimension = Mathf.Round(minDimension * textureAspectRatio);
+            Vector2 rectSize;
+            switch (Screen.orientation)
+            {
+                case ScreenOrientation.LandscapeRight:
+                case ScreenOrientation.LandscapeLeft:
+                    rectSize = new Vector2(maxDimension, minDimension);
+                    break;
+                case ScreenOrientation.PortraitUpsideDown:
+                case ScreenOrientation.Portrait:
+                default:
+                    rectSize = new Vector2(minDimension, maxDimension);
+                    break;
+            }
+            rawImage.rectTransform.sizeDelta = rectSize;
+
+            // Rotate the depth material to match screen orientation.
+            Quaternion rotation = Quaternion.Euler(0, 0, GetRotation());
+            Matrix4x4 rotMatrix = Matrix4x4.Rotate(rotation);
+            m_RawImage.material.SetMatrix(Shader.PropertyToID("_DisplayRotationPerFrame"), rotMatrix);
         }
-        rawImage.rectTransform.sizeDelta = rectSize;
-
-        // Rotate the depth material to match screen orientation.
-        Quaternion rotation = Quaternion.Euler(0, 0, GetRotation());
-        Matrix4x4 rotMatrix = Matrix4x4.Rotate(rotation);
-        m_RawImage.material.SetMatrix(Shader.PropertyToID("_DisplayRotationPerFrame"), rotMatrix);
     }
 
     // Obtain the depth value in meters. [u,v] should each range from 0 to 1. stride is the pixel stride of the acquired environment depth image.
