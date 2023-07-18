@@ -5,23 +5,49 @@ using UnityEngine;
 // REFERENCES
 // https://docs.unity3d.com/ScriptReference/LocationService.Start.html
 // https://nosuchstudio.medium.com/how-to-access-gps-location-in-unity-521f1371a7e3
-public class GPSLocation : MonoBehaviour
-{
-    private bool test = true;
-    private bool isRemote = true; // For Unity Remote
-    private bool continuousUse = true;
-    private LocationInfo data;
 
-    void Update() {
-        if (test && !continuousUse) {
-            test = false;
-            StartCoroutine(LocationCoroutine());
-        }
-        else
-            StartCoroutine(LocationCoroutine());
+// https://docs.unity3d.com/Manual/MobileInput.html
+// https://docs.unity3d.com/ScriptReference/Gyroscope.html
+// https://docs.unity3d.com/ScriptReference/Compass.html
+public class SensorData : MonoBehaviour
+{
+    private bool isRemote = true; // For Unity Remote
+ 
+    public LocationInfo gps;
+
+    private bool active = false;
+
+
+    public Vector3 accel;
+    public Vector3 gyro;
+    public float mag;
+    public Vector3 attitude;
+
+    void Start() {
+        StartCoroutine(LocationStart());
     }
 
-    public IEnumerator LocationCoroutine() {
+    void Update() {
+        UpdateData();
+        Debug.Log(IMUstring());
+    }
+
+    public void UpdateData() {
+        if (active) {
+            accel.x = -Input.acceleration.y;
+            accel.z = Input.acceleration.x;
+            gyro = Input.gyro.rotationRateUnbiased;
+            attitude = Input.gyro.attitude.eulerAngles;
+            mag = Input.compass.magneticHeading;
+
+            gps = UnityEngine.Input.location.lastData;
+        }
+        else
+            StartCoroutine(LocationStart());
+    }
+
+    public IEnumerator LocationStart() {
+        Debug.Log("Start called");
 
 #if UNITY_EDITOR
         if (isRemote) {
@@ -70,21 +96,31 @@ public class GPSLocation : MonoBehaviour
             yield break;
         }
 
-        // Connection has failed
         if (UnityEngine.Input.location.status != LocationServiceStatus.Running) {
             Debug.LogFormat("Unable to determine device location. Failed with status {0}", UnityEngine.Input.location.status);
             yield break;
         }
         else {
-            data = UnityEngine.Input.location.lastData;
+            active = true;
+            Input.gyro.enabled = true;
+            Input.gyro.updateInterval = 0.1f;
+            Input.compass.enabled = true;
         }
-
-        // Stop service if there is no need to query location updates continuously
-        if (!continuousUse)
-            UnityEngine.Input.location.Stop();
     }
 
-    public string dataString() {
-        return string.Format("Latitude: {0} \nLongitude: {1} \nAltitude: {2} \nHorizontal accuracy: {3} \nTimestamp: {4}", data.latitude, data.longitude, data.altitude, data.horizontalAccuracy, DateTimeOffset.FromUnixTimeSeconds((long)data.timestamp));
+    public IEnumerator LocationStop() {
+        UnityEngine.Input.location.Stop();
+        active = false;
+        Input.gyro.enabled = false;
+        Input.compass.enabled = false;
+        yield return null;
+    }
+
+    public string GPSstring() {
+        return string.Format("Latitude: {0} \nLongitude: {1} \nAltitude: {2} \nHorizontal accuracy: {3} \nTimestamp: {4}", gps.latitude, gps.longitude, gps.altitude, gps.horizontalAccuracy, DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp));
+    }
+
+    public string IMUstring() {
+        return string.Format("Accel: {0} \nGyro: {1} \nMag: {2} \nAttitude: {3}", accel, gyro, mag, attitude);
     }
 }
