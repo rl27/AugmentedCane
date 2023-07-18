@@ -41,6 +41,14 @@ public class DepthImage : MonoBehaviour
     [SerializeField]
     RawImage m_RawImage;
 
+    public RawImage cpuImage
+    {
+        get => m_RawCameraImage;
+        set => m_RawCameraImage = value;
+    }
+    [SerializeField]
+    RawImage m_RawCameraImage;
+
     // The UI Text used to display information about the image on screen.
     public Text imageInfo
     {
@@ -134,6 +142,13 @@ public class DepthImage : MonoBehaviour
         else {
             m_RawImage.enabled = false;
             return;
+        }
+
+        if (m_CameraManager.TryAcquireLatestCpuImage(out XRCpuImage cameraImage))
+        {
+            using (cameraImage) {
+                UpdateRawImage(m_RawCameraImage, cameraImage);
+            }
         }
         
         // Display some distance info.
@@ -245,7 +260,8 @@ public class DepthImage : MonoBehaviour
 
         // On an iPhone 12 Pro, the image data is in DepthFloat32 format.
         // https://docs.unity3d.com/Packages/com.unity.xr.arsubsystems@4.1/api/UnityEngine.XR.ARSubsystems.XRCpuImage.Format.html
-        // See the following code if the XRCpuImage format is something different, e.g. DepthUint16: https://forum.unity.com/threads/how-to-measure-distance-from-depth-map.1440799
+        // See the code in the following link if the XRCpuImage format is something different, e.g. DepthUint16.
+        // https://forum.unity.com/threads/how-to-measure-distance-from-depth-map.1440799
         float depthM = BitConverter.ToSingle(arr, stride * index);
 
         if (depthM > 0) {

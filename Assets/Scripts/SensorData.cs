@@ -12,7 +12,6 @@ using UnityEngine;
 public class SensorData : MonoBehaviour
 {
     private bool isRemote = true; // For using Unity Remote
-    private bool active = false; // This is set to true when location.Start() succeeds
 
     // GPS data
     public LocationInfo gps;
@@ -29,7 +28,7 @@ public class SensorData : MonoBehaviour
 
     // Update GPS and IMU data, or start location services if it hasn't been started
     public void UpdateData() {
-        if (active) {
+        if (Input.location.status == LocationServiceStatus.Running) {
             accel.x = -Input.acceleration.y;
             accel.y = Input.acceleration.z;
             accel.z = Input.acceleration.x;
@@ -37,7 +36,7 @@ public class SensorData : MonoBehaviour
             attitude = Input.gyro.attitude.eulerAngles;
             mag = Input.compass.magneticHeading;
 
-            gps = UnityEngine.Input.location.lastData;
+            gps = Input.location.lastData;
         }
         else
             StartCoroutine(LocationStart());
@@ -45,23 +44,21 @@ public class SensorData : MonoBehaviour
 
     // Start location services
     public IEnumerator LocationStart() {
-        Debug.Log("Start called");
-
 #if UNITY_EDITOR
         if (isRemote) {
             yield return new WaitForSecondsRealtime(5f); // Need to add delay for Unity Remote to work
             yield return new WaitWhile(() => !UnityEditor.EditorApplication.isRemoteConnected);
         }
 #elif UNITY_ANDROID
-        if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.CoarseLocation))
-            UnityEngine.Android.Permission.RequestUserPermission(UnityEngine.Android.Permission.CoarseLocation);
+        if (!Android.Permission.HasUserAuthorizedPermission(Android.Permission.CoarseLocation))
+            Android.Permission.RequestUserPermission(Android.Permission.CoarseLocation);
 
-        if (!UnityEngine.Input.location.isEnabledByUser) {
+        if (!Input.location.isEnabledByUser) {
             Debug.LogFormat("Android location not enabled");
             yield break;
         }
 #elif UNITY_IOS
-        if (!UnityEngine.Input.location.isEnabledByUser) {
+        if (!Input.location.isEnabledByUser) {
             Debug.LogFormat("iOS location not enabled");
             yield break;
         }
@@ -70,11 +67,11 @@ public class SensorData : MonoBehaviour
         // Start service before querying location
         // Start(desiredAccuracyInMeters, updateDistanceInMeters)
         // Default values: 10, 10
-        UnityEngine.Input.location.Start(2f, 2f);
+        Input.location.Start(2f, 2f);
                 
         // Wait until service initializes
         int maxWait = 15;
-        while (UnityEngine.Input.location.status == LocationServiceStatus.Initializing && maxWait > 0) {
+        while (Input.location.status == LocationServiceStatus.Initializing && maxWait > 0) {
             yield return new WaitForSecondsRealtime(1);
             maxWait--;
         }
@@ -82,7 +79,7 @@ public class SensorData : MonoBehaviour
         // Editor has a bug which doesn't set the service status to Initializing. So extra wait in Editor.
 #if UNITY_EDITOR
         int editorMaxWait = 15;
-        while (UnityEngine.Input.location.status == LocationServiceStatus.Stopped && editorMaxWait > 0) {
+        while (Input.location.status == LocationServiceStatus.Stopped && editorMaxWait > 0) {
             yield return new WaitForSecondsRealtime(1);
             editorMaxWait--;
         }
@@ -94,12 +91,11 @@ public class SensorData : MonoBehaviour
             yield break;
         }
 
-        if (UnityEngine.Input.location.status != LocationServiceStatus.Running) {
-            Debug.LogFormat("Unable to determine device location. Failed with status {0}", UnityEngine.Input.location.status);
+        if (Input.location.status != LocationServiceStatus.Running) {
+            Debug.LogFormat("Unable to determine device location. Failed with status {0}", Input.location.status);
             yield break;
         }
         else {
-            active = true;
             Input.gyro.enabled = true;
             Input.gyro.updateInterval = 0.1f;
             Input.compass.enabled = true;
@@ -108,8 +104,7 @@ public class SensorData : MonoBehaviour
 
     // Stop location services
     public IEnumerator LocationStop() {
-        UnityEngine.Input.location.Stop();
-        active = false;
+        Input.location.Stop();
         Input.gyro.enabled = false;
         Input.compass.enabled = false;
         yield return null;
