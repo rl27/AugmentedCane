@@ -29,12 +29,13 @@ public class SensorData : MonoBehaviour
 
     void Update() {
         UpdateData();
-        Debug.Log(IMUstring());
+        Debug.Log(Input.gyro.attitude.eulerAngles);
     }
 
     public void UpdateData() {
         if (active) {
             accel.x = -Input.acceleration.y;
+            accel.y = Input.acceleration.z;
             accel.z = Input.acceleration.x;
             gyro = Input.gyro.rotationRateUnbiased;
             attitude = Input.gyro.attitude.eulerAngles;

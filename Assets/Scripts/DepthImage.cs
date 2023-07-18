@@ -145,9 +145,9 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"principalPoint: {principalPoint}");
         // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
         // Phone orientation does not change coordinate locations on the screen.
-        m_StringBuilder.AppendLine($"{GetDepth(new Vector2(0.1f, 0.1f), depthArray, stride)}");
-        m_StringBuilder.AppendLine($"{GetDepth(new Vector2(0.5f, 0.5f), depthArray, stride)}");
-        m_StringBuilder.AppendLine($"{GetDepth(new Vector2(0.9f, 0.9f), depthArray, stride)}");
+        m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.1f, 0.1f), depthArray, stride)}");
+        m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f), depthArray, stride)}");
+        m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f), depthArray, stride)}");
 
         m_StringBuilder.AppendLine($"{sensors.GPSstring()}");
         m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
