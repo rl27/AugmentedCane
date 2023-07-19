@@ -50,8 +50,8 @@ public class SensorData : MonoBehaviour
             yield return new WaitWhile(() => !UnityEditor.EditorApplication.isRemoteConnected);
         }
 #elif UNITY_ANDROID
-        if (!Android.Permission.HasUserAuthorizedPermission(Android.Permission.CoarseLocation))
-            Android.Permission.RequestUserPermission(Android.Permission.CoarseLocation);
+        if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.CoarseLocation))
+            UnityEngine.Android.Permission.RequestUserPermission(UnityEngine.Android.Permission.CoarseLocation);
 
         if (!Input.location.isEnabledByUser) {
             Debug.LogFormat("Android location not enabled");
@@ -117,6 +117,6 @@ public class SensorData : MonoBehaviour
 
     // Format IMU data into string
     public string IMUstring() {
-        return string.Format("Accel: {0} \nGyro: {1} \nMag: {2} \nAttitude: {3}", accel, gyro, mag, attitude);
+        return string.Format("Accel: {0} \nGyro: {1} \nCompass: {2} \nAttitude: {3}", accel, gyro, mag, attitude);
     }
 }

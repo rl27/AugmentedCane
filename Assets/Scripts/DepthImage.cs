@@ -86,6 +86,8 @@ public class DepthImage : MonoBehaviour
 
     SensorData sensors;
 
+    bool testingBool = true;
+
     void OnEnable()
     {
         Debug.Assert(m_CameraManager != null, "No camera manager");
@@ -102,6 +104,10 @@ public class DepthImage : MonoBehaviour
             LogText("No occlusion manager");
             return;
         }
+        if (m_CameraManager == null) {
+            LogText("No camera manager");
+            return;
+        }
 
         // Check if device supports environment depth.
         var descriptor = m_OcclusionManager.descriptor;
@@ -114,7 +120,7 @@ public class DepthImage : MonoBehaviour
             else if (descriptor.environmentDepthImageSupported == Supported.Unknown)
                 LogText("Determining environment depth support...");
             m_RawImage.texture = null;
-            return;
+            // return;
         }
 
         // Acquire a depth image and update the displayed image.
@@ -141,16 +147,24 @@ public class DepthImage : MonoBehaviour
         }
         else {
             m_RawImage.enabled = false;
-            return;
+            // return;
         }
 
-        int cameraPlanes = 0;
         // Camera image
+        int cameraPlanes = 0;
         if (m_CameraManager.TryAcquireLatestCpuImage(out XRCpuImage cameraImage))
         {
             using (cameraImage) {
                 UpdateRawImage(m_RawCameraImage, cameraImage, false);
                 cameraPlanes = cameraImage.planeCount;
+
+                if (testingBool) {
+                    testingBool = false;
+                    Texture2D testTex = m_RawCameraImage.texture as Texture2D;
+                    byte[] bytes = ImageConversion.EncodeToJPG(testTex);
+                    // persistentDataPath directory: https://docs.unity3d.com/ScriptReference/Application-persistentDataPath.html
+                    System.IO.File.WriteAllBytes(Application.persistentDataPath + "/SavedScreen.jpg", bytes);
+                }
             }
         }
         
@@ -192,7 +206,7 @@ public class DepthImage : MonoBehaviour
         // Note: Although texture dimensions do not normally change frame-to-frame, they can change in response to
         //    a change in the camera resolution (for camera images) or changes to the quality of the human depth
         //    and human stencil buffers.
-        TextureFormat format = isDepth ? cpuImage.format.AsTextureFormat() : TextureFormat.RGBA32;
+        TextureFormat format = isDepth ? cpuImage.format.AsTextureFormat() : TextureFormat.RGBA32; // RGB24?
         if (texture == null || texture.width != cpuImage.width || texture.height != cpuImage.height)
         {
             texture = new Texture2D(cpuImage.width, cpuImage.height, format, false);
@@ -218,15 +232,17 @@ public class DepthImage : MonoBehaviour
         // Make sure it's enabled.
         rawImage.enabled = true;
 
-        if (isDepth) {
-            // Get the aspect ratio for the current texture.
-            var textureAspectRatio = (float)texture.width / texture.height;
 
-            // Determine the raw image rectSize preserving the texture aspect ratio, matching the screen orientation,
-            // and keeping a minimum dimension size.
-            float minDimension = 480.0f;
-            float maxDimension = Mathf.Round(minDimension * textureAspectRatio);
-            Vector2 rectSize;
+        // Get the aspect ratio for the current texture.
+        var textureAspectRatio = (float)texture.width / texture.height;
+
+        // Determine the raw image rectSize preserving the texture aspect ratio, matching the screen orientation,
+        // and keeping a minimum dimension size.
+        float minDimension = 480.0f;
+        float maxDimension = Mathf.Round(minDimension * textureAspectRatio);
+        Vector2 rectSize;
+        if (isDepth) {
+            
             switch (Screen.orientation)
             {
                 case ScreenOrientation.LandscapeRight:
@@ -246,6 +262,10 @@ public class DepthImage : MonoBehaviour
             Matrix4x4 rotMatrix = Matrix4x4.Rotate(rotation);
             m_RawImage.material.SetMatrix(Shader.PropertyToID("_DisplayRotationPerFrame"), rotMatrix);
         }
+        else {
+            rectSize = new Vector2(maxDimension, minDimension);
+            rawImage.rectTransform.sizeDelta = rectSize;
+        }
     }
 
     // Obtain the depth value in meters. [u,v] should each range from 0 to 1. stride is the pixel stride of the acquired environment depth image.
@@ -256,6 +276,9 @@ public class DepthImage : MonoBehaviour
     // Another distance example: https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/PointCloud/Scripts/RawPointCloudBlender.cs#L208
     public float GetDepth(Vector2 uv, byte[] arr, int stride)
     {
+        if (arr.Length == 0)
+            return float.NegativeInfinity;
+
         int x = (int)(uv.x * (depthWidth - 1));
         int y = (int)(uv.y * (depthHeight - 1));
 
@@ -264,20 +287,17 @@ public class DepthImage : MonoBehaviour
         // Depth in meters
         int index = (y * depthWidth) + x;
 
-        // On an iPhone 12 Pro, the image data is in DepthFloat32 format.
+        // On an iPhone 12 Pro, the image data is in DepthFloat32 format, so we use ToSingle().
         // https://docs.unity3d.com/Packages/com.unity.xr.arsubsystems@4.1/api/UnityEngine.XR.ARSubsystems.XRCpuImage.Format.html
         // See the code in the following link if the XRCpuImage format is something different, e.g. DepthUint16.
         // https://forum.unity.com/threads/how-to-measure-distance-from-depth-map.1440799
         float depthM = BitConverter.ToSingle(arr, stride * index);
 
         if (depthM > 0) {
-            Vector3 vertex = Vector3.negativeInfinity;
+            // Here we are calculating the magnitude of a 3D point (vertex_x, -vertex_y, depthM). 
             float vertex_x = (x - principalPoint.x) * depthM / focalLength.x;
             float vertex_y = (y - principalPoint.y) * depthM / focalLength.y;
-            vertex.x = vertex_x;
-            vertex.y = -vertex_y;
-            vertex.z = depthM;
-            return vertex.magnitude;
+            return Mathf.Sqrt(vertex_x*vertex_x + vertex_y*vertex_y + depthM*depthM);
         }
 
         return float.NegativeInfinity;
