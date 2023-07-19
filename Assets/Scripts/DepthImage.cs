@@ -130,7 +130,7 @@ public class DepthImage : MonoBehaviour
         m_RawImage.material = m_DepthMaterial;
 
         // Lock orientation to portrait
-        Screen.orientation = ScreenOrientation.Portrait;
+        // Screen.orientation = ScreenOrientation.Portrait;
 
         // Disable the displayed images if necessary
         if (!showCameraImage) {
