@@ -2,6 +2,7 @@
 // using System.Collections.Generic;
 using System;
 using System.Text;
+using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
@@ -163,7 +164,9 @@ public class DepthImage : MonoBehaviour
                     Texture2D testTex = m_RawCameraImage.texture as Texture2D;
                     byte[] bytes = ImageConversion.EncodeToJPG(testTex);
                     // persistentDataPath directory: https://docs.unity3d.com/ScriptReference/Application-persistentDataPath.html
-                    System.IO.File.WriteAllBytes(Application.persistentDataPath + "/SavedScreen.jpg", bytes);
+                    File.WriteAllBytes(Application.persistentDataPath + "/SavedScreen.jpg", bytes);
+
+                    // NativeArray<byte> data = testTex.getRawTextureData<byte>();
                 }
             }
         }

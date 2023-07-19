@@ -19,8 +19,9 @@ public class SensorData : MonoBehaviour
     // IMU data
     public Vector3 accel;
     public Vector3 gyro;
-    public float mag;
     public Vector3 attitude;
+    public Vector3 mag;
+    public float compass;
 
     void Update() {
         UpdateData();
@@ -34,7 +35,9 @@ public class SensorData : MonoBehaviour
             accel.z = Input.acceleration.x;
             gyro = Input.gyro.rotationRateUnbiased;
             attitude = Input.gyro.attitude.eulerAngles;
-            mag = Input.compass.magneticHeading;
+
+            mag = Input.compass.rawVector;
+            compass = Input.compass.magneticHeading;
 
             gps = Input.location.lastData;
         }
@@ -117,6 +120,6 @@ public class SensorData : MonoBehaviour
 
     // Format IMU data into string
     public string IMUstring() {
-        return string.Format("Accel: {0} \nGyro: {1} \nCompass: {2} \nAttitude: {3}", accel, gyro, mag, attitude);
+        return string.Format("Accel: {0} \nGyro: {1} \nMag: {2} \nCompass: {3} \nAttitude: {4}", accel, gyro, mag, compass, attitude);
     }
 }
