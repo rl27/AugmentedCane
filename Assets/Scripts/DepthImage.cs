@@ -91,7 +91,7 @@ public class DepthImage : MonoBehaviour
     SensorData sensors;
 
     private bool takePicture = false;
-    private bool showImages = true;
+    private bool showCameraImage = false;
 
     void OnEnable()
     {
@@ -132,8 +132,8 @@ public class DepthImage : MonoBehaviour
         Screen.orientation = ScreenOrientation.Portrait;
 
         // Disable the displayed images if necessary
-        if (!showImages) {
-            m_RawImage.enabled = false;
+        if (!showCameraImage) {
+            // m_RawImage.enabled = false;
             m_RawCameraImage.enabled = false;
         }
 
