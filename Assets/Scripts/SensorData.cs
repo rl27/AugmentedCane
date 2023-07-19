@@ -21,7 +21,10 @@ public class SensorData : MonoBehaviour
     public Vector3 gyro;
     public Vector3 attitude;
     public Vector3 mag;
-    public float compass;
+    public float heading;
+
+    private float desiredAccuracyInMeters = 2f;
+    private float updateDistanceInMeters = 2f;
 
     void Update() {
         UpdateData();
@@ -37,7 +40,7 @@ public class SensorData : MonoBehaviour
             attitude = Input.gyro.attitude.eulerAngles;
 
             mag = Input.compass.rawVector;
-            compass = Input.compass.magneticHeading;
+            heading = Input.compass.trueHeading;
 
             gps = Input.location.lastData;
         }
@@ -70,7 +73,7 @@ public class SensorData : MonoBehaviour
         // Start service before querying location
         // Start(desiredAccuracyInMeters, updateDistanceInMeters)
         // Default values: 10, 10
-        Input.location.Start(2f, 2f);
+        Input.location.Start(desiredAccuracyInMeters, updateDistanceInMeters);
                 
         // Wait until service initializes
         int maxWait = 15;
@@ -115,11 +118,14 @@ public class SensorData : MonoBehaviour
 
     // Format GPS data into string
     public string GPSstring() {
-        return string.Format("Latitude: {0} \nLongitude: {1} \nAltitude: {2} \nHorizontal accuracy: {3} \nTimestamp: {4}", gps.latitude, gps.longitude, gps.altitude, gps.horizontalAccuracy, DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp));
+        // return string.Format("Latitude: {0} \nLongitude: {1} \nAltitude: {2} \nHorizontal accuracy: {3} \nTimestamp: {4}", gps.latitude, gps.longitude, gps.altitude, gps.horizontalAccuracy, DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp));
+        return string.Format("GPS last update: {0} \nLatitude: {1} \nLongitude: {2} \nHorizontal accuracy: {3}",
+            DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp).LocalDateTime.TimeOfDay, gps.latitude, gps.longitude, gps.horizontalAccuracy);
     }
 
     // Format IMU data into string
     public string IMUstring() {
-        return string.Format("Accel: {0} \nGyro: {1} \nMag: {2} \nCompass: {3} \nAttitude: {4}", accel, gyro, mag, compass, attitude);
+        // return string.Format("Accel: {0} \nGyro: {1} \nMag: {2} \nAttitude: {3} \nHeading: {4}", accel, gyro, mag, attitude, heading);
+        return string.Format("Attitude: {0} \nHeading: {1}", attitude, heading);
     }
 }

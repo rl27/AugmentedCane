@@ -85,28 +85,26 @@ public class DepthImage : MonoBehaviour
     // StringBuilder for building strings to be logged.
     readonly StringBuilder m_StringBuilder = new StringBuilder();
 
+    [SerializeField]
+    GameObject SensorHandler;
+
     SensorData sensors;
 
-    bool testingBool = true;
+    private bool takePicture = false;
+    private bool showImages = true;
 
     void OnEnable()
     {
-        Debug.Assert(m_CameraManager != null, "No camera manager");
-        m_RawImage.material = m_DepthMaterial;
-
-        sensors = GameObject.Find("SensorHandler").GetComponent<SensorData>();
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        // Debug.Assert(m_OcclusionManager != null, "no occlusion manager");
         if (m_OcclusionManager == null) {
             LogText("No occlusion manager");
             return;
         }
         if (m_CameraManager == null) {
             LogText("No camera manager");
+            return;
+        }
+        if (SensorHandler == null) {
+            LogText("No sensor handler");
             return;
         }
 
@@ -124,7 +122,34 @@ public class DepthImage : MonoBehaviour
             // return;
         }
 
-        // Acquire a depth image and update the displayed image.
+        // Initialize GPS/IMU data object
+        sensors = SensorHandler.GetComponent<SensorData>();
+
+        // Set depth image material
+        m_RawImage.material = m_DepthMaterial;
+
+        // Lock orientation to portrait
+        Screen.orientation = ScreenOrientation.Portrait;
+
+        // Disable the displayed images if necessary
+        if (!showImages) {
+            m_RawImage.enabled = false;
+            m_RawCameraImage.enabled = false;
+        }
+
+        m_CameraManager.frameReceived += OnCameraFrameReceived;
+    }
+
+    void OnDisable()
+    {
+        if (m_CameraManager != null)
+            m_CameraManager.frameReceived -= OnCameraFrameReceived;
+    }
+
+    // This is called every time a camera frame is received. It's called virtually the same number of times as Update() based on some testing.
+    void OnCameraFrameReceived(ARCameraFrameEventArgs eventArgs)
+    {
+        // Acquire a depth image and update the corresponding raw image.
         if (occlusionManager.TryAcquireEnvironmentDepthCpuImage(out XRCpuImage image)) {
             using (image) {
                 UpdateRawImage(m_RawImage, image, true);
@@ -146,12 +171,8 @@ public class DepthImage : MonoBehaviour
                 image.GetPlane(0).data.CopyTo(depthArray);
             }
         }
-        else {
-            m_RawImage.enabled = false;
-            // return;
-        }
 
-        // Camera image
+        // Acquire a camera image and update the corresponding raw image.
         int cameraPlanes = 0;
         if (m_CameraManager.TryAcquireLatestCpuImage(out XRCpuImage cameraImage))
         {
@@ -159,8 +180,8 @@ public class DepthImage : MonoBehaviour
                 UpdateRawImage(m_RawCameraImage, cameraImage, false);
                 cameraPlanes = cameraImage.planeCount;
 
-                if (testingBool) {
-                    testingBool = false;
+                if (takePicture) {
+                    takePicture = false;
                     Texture2D testTex = m_RawCameraImage.texture as Texture2D;
                     byte[] bytes = ImageConversion.EncodeToJPG(testTex);
                     // persistentDataPath directory: https://docs.unity3d.com/ScriptReference/Application-persistentDataPath.html
@@ -170,22 +191,20 @@ public class DepthImage : MonoBehaviour
                 }
             }
         }
-        
+
         // Display some distance info.
         m_StringBuilder.Clear();
-        m_StringBuilder.AppendLine($"camera planes: {cameraPlanes}");
-        m_StringBuilder.AppendLine($"width: {depthWidth}");
-        m_StringBuilder.AppendLine($"width: {depthHeight}");
-        m_StringBuilder.AppendLine($"focalLength: {focalLength}");
-        m_StringBuilder.AppendLine($"principalPoint: {principalPoint}");
+        m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}");
+
         // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
         // Phone orientation does not change coordinate locations on the screen.
+        m_StringBuilder.AppendLine("DEPTH:");
         m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.1f, 0.1f), depthArray, stride)}");
         m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f), depthArray, stride)}");
         m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f), depthArray, stride)}");
 
-        m_StringBuilder.AppendLine($"{sensors.GPSstring()}");
         m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
+        m_StringBuilder.AppendLine($"{sensors.GPSstring()}");
         LogText(m_StringBuilder.ToString());
     }
 
@@ -231,10 +250,6 @@ public class DepthImage : MonoBehaviour
 
         // "Apply" the new pixel data to the Texture2D.
         texture.Apply();
-
-        // Make sure it's enabled.
-        rawImage.enabled = true;
-
 
         // Get the aspect ratio for the current texture.
         var textureAspectRatio = (float)texture.width / texture.height;
@@ -285,22 +300,25 @@ public class DepthImage : MonoBehaviour
         int x = (int)(uv.x * (depthWidth - 1));
         int y = (int)(uv.y * (depthHeight - 1));
 
-        Debug.Assert(x >= 0 && x < depthWidth && y >= 0 && y < depthHeight, "Invalid depth index");
 
-        // Depth in meters
-        int index = (y * depthWidth) + x;
+        if (x < 0 || x >= depthWidth || y < 0 || y >= depthHeight) {
+            Debug.Log("Invalid depth index");
+            return -99999f;
+        }
+
 
         // On an iPhone 12 Pro, the image data is in DepthFloat32 format, so we use ToSingle().
         // https://docs.unity3d.com/Packages/com.unity.xr.arsubsystems@4.1/api/UnityEngine.XR.ARSubsystems.XRCpuImage.Format.html
         // See the code in the following link if the XRCpuImage format is something different, e.g. DepthUint16.
         // https://forum.unity.com/threads/how-to-measure-distance-from-depth-map.1440799
-        float depthM = BitConverter.ToSingle(arr, stride * index);
+        int index = (y * depthWidth) + x;
+        float depthInMeters = BitConverter.ToSingle(arr, stride * index);
 
-        if (depthM > 0) {
-            // Here we are calculating the magnitude of a 3D point (vertex_x, -vertex_y, depthM). 
-            float vertex_x = (x - principalPoint.x) * depthM / focalLength.x;
-            float vertex_y = (y - principalPoint.y) * depthM / focalLength.y;
-            return Mathf.Sqrt(vertex_x*vertex_x + vertex_y*vertex_y + depthM*depthM);
+        if (depthInMeters > 0) {
+            // Here we are calculating the magnitude of a 3D point (vertex_x, -vertex_y, depthInMeters). 
+            float vertex_x = (x - principalPoint.x) * depthInMeters / focalLength.x;
+            float vertex_y = (y - principalPoint.y) * depthInMeters / focalLength.y;
+            return Mathf.Sqrt(vertex_x*vertex_x + vertex_y*vertex_y + depthInMeters*depthInMeters);
         }
 
         return float.NegativeInfinity;

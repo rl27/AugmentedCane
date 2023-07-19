@@ -601,6 +601,7 @@ MonoBehaviour:
   m_RawCameraImage: {fileID: 39756524}
   m_ImageInfo: {fileID: 1456075591}
   m_DepthMaterial: {fileID: 2100000, guid: 3518299564ad40c488f2036459c24a33, type: 2}
+  SensorHandler: {fileID: 1310236898}
 --- !u!4 &975916387
 Transform:
   m_ObjectHideFlags: 0
@@ -697,8 +698,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   accel: {x: 0, y: 0, z: 0}
   gyro: {x: 0, y: 0, z: 0}
-  mag: 0
   attitude: {x: 0, y: 0, z: 0}
+  mag: {x: 0, y: 0, z: 0}
+  heading: 0
 --- !u!4 &1310236900
 Transform:
   m_ObjectHideFlags: 0
@@ -817,8 +819,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -20, y: -40}
-  m_SizeDelta: {x: 420, y: 400}
+  m_AnchoredPosition: {x: -10, y: -40}
+  m_SizeDelta: {x: 450, y: 400}
   m_Pivot: {x: 1, y: 1}
 --- !u!114 &1456075591
 MonoBehaviour:
