@@ -119,6 +119,7 @@ public class DepthImage : MonoBehaviour
             else if (descriptor.environmentDepthImageSupported == Supported.Unknown)
                 LogText("Determining environment depth support...");
             m_RawImage.texture = null;
+            m_RawImage.enabled = false;
             // return;
         }
 
