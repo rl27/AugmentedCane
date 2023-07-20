@@ -1,5 +1,5 @@
-// using System.Collections;
 // using System.Collections.Generic;
+using System.Collections;
 using System;
 using System.Text;
 using System.IO;
@@ -50,7 +50,7 @@ public class DepthImage : MonoBehaviour
     [SerializeField]
     RawImage m_RawCameraImage;
 
-    // The UI Text used to display information about the image on screen.
+    // UI Text used to display information about the image on screen.
     public Text imageInfo
     {
         get => m_ImageInfo;
@@ -58,6 +58,16 @@ public class DepthImage : MonoBehaviour
     }
     [SerializeField]
     Text m_ImageInfo;
+
+    // UI Text used to display whether depth is supported.
+    public Text depthInfo
+    {
+        get => m_DepthInfo;
+        set => m_DepthInfo = value;
+    }
+    [SerializeField]
+    Text m_DepthInfo;
+
 
     // This is for using a custom shader that lets us see the full range of depth.
     // See the Details section here: https://github.com/andijakl/arfoundation-depth
@@ -94,7 +104,13 @@ public class DepthImage : MonoBehaviour
     private bool showCameraImage = false;
 
     // True if everything is fine and Update() should be called. False if something went wrong.
-    private bool shouldUpdate = false;
+    private bool shouldProceed = false;
+
+    // True when UpdateImages is in progress, false otherwise.
+    private bool isUpdating = false;
+
+    // Add delay between updates to data for better performance.
+    private float delay = 0.15f;
 
     void OnEnable()
     {
@@ -109,21 +125,6 @@ public class DepthImage : MonoBehaviour
         if (SensorHandler == null) {
             LogText("No sensor handler");
             return;
-        }
-
-        // Check if device supports environment depth.
-        var descriptor = m_OcclusionManager.descriptor;
-        if (descriptor != null && descriptor.environmentDepthImageSupported == Supported.Supported) {
-            // LogText("Environment depth is supported!");
-        }
-        else {
-            if (descriptor == null || descriptor.environmentDepthImageSupported == Supported.Unsupported)
-                LogText("Environment depth is not supported on this device.");
-            else if (descriptor.environmentDepthImageSupported == Supported.Unknown)
-                LogText("Determining environment depth support...");
-            m_RawImage.texture = null;
-            m_RawImage.enabled = false;
-            // return;
         }
 
         // Initialize GPS/IMU data object
@@ -141,14 +142,34 @@ public class DepthImage : MonoBehaviour
             m_RawCameraImage.enabled = false;
         }
 
-        shouldUpdate = true;
+        shouldProceed = true;
     }
 
     // This is called every frame
     void Update()
     {
-        if (!shouldUpdate)
-            return;
+        // Check if device supports environment depth.
+        var descriptor = m_OcclusionManager.descriptor;
+        if (descriptor != null && descriptor.environmentDepthImageSupported == Supported.Supported) {
+            LogText("Environment depth is supported!");
+        }
+        else {
+            if (descriptor == null || descriptor.environmentDepthImageSupported == Supported.Unsupported)
+                LogDepth("Environment depth is not supported on this device.");
+            else if (descriptor.environmentDepthImageSupported == Supported.Unknown)
+                LogDepth("Determining environment depth support...");
+            m_RawImage.texture = null;
+            // m_RawImage.enabled = false;
+            // return;
+        }
+
+        if (shouldProceed && !isUpdating)
+            StartCoroutine(UpdateImages());
+    }
+
+    IEnumerator UpdateImages()
+    {
+        isUpdating = true;
 
         // Acquire a depth image and update the corresponding raw image.
         if (occlusionManager.TryAcquireEnvironmentDepthCpuImage(out XRCpuImage image)) {
@@ -207,6 +228,9 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
         m_StringBuilder.AppendLine($"{sensors.GPSstring()}");
         LogText(m_StringBuilder.ToString());
+
+        yield return new WaitForSeconds(delay);
+        isUpdating = false;
     }
 
     // Log the given text to the screen if the image info UI is set. Otherwise, log the text to debug.
@@ -214,6 +238,15 @@ public class DepthImage : MonoBehaviour
     {
         if (m_ImageInfo != null)
             m_ImageInfo.text = text;
+        else
+            Debug.Log(text);
+    }
+
+    // Log the given text to the depth info text box.
+    void LogDepth(string text)
+    {
+        if (m_DepthInfo != null)
+            m_DepthInfo.text = text;
         else
             Debug.Log(text);
     }
