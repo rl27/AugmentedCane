@@ -93,6 +93,9 @@ public class DepthImage : MonoBehaviour
     private bool takePicture = false;
     private bool showCameraImage = false;
 
+    // True if everything is fine and Update() should be called. False if something went wrong.
+    private bool shouldUpdate = false;
+
     void OnEnable()
     {
         if (m_OcclusionManager == null) {
@@ -138,18 +141,15 @@ public class DepthImage : MonoBehaviour
             m_RawCameraImage.enabled = false;
         }
 
-        m_CameraManager.frameReceived += OnCameraFrameReceived;
+        shouldUpdate = true;
     }
 
-    void OnDisable()
+    // This is called every frame
+    void Update()
     {
-        if (m_CameraManager != null)
-            m_CameraManager.frameReceived -= OnCameraFrameReceived;
-    }
+        if (!shouldUpdate)
+            return;
 
-    // This is called every time a camera frame is received. It's called virtually the same number of times as Update() based on some testing.
-    void OnCameraFrameReceived(ARCameraFrameEventArgs eventArgs)
-    {
         // Acquire a depth image and update the corresponding raw image.
         if (occlusionManager.TryAcquireEnvironmentDepthCpuImage(out XRCpuImage image)) {
             using (image) {
@@ -301,12 +301,10 @@ public class DepthImage : MonoBehaviour
         int x = (int)(uv.x * (depthWidth - 1));
         int y = (int)(uv.y * (depthHeight - 1));
 
-
         if (x < 0 || x >= depthWidth || y < 0 || y >= depthHeight) {
             Debug.Log("Invalid depth index");
             return -99999f;
         }
-
 
         // On an iPhone 12 Pro, the image data is in DepthFloat32 format, so we use ToSingle().
         // https://docs.unity3d.com/Packages/com.unity.xr.arsubsystems@4.1/api/UnityEngine.XR.ARSubsystems.XRCpuImage.Format.html
