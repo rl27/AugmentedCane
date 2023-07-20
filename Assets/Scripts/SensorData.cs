@@ -26,12 +26,22 @@ public class SensorData : MonoBehaviour
     private float desiredAccuracyInMeters = 2f;
     private float updateDistanceInMeters = 2f;
 
-    void Update() {
-        UpdateData();
-    }
+    private float delay = 0.2f;
+
+    private bool isStarting = false;
+    private bool dataUpdating = false;
+
+    // void Update() {
+    //     UpdateData();
+    // }
 
     // Update GPS and IMU data, or start location services if it hasn't been started
-    public void UpdateData() {
+    public IEnumerator UpdateData() {
+        // Exit if already updating the data
+        if (dataUpdating)
+            yield break;
+
+        dataUpdating = true;
         if (Input.location.status == LocationServiceStatus.Running) {
             accel.x = -Input.acceleration.y;
             accel.y = Input.acceleration.z;
@@ -46,10 +56,19 @@ public class SensorData : MonoBehaviour
         }
         else
             StartCoroutine(LocationStart());
+
+        // Wait for a bit before trying to update again
+        yield return new WaitForSeconds(delay);
+        dataUpdating = false;
     }
 
     // Start location services
     public IEnumerator LocationStart() {
+        if (isStarting)
+            yield break;
+
+        isStarting = true;
+
 #if UNITY_EDITOR
         if (isRemote) {
             yield return new WaitForSecondsRealtime(5f); // Need to add delay for Unity Remote to work
@@ -106,6 +125,8 @@ public class SensorData : MonoBehaviour
             Input.gyro.updateInterval = 0.1f;
             Input.compass.enabled = true;
         }
+
+        isStarting = false;
     }
 
     // Stop location services

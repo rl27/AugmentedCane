@@ -107,10 +107,10 @@ public class DepthImage : MonoBehaviour
     private bool shouldProceed = false;
 
     // True when UpdateImages is in progress, false otherwise.
-    private bool isUpdating = false;
+    private bool imagesUpdating = false;
 
     // Add delay between updates to data for better performance.
-    private float delay = 0.15f;
+    private float delay = 0.2f;
 
     void OnEnable()
     {
@@ -148,6 +148,9 @@ public class DepthImage : MonoBehaviour
     // This is called every frame
     void Update()
     {
+        if (!shouldProceed)
+            return;
+
         // Check if device supports environment depth.
         var descriptor = m_OcclusionManager.descriptor;
         if (descriptor != null && descriptor.environmentDepthImageSupported == Supported.Supported) {
@@ -163,13 +166,32 @@ public class DepthImage : MonoBehaviour
             // return;
         }
 
-        if (shouldProceed && !isUpdating)
-            StartCoroutine(UpdateImages());
+        StartCoroutine(UpdateImages());
+        StartCoroutine(sensors.UpdateData());
+
+        // Display some distance info.
+        m_StringBuilder.Clear();
+        m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}");
+
+        // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
+        // Phone orientation does not change coordinate locations on the screen.
+        m_StringBuilder.AppendLine("DEPTH:");
+        m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.1f, 0.1f), depthArray, stride)}");
+        m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f), depthArray, stride)}");
+        m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f), depthArray, stride)}");
+
+        m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
+        m_StringBuilder.AppendLine($"{sensors.GPSstring()}");
+        LogText(m_StringBuilder.ToString());
     }
 
     IEnumerator UpdateImages()
     {
-        isUpdating = true;
+        // Exit if already updating images
+        if (imagesUpdating)
+            yield break;
+
+        imagesUpdating = true;
 
         // Acquire a depth image and update the corresponding raw image.
         if (occlusionManager.TryAcquireEnvironmentDepthCpuImage(out XRCpuImage image)) {
@@ -196,8 +218,7 @@ public class DepthImage : MonoBehaviour
 
         // Acquire a camera image and update the corresponding raw image.
         int cameraPlanes = 0;
-        if (m_CameraManager.TryAcquireLatestCpuImage(out XRCpuImage cameraImage))
-        {
+        if (m_CameraManager.TryAcquireLatestCpuImage(out XRCpuImage cameraImage)) {
             using (cameraImage) {
                 UpdateRawImage(m_RawCameraImage, cameraImage, false);
                 cameraPlanes = cameraImage.planeCount;
@@ -214,23 +235,9 @@ public class DepthImage : MonoBehaviour
             }
         }
 
-        // Display some distance info.
-        m_StringBuilder.Clear();
-        m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}");
-
-        // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
-        // Phone orientation does not change coordinate locations on the screen.
-        m_StringBuilder.AppendLine("DEPTH:");
-        m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.1f, 0.1f), depthArray, stride)}");
-        m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f), depthArray, stride)}");
-        m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f), depthArray, stride)}");
-
-        m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
-        m_StringBuilder.AppendLine($"{sensors.GPSstring()}");
-        LogText(m_StringBuilder.ToString());
-
+        // Wait for a bit before trying to update again
         yield return new WaitForSeconds(delay);
-        isUpdating = false;
+        imagesUpdating = false;
     }
 
     // Log the given text to the screen if the image info UI is set. Otherwise, log the text to debug.
