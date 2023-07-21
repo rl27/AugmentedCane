@@ -119,7 +119,7 @@ public class DepthImage : MonoBehaviour
     // Converts local coordinates to world coordinates.
     private Matrix4x4 localToWorldTransform = Matrix4x4.identity;
     private Matrix4x4 screenRotation = Matrix4x4.Rotate(Quaternion.identity);
-    private Camera camera;
+    private new Camera camera;
 
     void Awake()
     {
