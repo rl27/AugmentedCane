@@ -50,6 +50,8 @@ public class DepthImage : MonoBehaviour
     [SerializeField]
     RawImage m_RawCameraImage;
 
+    RawImage m_RawConfidenceImage;
+
     // UI Text used to display information about the image on screen.
     public Text imageInfo
     {
@@ -80,17 +82,13 @@ public class DepthImage : MonoBehaviour
 
     // Depth array
     byte[] depthArray = new byte[0];
-    int depthArrayLength = 0;
     int depthWidth = 0;
     int depthHeight = 0;
-    int depthStride = 4;
+    int depthStride = 4; // Should be 4
 
     // Depth confidence array
     byte[] confidenceArray = new byte[0];
-    int confidenceArrayLength = 0;
-    int confidenceWidth = 0;
-    int confidenceHeight = 0;
-    int confidenceStride = 4;
+    int confidenceStride = 1; // Should be 1
 
     // Max distance (in meters) before depth becomes too inaccurate
     float maxDepth = 5f;
@@ -139,7 +137,7 @@ public class DepthImage : MonoBehaviour
             return;
         }
 
-        camera = GetComponent<Camera>();
+        camera = m_CameraManager.GetComponent<Camera>();
         if (!camera) {
             LogText("No camera");
             return;
@@ -200,11 +198,10 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.1f, 0.1f), depthArray, depthStride)}");
         m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f), depthArray, depthStride)}");
         m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f), depthArray, depthStride)}");
-        m_StringBuilder.AppendLine("CONFIDENCE:");
-        m_StringBuilder.AppendLine($"{confidenceWidth}");
-        m_StringBuilder.AppendLine($"{confidenceHeight}");
-        m_StringBuilder.AppendLine($"{confidenceStride}");
+
+        m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.5f, 0.5f), confidenceArray, confidenceStride)}");
         m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f), confidenceArray, confidenceStride)}");
+        m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.5f, 0.5f), confidenceArray, confidenceStride)}");
 
         m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
         m_StringBuilder.AppendLine($"{sensors.GPSstring()}");
@@ -222,7 +219,7 @@ public class DepthImage : MonoBehaviour
         // Acquire a depth image and update the corresponding raw image.
         if (occlusionManager.TryAcquireEnvironmentDepthCpuImage(out XRCpuImage image)) {
             using (image) {
-                UpdateRawImage(m_RawImage, image, true);
+                UpdateRawImage(m_RawImage, image, image.format.AsTextureFormat(), true);
 
                 // Get distance data into depthArray
                 // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/Common/Scripts/MotionStereoDepthDataSource.cs#L250
@@ -232,12 +229,10 @@ public class DepthImage : MonoBehaviour
 
                 int numPixels = depthWidth * depthHeight;
                 Debug.Assert(image.planeCount == 1, "Plane count is not 1");
-                depthStride = image.GetPlane(0).pixelStride;
+                Debug.Assert(depthStride == image.GetPlane(0).pixelStride, "Depth stride doesn't match!");
                 int numBytes = numPixels * depthStride;
-                if (depthArrayLength != numBytes) {
+                if (depthArray.Length != numBytes)
                     depthArray = new byte[numBytes];
-                    depthArrayLength = numBytes;
-                }
                 image.GetPlane(0).data.CopyTo(depthArray);
             }
         }
@@ -245,21 +240,23 @@ public class DepthImage : MonoBehaviour
         // Acquire a depth confidence image.
         if (occlusionManager.TryAcquireEnvironmentDepthConfidenceCpuImage(out XRCpuImage confidenceImage)) {
             using (confidenceImage) {
-
-                // Should use TextureFormat.R8 if displaying a confidence image.
-
-                confidenceWidth = confidenceImage.width;
-                confidenceHeight = confidenceImage.height;
-
-                int numPixels = confidenceWidth * confidenceHeight;
-                Debug.Assert(confidenceImage.planeCount == 1, "Plane count is not 1");
-                confidenceStride = confidenceImage.GetPlane(0).pixelStride;
-                int numBytes = numPixels * confidenceStride;
-                if (confidenceArrayLength != numBytes) {
-                    confidenceArray = new byte[numBytes];
-                    confidenceArrayLength = numBytes;
+                if (confidenceImage.width != depthWidth || confidenceImage.height != depthHeight) {
+                    LogDepth("Confidence dimensions don't match");
                 }
-                confidenceImage.GetPlane(0).data.CopyTo(confidenceArray);
+                else {
+                    UpdateRawImage(m_RawConfidenceImage, image, TextureFormat.R8, false);
+
+                    // int numPixels = depthWidth * depthHeight;
+                    // Debug.Assert(confidenceImage.planeCount == 1, "Plane count is not 1");
+                    // Debug.Assert(confidenceStride == confidenceImage.GetPlane(0).pixelStride, "Confidence stride doesn't match!");
+                    // int numBytes = numPixels * confidenceStride;
+                    // if (confidenceArray.Length != numBytes)
+                    //     confidenceArray = new byte[numBytes];
+                    // confidenceImage.GetPlane(0).data.CopyTo(confidenceArray);
+
+                    Texture2D tex = m_RawConfidenceImage.texture as Texture2D;
+                    confidenceArray = tex.GetRawTextureData();
+                }
             }
         }
 
@@ -267,7 +264,7 @@ public class DepthImage : MonoBehaviour
         int cameraPlanes = 0;
         if (m_CameraManager.TryAcquireLatestCpuImage(out XRCpuImage cameraImage)) {
             using (cameraImage) {
-                UpdateRawImage(m_RawCameraImage, cameraImage, false);
+                UpdateRawImage(m_RawCameraImage, cameraImage, TextureFormat.RGBA32, false);
                 cameraPlanes = cameraImage.planeCount;
 
                 if (takePicture) {
@@ -305,7 +302,7 @@ public class DepthImage : MonoBehaviour
             Debug.Log(text);
     }
 
-    private void UpdateRawImage(RawImage rawImage, XRCpuImage cpuImage, bool isDepth)
+    private void UpdateRawImage(RawImage rawImage, XRCpuImage cpuImage, TextureFormat format, bool isDepth)
     {
         Debug.Assert(rawImage != null, "no raw image");
 
@@ -316,7 +313,6 @@ public class DepthImage : MonoBehaviour
         // Note: Although texture dimensions do not normally change frame-to-frame, they can change in response to
         //    a change in the camera resolution (for camera images) or changes to the quality of the human depth
         //    and human stencil buffers.
-        TextureFormat format = isDepth ? cpuImage.format.AsTextureFormat() : TextureFormat.RGBA32; // RGB24?
         if (texture == null || texture.width != cpuImage.width || texture.height != cpuImage.height)
         {
             texture = new Texture2D(cpuImage.width, cpuImage.height, format, false);
@@ -434,6 +430,14 @@ public class DepthImage : MonoBehaviour
     // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/PointCloud/Scripts/RawPointCloudBlender.cs#L208
     private void UpdatePointCloud()
     {
+        for (int y = 0; y < depthHeight; y++) {
+            for (int x = 0; x < depthWidth; x++) {
+                int index = (y * depthWidth) + x;
+                float depthInMeters = BitConverter.ToSingle(depthArray, depthStride * index);
+
+                float confidence = confidenceArray[index];
+            }
+        }
         return;
     }
 
