@@ -79,17 +79,15 @@ public class DepthImage : MonoBehaviour
     Material m_DepthMaterial;
 
     // Depth array
-    byte[] depthArray = new byte[0];
+    public byte[] depthArray = new byte[0];
     int depthWidth = 0;
     int depthHeight = 0;
     int depthStride = 4; // Should be 4
 
     // Depth confidence array
-    byte[] confidenceArray = new byte[0];
+    // For iOS, confidence values are 0, 1, or 2. https://forum.unity.com/threads/depth-confidence-error-iphone-12-pro.1201831
+    public byte[] confidenceArray = new byte[0];
     int confidenceStride = 1; // Should be 1
-
-    // Max distance (in meters) before depth becomes too inaccurate
-    float maxDepth = 5f;
     
     // Camera intrinsics
     Vector2 focalLength = Vector2.zero;
@@ -100,8 +98,11 @@ public class DepthImage : MonoBehaviour
 
     [SerializeField]
     GameObject SensorHandler;
-
     SensorData sensors;
+
+    [SerializeField]
+    GameObject PointCloudHandler;
+    PointCloud pc;
 
     private bool takePicture = false;
     private bool showCameraImage = false;
@@ -113,7 +114,7 @@ public class DepthImage : MonoBehaviour
     private bool imagesUpdating = false;
 
     // Add delay between updates to data for better performance.
-    private float delay = 0.2f;
+    private float delay = 0.0333f;
 
     // Converts local coordinates to world coordinates.
     private Matrix4x4 localToWorldTransform = Matrix4x4.identity;
@@ -143,6 +144,8 @@ public class DepthImage : MonoBehaviour
 
         // Initialize GPS/IMU data object
         sensors = SensorHandler.GetComponent<SensorData>();
+
+        pc = PointCloudHandler.GetComponent<PointCloud>();
 
         // Set depth image material
         m_RawImage.material = m_DepthMaterial;
@@ -189,7 +192,6 @@ public class DepthImage : MonoBehaviour
         int numLow = 0;
         int numMed = 0;
         int numHigh = 0;
-        int misc = 0;
         for (int y = 0; y < depthHeight; y++) {
             for (int x = 0; x < depthWidth; x++) {
                 int val = confidenceArray[(y * depthWidth) + x];
@@ -199,8 +201,6 @@ public class DepthImage : MonoBehaviour
                     numMed += 1;
                 else if (val == 2)
                     numHigh += 1;
-                else
-                    misc += 1;
             }
         }
 
@@ -215,23 +215,29 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f), depthArray, depthStride)}");
         m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f), depthArray, depthStride)}");
 
-        m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.5f, 0.5f), confidenceArray, confidenceStride)}");
-        m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f), confidenceArray, confidenceStride)}");
-        m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.5f, 0.5f), confidenceArray, confidenceStride)}");
+        m_StringBuilder.AppendLine("CONFIDENCE:");
+        m_StringBuilder.AppendLine($"(0.1,0.1): {GetConfidence(new Vector2(0.1f, 0.1f), confidenceArray, confidenceStride)}");
+        m_StringBuilder.AppendLine($"(0.5,0.5): {GetConfidence(new Vector2(0.5f, 0.5f), confidenceArray, confidenceStride)}");
+        m_StringBuilder.AppendLine($"(0.9,0.9): {GetConfidence(new Vector2(0.9f, 0.9f), confidenceArray, confidenceStride)}");
 
-        m_StringBuilder.AppendLine($"{numLow}");
-        m_StringBuilder.AppendLine($"{numMed}");
-        m_StringBuilder.AppendLine($"{numHigh}");
-        m_StringBuilder.AppendLine($"{misc}");
-        m_StringBuilder.AppendLine($"{localToWorldTransform}");
+        int numPixels = depthWidth * depthHeight;
+        m_StringBuilder.AppendLine("CONFIDENCE PROPORTIONS:");
+        m_StringBuilder.AppendLine($"Low: {(float) numLow / numPixels}");
+        m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
+        m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
+        m_StringBuilder.AppendLine($"Position: {camera.transform.position}");
 
         m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
         m_StringBuilder.AppendLine($"{sensors.GPSstring()}");
+
+        m_StringBuilder.AppendLine($"{pc.info}");
         LogText(m_StringBuilder.ToString());
     }
 
     IEnumerator UpdateImages()
     {
+        DateTime startTime = DateTime.Now;
+
         // Exit if already updating images
         if (imagesUpdating)
             yield break;
@@ -278,12 +284,9 @@ public class DepthImage : MonoBehaviour
         }
 
         // Acquire a camera image and update the corresponding raw image.
-        int cameraPlanes = 0;
         if (m_CameraManager.TryAcquireLatestCpuImage(out XRCpuImage cameraImage)) {
             using (cameraImage) {
                 UpdateRawImage(m_RawCameraImage, cameraImage, TextureFormat.RGBA32, false);
-                cameraPlanes = cameraImage.planeCount;
-
                 if (takePicture) {
                     takePicture = false;
                     Texture2D testTex = m_RawCameraImage.texture as Texture2D;
@@ -296,8 +299,13 @@ public class DepthImage : MonoBehaviour
             }
         }
 
+        double timeSpent = (DateTime.Now - startTime).TotalSeconds;
+        double newDelay = delay - timeSpent;
+
         // Wait for a bit before trying to update again
-        yield return new WaitForSeconds(delay);
+        if (newDelay > 0)
+            yield return new WaitForSeconds((float) newDelay);
+        
         imagesUpdating = false;
     }
 
@@ -396,10 +404,18 @@ public class DepthImage : MonoBehaviour
     public float GetDepth(Vector2 uv, byte[] arr, int stride)
     {
         if (arr.Length == 0)
-            return float.NegativeInfinity;
-
+            return -1f;
+        
         int x = (int)(uv.x * (depthWidth - 1));
         int y = (int)(uv.y * (depthHeight - 1));
+
+        return GetDepth(x, y, arr, stride);
+    }
+
+    public float GetDepth(int x, int y, byte[] arr, int stride)
+    {
+        if (arr.Length == 0)
+            return -1f;
 
         if (x < 0 || x >= depthWidth || y < 0 || y >= depthHeight) {
             Debug.Log("Invalid depth index");
@@ -424,6 +440,16 @@ public class DepthImage : MonoBehaviour
         return float.NegativeInfinity;
     }
 
+    public float GetConfidence(Vector2 uv, byte[] arr, int stride)
+    {
+        if (arr.Length == 0)
+            return -1f;
+        int x = (int)(uv.x * (depthWidth - 1));
+        int y = (int)(uv.y * (depthHeight - 1));
+        int index = (y * depthWidth) + x;
+        return arr[stride * index];
+    }
+
     // Given image pixel coordinates (x,y) and distance z, returns a vertex in local camera space.
     public Vector3 ComputeVertex(int x, int y, float z)
     {
@@ -442,20 +468,6 @@ public class DepthImage : MonoBehaviour
     public Vector3 TransformLocalToWorld(Vector3 vertex)
     {
         return localToWorldTransform.MultiplyPoint(vertex);
-    }
-
-    // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/PointCloud/Scripts/RawPointCloudBlender.cs#L208
-    private void UpdatePointCloud()
-    {
-        for (int y = 0; y < depthHeight; y++) {
-            for (int x = 0; x < depthWidth; x++) {
-                int index = (y * depthWidth) + x;
-                float depthInMeters = BitConverter.ToSingle(depthArray, depthStride * index);
-
-                float confidence = confidenceArray[index];
-            }
-        }
-        return;
     }
 
     // https://github.com/Unity-Technologies/arfoundation-samples/issues/266#issuecomment-523316133
