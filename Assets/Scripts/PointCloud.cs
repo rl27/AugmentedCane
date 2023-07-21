@@ -27,7 +27,8 @@ public class PointCloud : MonoBehaviour
 
     void OnEnable()
     {
-        GetComponent<ARPointCloudManager>().pointCloudsChanged += OnPointCloudsChanged;       
+        GetComponent<ARPointCloudManager>().pointCloudsChanged += OnPointCloudsChanged;
+        particleSystem = GetComponent<ParticleSystem>();
     }
 
     void OnPointCloudsChanged(ARPointCloudChangedEventArgs eventArgs)
@@ -50,8 +51,9 @@ public class PointCloud : MonoBehaviour
                 for (int i = 0; i < positions.Length; i++)
                     confidences[identifiers[i]] = conf[i];
             }
+
+            info = "Number of points in current frame: " + positions.Length;
         }
-        info = "Number of points: " + points.Count;
 
 
         /** RENDER POINTS **/
