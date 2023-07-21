@@ -68,7 +68,6 @@ public class DepthImage : MonoBehaviour
     [SerializeField]
     Text m_DepthInfo;
 
-
     // This is for using a custom shader that lets us see the full range of depth.
     // See the Details section here: https://github.com/andijakl/arfoundation-depth
     public Material depthMaterial
@@ -79,15 +78,23 @@ public class DepthImage : MonoBehaviour
     [SerializeField]
     Material m_DepthMaterial;
 
-    // Array for holding distance
+    // Depth array
     byte[] depthArray = new byte[0];
     int depthArrayLength = 0;
-    int stride = 4;
-
-    // Depth image resolution
     int depthWidth = 0;
     int depthHeight = 0;
+    int depthStride = 4;
 
+    // Depth confidence array
+    byte[] confidenceArray = new byte[0];
+    int confidenceArrayLength = 0;
+    int confidenceWidth = 0;
+    int confidenceHeight = 0;
+    int confidenceStride = 4;
+
+    // Max distance (in meters) before depth becomes too inaccurate
+    float maxDepth = 5f;
+    
     // Camera intrinsics
     Vector2 focalLength = Vector2.zero;
     Vector2 principalPoint = Vector2.zero;
@@ -112,7 +119,12 @@ public class DepthImage : MonoBehaviour
     // Add delay between updates to data for better performance.
     private float delay = 0.2f;
 
-    void OnEnable()
+    // Converts local coordinates to world coordinates.
+    private Matrix4x4 localToWorldTransform = Matrix4x4.identity;
+    private Matrix4x4 screenRotation = Matrix4x4.Rotate(Quaternion.identity);
+    private Camera camera;
+
+    void Awake()
     {
         if (m_OcclusionManager == null) {
             LogText("No occlusion manager");
@@ -124,6 +136,12 @@ public class DepthImage : MonoBehaviour
         }
         if (SensorHandler == null) {
             LogText("No sensor handler");
+            return;
+        }
+
+        camera = GetComponent<Camera>();
+        if (!camera) {
+            LogText("No camera");
             return;
         }
 
@@ -166,6 +184,9 @@ public class DepthImage : MonoBehaviour
             // return;
         }
 
+        screenRotation = Matrix4x4.Rotate(Quaternion.Euler(0, 0, GetRotationForScreen()));
+        localToWorldTransform = camera.transform.localToWorldMatrix * screenRotation;
+
         StartCoroutine(UpdateImages());
         StartCoroutine(sensors.UpdateData());
 
@@ -176,9 +197,14 @@ public class DepthImage : MonoBehaviour
         // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
         // Phone orientation does not change coordinate locations on the screen.
         m_StringBuilder.AppendLine("DEPTH:");
-        m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.1f, 0.1f), depthArray, stride)}");
-        m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f), depthArray, stride)}");
-        m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f), depthArray, stride)}");
+        m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.1f, 0.1f), depthArray, depthStride)}");
+        m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f), depthArray, depthStride)}");
+        m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f), depthArray, depthStride)}");
+        m_StringBuilder.AppendLine("CONFIDENCE:");
+        m_StringBuilder.AppendLine($"{confidenceWidth}");
+        m_StringBuilder.AppendLine($"{confidenceHeight}");
+        m_StringBuilder.AppendLine($"{confidenceStride}");
+        m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f), confidenceArray, confidenceStride)}");
 
         m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
         m_StringBuilder.AppendLine($"{sensors.GPSstring()}");
@@ -206,13 +232,34 @@ public class DepthImage : MonoBehaviour
 
                 int numPixels = depthWidth * depthHeight;
                 Debug.Assert(image.planeCount == 1, "Plane count is not 1");
-                stride = image.GetPlane(0).pixelStride;
-                int numBytes = numPixels * stride;
+                depthStride = image.GetPlane(0).pixelStride;
+                int numBytes = numPixels * depthStride;
                 if (depthArrayLength != numBytes) {
                     depthArray = new byte[numBytes];
                     depthArrayLength = numBytes;
                 }
                 image.GetPlane(0).data.CopyTo(depthArray);
+            }
+        }
+
+        // Acquire a depth confidence image.
+        if (occlusionManager.TryAcquireEnvironmentDepthConfidenceCpuImage(out XRCpuImage confidenceImage)) {
+            using (confidenceImage) {
+
+                // Should use TextureFormat.R8 if displaying a confidence image.
+
+                confidenceWidth = confidenceImage.width;
+                confidenceHeight = confidenceImage.height;
+
+                int numPixels = confidenceWidth * confidenceHeight;
+                Debug.Assert(confidenceImage.planeCount == 1, "Plane count is not 1");
+                confidenceStride = confidenceImage.GetPlane(0).pixelStride;
+                int numBytes = numPixels * confidenceStride;
+                if (confidenceArrayLength != numBytes) {
+                    confidenceArray = new byte[numBytes];
+                    confidenceArrayLength = numBytes;
+                }
+                confidenceImage.GetPlane(0).data.CopyTo(confidenceArray);
             }
         }
 
@@ -301,7 +348,6 @@ public class DepthImage : MonoBehaviour
         float maxDimension = Mathf.Round(minDimension * textureAspectRatio);
         Vector2 rectSize;
         if (isDepth) {
-            
             switch (Screen.orientation)
             {
                 case ScreenOrientation.LandscapeRight:
@@ -327,12 +373,13 @@ public class DepthImage : MonoBehaviour
         }
     }
 
-    // Obtain the depth value in meters. [u,v] should each range from 0 to 1. stride is the pixel stride of the acquired environment depth image.
-    // This function is based on: https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/OrientedReticle/Scripts/OrientedReticle.cs#L116
-    // Further references:
-    // https://developers.google.com/ar/develop/unity-arf/depth/developer-guide#extract_distance_from_a_depth_image
-    // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/Common/Scripts/DepthSource.cs#L436
-    // Another distance example: https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/PointCloud/Scripts/RawPointCloudBlender.cs#L208
+    /*
+    Obtain the depth value in meters. (u,v) are normalized screen coordinates; stride is the pixel stride of the acquired environment depth image.
+    This function is based on: https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/OrientedReticle/Scripts/OrientedReticle.cs#L116
+    Further references:
+    https://developers.google.com/ar/develop/unity-arf/depth/developer-guide#extract_distance_from_a_depth_image
+    https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/Common/Scripts/DepthSource.cs#L436
+    */
     public float GetDepth(Vector2 uv, byte[] arr, int stride)
     {
         if (arr.Length == 0)
@@ -346,21 +393,48 @@ public class DepthImage : MonoBehaviour
             return -99999f;
         }
 
-        // On an iPhone 12 Pro, the image data is in DepthFloat32 format, so we use ToSingle().
-        // https://docs.unity3d.com/Packages/com.unity.xr.arsubsystems@4.1/api/UnityEngine.XR.ARSubsystems.XRCpuImage.Format.html
-        // See the code in the following link if the XRCpuImage format is something different, e.g. DepthUint16.
-        // https://forum.unity.com/threads/how-to-measure-distance-from-depth-map.1440799
+        /*
+        On an iPhone 12 Pro, the image data is in DepthFloat32 format, so we use ToSingle().
+        https://docs.unity3d.com/Packages/com.unity.xr.arsubsystems@4.1/api/UnityEngine.XR.ARSubsystems.XRCpuImage.Format.html
+        See the code in the following link if the XRCpuImage format is something different, e.g. DepthUint16.
+        https://forum.unity.com/threads/how-to-measure-distance-from-depth-map.1440799
+        */
         int index = (y * depthWidth) + x;
         float depthInMeters = BitConverter.ToSingle(arr, stride * index);
 
-        if (depthInMeters > 0) {
-            // Here we are calculating the magnitude of a 3D point (vertex_x, -vertex_y, depthInMeters). 
+        if (depthInMeters > 0) { 
             float vertex_x = (x - principalPoint.x) * depthInMeters / focalLength.x;
             float vertex_y = (y - principalPoint.y) * depthInMeters / focalLength.y;
             return Mathf.Sqrt(vertex_x*vertex_x + vertex_y*vertex_y + depthInMeters*depthInMeters);
         }
 
         return float.NegativeInfinity;
+    }
+
+    // Given image pixel coordinates (x,y) and distance z, returns a vertex in local camera space.
+    public Vector3 ComputeVertex(int x, int y, float z)
+    {
+        Vector3 vertex = Vector3.negativeInfinity;
+        if (z > 0) {
+            float vertex_x = (x - principalPoint.x) * z / focalLength.x;
+            float vertex_y = (y - principalPoint.y) * z / focalLength.y;
+            vertex.x = vertex_x;
+            vertex.y = -vertex_y;
+            vertex.z = z;
+        }
+        return vertex;
+    }
+
+    // Transforms a vertex in local space to world space.
+    public Vector3 TransformLocalToWorld(Vector3 vertex)
+    {
+        return localToWorldTransform.MultiplyPoint(vertex);
+    }
+
+    // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/PointCloud/Scripts/RawPointCloudBlender.cs#L208
+    private void UpdatePointCloud()
+    {
+        return;
     }
 
     // https://github.com/Unity-Technologies/arfoundation-samples/issues/266#issuecomment-523316133
@@ -371,6 +445,15 @@ public class DepthImage : MonoBehaviour
         ScreenOrientation.PortraitUpsideDown => -90,
         ScreenOrientation.LandscapeRight => 0,
         _ => 90
+    };
+
+    private static int GetRotationForScreen() => Screen.orientation switch
+    {
+        ScreenOrientation.Portrait => -90,
+        ScreenOrientation.LandscapeLeft => 0,
+        ScreenOrientation.PortraitUpsideDown => 90,
+        ScreenOrientation.LandscapeRight => 180,
+        _ => -90
     };
 
     // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/Common/Scripts/MotionStereoDepthDataSource.cs#L219
