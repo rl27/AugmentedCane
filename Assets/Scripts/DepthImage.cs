@@ -50,8 +50,6 @@ public class DepthImage : MonoBehaviour
     [SerializeField]
     RawImage m_RawCameraImage;
 
-    RawImage m_RawConfidenceImage;
-
     // UI Text used to display information about the image on screen.
     public Text imageInfo
     {
@@ -188,6 +186,24 @@ public class DepthImage : MonoBehaviour
         StartCoroutine(UpdateImages());
         StartCoroutine(sensors.UpdateData());
 
+        int numLow = 0;
+        int numMed = 0;
+        int numHigh = 0;
+        int misc = 0;
+        for (int y = 0; y < depthHeight; y++) {
+            for (int x = 0; x < depthWidth; x++) {
+                int val = confidenceArray[(y * depthWidth) + x];
+                if (val == 0)
+                    numLow += 1;
+                else if (val == 1)
+                    numMed += 1;
+                else if (val == 2)
+                    numHigh += 1;
+                else
+                    misc += 1;
+            }
+        }
+
         // Display some distance info.
         m_StringBuilder.Clear();
         m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}");
@@ -202,6 +218,12 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.5f, 0.5f), confidenceArray, confidenceStride)}");
         m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f), confidenceArray, confidenceStride)}");
         m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.5f, 0.5f), confidenceArray, confidenceStride)}");
+
+        m_StringBuilder.AppendLine($"{numLow}");
+        m_StringBuilder.AppendLine($"{numMed}");
+        m_StringBuilder.AppendLine($"{numHigh}");
+        m_StringBuilder.AppendLine($"{misc}");
+        m_StringBuilder.AppendLine($"{localToWorldTransform}");
 
         m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
         m_StringBuilder.AppendLine($"{sensors.GPSstring()}");
@@ -244,18 +266,13 @@ public class DepthImage : MonoBehaviour
                     LogDepth("Confidence dimensions don't match");
                 }
                 else {
-                    UpdateRawImage(m_RawConfidenceImage, image, TextureFormat.R8, false);
-
-                    // int numPixels = depthWidth * depthHeight;
-                    // Debug.Assert(confidenceImage.planeCount == 1, "Plane count is not 1");
-                    // Debug.Assert(confidenceStride == confidenceImage.GetPlane(0).pixelStride, "Confidence stride doesn't match!");
-                    // int numBytes = numPixels * confidenceStride;
-                    // if (confidenceArray.Length != numBytes)
-                    //     confidenceArray = new byte[numBytes];
-                    // confidenceImage.GetPlane(0).data.CopyTo(confidenceArray);
-
-                    Texture2D tex = m_RawConfidenceImage.texture as Texture2D;
-                    confidenceArray = tex.GetRawTextureData();
+                    int numPixels = depthWidth * depthHeight;
+                    Debug.Assert(confidenceImage.planeCount == 1, "Plane count is not 1");
+                    Debug.Assert(confidenceStride == confidenceImage.GetPlane(0).pixelStride, "Confidence stride doesn't match!");
+                    int numBytes = numPixels * confidenceStride;
+                    if (confidenceArray.Length != numBytes)
+                        confidenceArray = new byte[numBytes];
+                    confidenceImage.GetPlane(0).data.CopyTo(confidenceArray);
                 }
             }
         }
