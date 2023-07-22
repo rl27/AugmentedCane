@@ -171,7 +171,7 @@ public class DepthImage : MonoBehaviour
         // Check if device supports environment depth.
         var descriptor = m_OcclusionManager.descriptor;
         if (descriptor != null && descriptor.environmentDepthImageSupported == Supported.Supported) {
-            LogText("Environment depth is supported!");
+            LogDepth("Environment depth is supported!");
         }
         else {
             if (descriptor == null || descriptor.environmentDepthImageSupported == Supported.Unsupported)
@@ -192,6 +192,20 @@ public class DepthImage : MonoBehaviour
         int numLow = 0;
         int numMed = 0;
         int numHigh = 0;
+
+#if UNITY_ANDROID
+        for (int y = 0; y < depthHeight; y++) {
+            for (int x = 0; x < depthWidth; x++) {
+                int val = confidenceArray[(y * depthWidth) + x];
+                if (val < 84)
+                    numLow += 1;
+                else if (val < 168)
+                    numMed += 1;
+                else
+                    numHigh += 1;
+            }
+        }
+#elif UNITY_IOS
         for (int y = 0; y < depthHeight; y++) {
             for (int x = 0; x < depthWidth; x++) {
                 int val = confidenceArray[(y * depthWidth) + x];
@@ -203,8 +217,9 @@ public class DepthImage : MonoBehaviour
                     numHigh += 1;
             }
         }
+#endif
 
-        // Display some distance info.
+        // Display some info.
         m_StringBuilder.Clear();
         m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}");
 
@@ -257,7 +272,7 @@ public class DepthImage : MonoBehaviour
 
                 int numPixels = depthWidth * depthHeight;
                 Debug.Assert(image.planeCount == 1, "Plane count is not 1");
-                Debug.Assert(depthStride == image.GetPlane(0).pixelStride, "Depth stride doesn't match!");
+                depthStride = image.GetPlane(0).pixelStride;
                 int numBytes = numPixels * depthStride;
                 if (depthArray.Length != numBytes)
                     depthArray = new byte[numBytes];
@@ -274,7 +289,7 @@ public class DepthImage : MonoBehaviour
                 else {
                     int numPixels = depthWidth * depthHeight;
                     Debug.Assert(confidenceImage.planeCount == 1, "Plane count is not 1");
-                    Debug.Assert(confidenceStride == confidenceImage.GetPlane(0).pixelStride, "Confidence stride doesn't match!");
+                    confidenceStride = confidenceImage.GetPlane(0).pixelStride;
                     int numBytes = numPixels * confidenceStride;
                     if (confidenceArray.Length != numBytes)
                         confidenceArray = new byte[numBytes];
@@ -424,12 +439,18 @@ public class DepthImage : MonoBehaviour
 
         /*
         On an iPhone 12 Pro, the image data is in DepthFloat32 format, so we use ToSingle().
+        On a OnePlus 11, it is in DepthUInt16 format.
+        CPU image formats are described here:
         https://docs.unity3d.com/Packages/com.unity.xr.arsubsystems@4.1/api/UnityEngine.XR.ARSubsystems.XRCpuImage.Format.html
-        See the code in the following link if the XRCpuImage format is something different, e.g. DepthUint16.
+        Also see the below example code:
         https://forum.unity.com/threads/how-to-measure-distance-from-depth-map.1440799
         */
         int index = (y * depthWidth) + x;
-        float depthInMeters = BitConverter.ToSingle(arr, stride * index);
+        float depthInMeters;
+        if (stride == 4)
+            depthInMeters = BitConverter.ToSingle(arr, stride * index);
+        else
+            depthInMeters = BitConverter.ToUInt16(arr, stride * index) / 1000f;
 
         if (depthInMeters > 0) { 
             float vertex_x = (x - principalPoint.x) * depthInMeters / focalLength.x;

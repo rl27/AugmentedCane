@@ -24,11 +24,20 @@ public class PointCloudVisualizer : MonoBehaviour
 
     ARPointCloud pointCloud;
 
-    void OnEnable()
+    void Awake()
     {
         particleSystem = GetComponent<ParticleSystem>();
-        pointCloud = GetComponent<ARPointCloud>();
+        pointCloud = GetComponent<ARPointCloud>();   
+    }
+
+    void OnEnable()
+    {
         pointCloud.updated += OnPointCloudUpdated;
+    }
+
+    void OnDisable()
+    {
+        pointCloud.updated -= OnPointCloudUpdated;
     }
 
     void OnPointCloudUpdated(ARPointCloudUpdatedEventArgs eventArgs)
@@ -60,11 +69,13 @@ public class PointCloudVisualizer : MonoBehaviour
         if (particles == null || particles.Length < numParticles)
             particles = new ParticleSystem.Particle[(int) (1.2 * numParticles)]; // Create an array with extra space to reduce re-creations.
 
+        Color32 startColor = particleSystem.main.startColor.color;
+        float startSize = particleSystem.main.startSize.constant;
         int index = 0;
         foreach (var kvp in points) { // Iterate over positions[] if only rendering points in the current frame.
             Vector3 pos = kvp.Value;
-            particles[index].startColor = particleSystem.main.startColor.color;
-            particles[index].startSize = particleSystem.main.startSize.constant;
+            particles[index].startColor = startColor;
+            particles[index].startSize = startSize;
             particles[index].position = pos;
             particles[index].remainingLifetime = 1f;
             index++;
