@@ -14,8 +14,7 @@ using UnityEngine.XR.ARSubsystems;
 public class DepthImage : MonoBehaviour
 {
     // Get or set the AROcclusionManager.
-    public AROcclusionManager occlusionManager
-    {
+    public AROcclusionManager occlusionManager {
         get => m_OcclusionManager;
         set => m_OcclusionManager = value;
     }
@@ -24,8 +23,7 @@ public class DepthImage : MonoBehaviour
     AROcclusionManager m_OcclusionManager;
 
     // Get or set the ARCameraManager.
-    public ARCameraManager cameraManager
-    {
+    public ARCameraManager cameraManager {
         get => m_CameraManager;
         set => m_CameraManager = value;
     }
@@ -34,16 +32,14 @@ public class DepthImage : MonoBehaviour
     ARCameraManager m_CameraManager;
 
     // The UI RawImage used to display the image on screen.
-    public RawImage rawImage
-    {
+    public RawImage rawImage {
         get => m_RawImage;
         set => m_RawImage = value;
     }
     [SerializeField]
     RawImage m_RawImage;
 
-    public RawImage rawCameraImage
-    {
+    public RawImage rawCameraImage {
         get => m_RawCameraImage;
         set => m_RawCameraImage = value;
     }
@@ -51,8 +47,7 @@ public class DepthImage : MonoBehaviour
     RawImage m_RawCameraImage;
 
     // UI Text used to display information about the image on screen.
-    public Text imageInfo
-    {
+    public Text imageInfo {
         get => m_ImageInfo;
         set => m_ImageInfo = value;
     }
@@ -60,8 +55,7 @@ public class DepthImage : MonoBehaviour
     Text m_ImageInfo;
 
     // UI Text used to display whether depth is supported.
-    public Text depthInfo
-    {
+    public Text depthInfo {
         get => m_DepthInfo;
         set => m_DepthInfo = value;
     }
@@ -70,8 +64,7 @@ public class DepthImage : MonoBehaviour
 
     // This is for using a custom shader that lets us see the full range of depth.
     // See the Details section here: https://github.com/andijakl/arfoundation-depth
-    public Material depthMaterial
-    {
+    public Material depthMaterial {
         get => m_DepthMaterial;
         set => m_DepthMaterial = value;
     }
@@ -79,14 +72,14 @@ public class DepthImage : MonoBehaviour
     Material m_DepthMaterial;
 
     // Depth array
-    public byte[] depthArray = new byte[0];
-    int depthWidth = 0;
-    int depthHeight = 0;
-    int depthStride = 4; // Should be 4
+    byte[] depthArray = new byte[0];
+    public int depthWidth = 0;
+    public int depthHeight = 0;
+    int depthStride = 4; // Should be either 2 or 4
 
     // Depth confidence array
     // For iOS, confidence values are 0, 1, or 2. https://forum.unity.com/threads/depth-confidence-error-iphone-12-pro.1201831
-    public byte[] confidenceArray = new byte[0];
+    byte[] confidenceArray = new byte[0];
     int confidenceStride = 1; // Should be 1
     
     // Camera intrinsics
@@ -197,11 +190,11 @@ public class DepthImage : MonoBehaviour
         for (int y = 0; y < depthHeight; y++) {
             for (int x = 0; x < depthWidth; x++) {
                 int val = confidenceArray[(y * depthWidth) + x];
-                if (val < 84)
+                if (val < 80)
                     numLow += 1;
-                else if (val < 168)
+                else if (val < 160)
                     numMed += 1;
-                else
+                else if (val == 255)
                     numHigh += 1;
             }
         }
@@ -226,14 +219,14 @@ public class DepthImage : MonoBehaviour
         // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
         // Phone orientation does not change coordinate locations on the screen.
         m_StringBuilder.AppendLine("DEPTH:");
-        m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.1f, 0.1f), depthArray, depthStride)}");
-        m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f), depthArray, depthStride)}");
-        m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f), depthArray, depthStride)}");
+        m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.1f, 0.1f))}");
+        m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f))}");
+        m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f))}");
 
         m_StringBuilder.AppendLine("CONFIDENCE:");
-        m_StringBuilder.AppendLine($"(0.1,0.1): {GetConfidence(new Vector2(0.1f, 0.1f), confidenceArray, confidenceStride)}");
-        m_StringBuilder.AppendLine($"(0.5,0.5): {GetConfidence(new Vector2(0.5f, 0.5f), confidenceArray, confidenceStride)}");
-        m_StringBuilder.AppendLine($"(0.9,0.9): {GetConfidence(new Vector2(0.9f, 0.9f), confidenceArray, confidenceStride)}");
+        m_StringBuilder.AppendLine($"(0.1,0.1): {GetConfidence(new Vector2(0.1f, 0.1f))}");
+        m_StringBuilder.AppendLine($"(0.5,0.5): {GetConfidence(new Vector2(0.5f, 0.5f))}");
+        m_StringBuilder.AppendLine($"(0.9,0.9): {GetConfidence(new Vector2(0.9f, 0.9f))}");
 
         int numPixels = depthWidth * depthHeight;
         m_StringBuilder.AppendLine("CONFIDENCE PROPORTIONS:");
@@ -416,20 +409,20 @@ public class DepthImage : MonoBehaviour
     https://developers.google.com/ar/develop/unity-arf/depth/developer-guide#extract_distance_from_a_depth_image
     https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/Common/Scripts/DepthSource.cs#L436
     */
-    public float GetDepth(Vector2 uv, byte[] arr, int stride)
+    public float GetDepth(Vector2 uv)
     {
-        if (arr.Length == 0)
+        if (depthArray.Length == 0)
             return -1f;
         
         int x = (int)(uv.x * (depthWidth - 1));
         int y = (int)(uv.y * (depthHeight - 1));
 
-        return GetDepth(x, y, arr, stride);
+        return GetDepth(x, y);
     }
 
-    public float GetDepth(int x, int y, byte[] arr, int stride)
+    public float GetDepth(int x, int y)
     {
-        if (arr.Length == 0)
+        if (depthArray.Length == 0)
             return -1f;
 
         if (x < 0 || x >= depthWidth || y < 0 || y >= depthHeight) {
@@ -446,11 +439,11 @@ public class DepthImage : MonoBehaviour
         https://forum.unity.com/threads/how-to-measure-distance-from-depth-map.1440799
         */
         int index = (y * depthWidth) + x;
-        float depthInMeters;
-        if (stride == 4)
-            depthInMeters = BitConverter.ToSingle(arr, stride * index);
-        else
-            depthInMeters = BitConverter.ToUInt16(arr, stride * index) / 1000f;
+        float depthInMeters = 0;
+        if (depthStride == 4) // DepthFloat32
+            depthInMeters = BitConverter.ToSingle(depthArray, depthStride * index);
+        else if (depthStride == 2) // DepthUInt16
+            depthInMeters = BitConverter.ToUInt16(depthArray, depthStride * index) / 1000f;
 
         if (depthInMeters > 0) { 
             float vertex_x = (x - principalPoint.x) * depthInMeters / focalLength.x;
@@ -461,14 +454,22 @@ public class DepthImage : MonoBehaviour
         return float.NegativeInfinity;
     }
 
-    public float GetConfidence(Vector2 uv, byte[] arr, int stride)
+    public float GetConfidence(Vector2 uv)
     {
-        if (arr.Length == 0)
+        if (confidenceArray.Length == 0)
             return -1f;
         int x = (int)(uv.x * (depthWidth - 1));
         int y = (int)(uv.y * (depthHeight - 1));
         int index = (y * depthWidth) + x;
-        return arr[stride * index];
+        return confidenceArray[confidenceStride * index];
+    }
+
+    public float GetConfidence(int x, int y)
+    {
+        if (confidenceArray.Length == 0)
+            return -1f;
+        int index = (y * depthWidth) + x;
+        return confidenceArray[confidenceStride * index];
     }
 
     // Given image pixel coordinates (x,y) and distance z, returns a vertex in local camera space.
