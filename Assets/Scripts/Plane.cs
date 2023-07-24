@@ -42,7 +42,7 @@ public class Plane : MonoBehaviour
         TrackableId lowestPlane = TrackableId.invalidId;
         min = Single.PositiveInfinity;
         foreach (var plane in apm.trackables) {
-            // Check if plane is horizontal; check if plane 
+            // Check if plane is close to horizontal. Check if plane's center is lower than the previous lowest.
             if (Mathf.Acos(Vector3.Dot(plane.normal, Vector3.up)) < Mathf.PI / 3f && plane.center.y < min) {
                 min = plane.center.y;
                 lowestPlane = plane.trackableId;
