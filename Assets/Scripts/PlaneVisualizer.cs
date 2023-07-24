@@ -9,6 +9,8 @@ using UnityEngine.XR.ARFoundation;
 public class PlaneVisualizer : MonoBehaviour
 {
     ARPlane m_ARPlane;
+
+    [System.NonSerialized]
     public MeshRenderer meshRenderer;
 
     void Awake()

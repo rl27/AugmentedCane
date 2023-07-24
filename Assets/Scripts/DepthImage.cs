@@ -1,6 +1,6 @@
 // using System.Collections.Generic;
-using System.Collections;
 using System;
+using System.Collections;
 using System.Text;
 using System.IO;
 using UnityEngine;
@@ -73,7 +73,9 @@ public class DepthImage : MonoBehaviour
 
     // Depth array
     byte[] depthArray = new byte[0];
+    [NonSerialized]
     public int depthWidth = 0;
+    [NonSerialized]
     public int depthHeight = 0;
     int depthStride = 4; // Should be either 2 or 4
 
