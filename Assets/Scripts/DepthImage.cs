@@ -97,6 +97,10 @@ public class DepthImage : MonoBehaviour
     GameObject PointCloudHandler;
     PointCloud pc;
 
+    [SerializeField]
+    GameObject PlaneHandler;
+    Plane plane;
+
     private bool takePicture = false;
     private bool showCameraImage = false;
 
@@ -139,6 +143,7 @@ public class DepthImage : MonoBehaviour
         sensors = SensorHandler.GetComponent<SensorData>();
 
         pc = PointCloudHandler.GetComponent<PointCloud>();
+        plane = PlaneHandler.GetComponent<Plane>();
 
         // Set depth image material
         m_RawImage.material = m_DepthMaterial;
@@ -239,6 +244,7 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"{sensors.GPSstring()}");
 
         m_StringBuilder.AppendLine($"{pc.info}");
+        m_StringBuilder.AppendLine($"{plane.info}");
         LogText(m_StringBuilder.ToString());
     }
 

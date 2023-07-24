@@ -8,18 +8,16 @@ using UnityEngine.XR.ARFoundation;
 
 public class PlaneVisualizer : MonoBehaviour
 {
-    /* // Uncomment this if you want to do something with each individual plane.
     ARPlane m_ARPlane;
-    MeshRenderer m_PlaneMeshRenderer;
+    public MeshRenderer meshRenderer;
 
     void Awake()
     {
         m_ARPlane = GetComponent<ARPlane>();
-        m_PlaneMeshRenderer = GetComponent<MeshRenderer>();
+        meshRenderer = GetComponent<MeshRenderer>();
 
         Color planeMatColor = Color.yellow;
         planeMatColor.a = 0.33f;
-        m_PlaneMeshRenderer.material.color = planeMatColor;
+        meshRenderer.material.color = planeMatColor;
     }
-    */
 }

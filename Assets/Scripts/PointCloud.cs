@@ -14,21 +14,26 @@ using UnityEngine.XR.ARFoundation;
 public class PointCloud : MonoBehaviour
 {
     // For logging
-    public string info = "";
+    public string info = "Total points: 0";
 
     void OnEnable()
     {
         GetComponent<ARPointCloudManager>().pointCloudsChanged += OnPointCloudsChanged;
     }
 
+    void OnDisable()
+    {
+        GetComponent<ARPointCloudManager>().pointCloudsChanged -= OnPointCloudsChanged;
+    }
+
     void OnPointCloudsChanged(ARPointCloudChangedEventArgs eventArgs)
     {
-        info = "Total points: ";
+        info = "Total points:";
         foreach (var pointCloud in eventArgs.updated) {
             var visualizer = pointCloud.GetComponent<PointCloudVisualizer>();
             if (visualizer) {
-                info += visualizer.points.Count.ToString() + " ";
-            } 
+                info += " " + visualizer.points.Count.ToString();
+            }
         }
     }
 }
