@@ -22,8 +22,12 @@ public class PointCloudVisualizer : MonoBehaviour
     ParticleSystem.Particle[] particles;
     int prevNumParticles = 0;
 
+    float heightToDiscard = 0.3f;
+
     // Access depth data
     DepthImage depthSource;
+
+    Plane planeSource;
 
     ARPointCloud pointCloud;
 
@@ -39,6 +43,9 @@ public class PointCloudVisualizer : MonoBehaviour
     void OnEnable()
     {
         depthSource = GameObject.Find("DepthHandler").GetComponent<DepthImage>();
+
+        planeSource = GameObject.Find("PlaneHandler").GetComponent<Plane>();
+
         pointCloud.updated += OnPointCloudUpdated;
     }
 
@@ -59,7 +66,10 @@ public class PointCloudVisualizer : MonoBehaviour
         int index = 0;
         foreach (var kvp in points) { // Iterate over positions[] if only rendering points in the current frame.
             Vector3 pos = kvp.Value;
-            particles[index].startColor = startColor;
+            if (pos.y < planeSource.min + heightToDiscard)
+                particles[index].startColor = Color.red;
+            else
+                particles[index].startColor = startColor;
             particles[index].startSize = startSize;
             particles[index].position = pos;
             particles[index].remainingLifetime = 1f;
@@ -67,7 +77,7 @@ public class PointCloudVisualizer : MonoBehaviour
         }
 
         // Remove any extra pre-existing particles
-        for (int i = numParticles; i < prevNumParticles; i++)
+        for (int i = index; i < prevNumParticles; i++)
             particles[i].remainingLifetime = -1f;
 
         particleSystem.SetParticles(particles, Math.Max(numParticles, prevNumParticles));
@@ -85,7 +95,10 @@ public class PointCloudVisualizer : MonoBehaviour
         float startSize = particleSystem.main.startSize.constant;
         int index = 0;
         foreach (Vector3 pos in points2) {
-            particles[index].startColor = startColor;
+            if (pos.y < planeSource.min + heightToDiscard)
+                particles[index].startColor = Color.red;
+            else
+                particles[index].startColor = startColor;
             particles[index].startSize = startSize;
             particles[index].position = pos;
             particles[index].remainingLifetime = 1f;

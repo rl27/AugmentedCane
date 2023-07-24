@@ -151,7 +151,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 65e0f6bfcd7464a43ace88d5ec0da4f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  info: 
 --- !u!4 &3028139
 Transform:
   m_ObjectHideFlags: 0
@@ -301,7 +300,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d999d006a6bd8f46987f82afd9886a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  info: 
 --- !u!114 &309597000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -315,7 +313,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_PlanePrefab: {fileID: 5167600316118093345, guid: 24d4697be6145d540bf1a976a9f6b373, type: 3}
-  m_DetectionMode: -1
+  m_DetectionMode: 1
 --- !u!114 &309597001
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -757,8 +755,6 @@ MonoBehaviour:
   m_ImageInfo: {fileID: 1456075591}
   m_DepthInfo: {fileID: 1677772680}
   m_DepthMaterial: {fileID: 2100000, guid: 3518299564ad40c488f2036459c24a33, type: 2}
-  depthWidth: 0
-  depthHeight: 0
   SensorHandler: {fileID: 1310236898}
   PointCloudHandler: {fileID: 3028137}
   PlaneHandler: {fileID: 309596998}

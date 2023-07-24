@@ -12,9 +12,16 @@ public class Plane : MonoBehaviour
 
     ARPlaneManager apm;
 
+    Color defaultColor;
+
+    [NonSerialized]
+    public float min = Single.PositiveInfinity;
+
     void Awake()
     {
         apm = GetComponent<ARPlaneManager>();
+        defaultColor = Color.yellow;
+        defaultColor.a = 0.33f;
     }
 
     void OnEnable()
@@ -33,12 +40,13 @@ public class Plane : MonoBehaviour
 
         // Find lowest plane
         TrackableId lowestPlane = TrackableId.invalidId;
-        float min = Single.PositiveInfinity;
+        min = Single.PositiveInfinity;
         foreach (var plane in apm.trackables) {
             if (plane.center.y < min) {
                 min = plane.center.y;
                 lowestPlane = plane.trackableId;
             }
+            plane.GetComponent<PlaneVisualizer>().meshRenderer.material.color = defaultColor;
         }
 
         // Set color of lowest plane to cyan
