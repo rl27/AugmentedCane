@@ -22,7 +22,7 @@ public class PointCloudVisualizer : MonoBehaviour
     ParticleSystem.Particle[] particles;
     int prevNumParticles = 0;
 
-    float heightToDiscard = 0.3f;
+    float heightToDiscard = 0.2f;
 
     // Access depth data
     DepthImage depthSource;
