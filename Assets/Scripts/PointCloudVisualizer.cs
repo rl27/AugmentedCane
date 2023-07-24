@@ -121,7 +121,7 @@ public class PointCloudVisualizer : MonoBehaviour
                 }
             }
 
-            UpdateParticles();
+            UpdateParticles2();
         }
         else { // Use built-in point cloud system
             if (!pointCloud.positions.HasValue || !pointCloud.identifiers.HasValue)
