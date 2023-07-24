@@ -7,6 +7,7 @@ using UnityEngine.XR.ARSubsystems;
 
 public class Plane : MonoBehaviour
 {
+    [NonSerialized]
     public string info = "Total planes: 0";
 
     ARPlaneManager apm;

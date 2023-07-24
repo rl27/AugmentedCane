@@ -1,8 +1,6 @@
 using System;
-using System.Text;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
 
 [RequireComponent(typeof(ARPointCloud))]
@@ -11,6 +9,7 @@ using UnityEngine.XR.ARFoundation;
 public class PointCloudVisualizer : MonoBehaviour
 {
     // For logging purposes
+    [NonSerialized]
     public string info = "";
 
     // Keep track of all points.
@@ -122,7 +121,7 @@ public class PointCloudVisualizer : MonoBehaviour
                 }
             }
 
-            UpdateParticles2();
+            UpdateParticles();
         }
         else { // Use built-in point cloud system
             if (!pointCloud.positions.HasValue || !pointCloud.identifiers.HasValue)

@@ -1,8 +1,5 @@
 using System;
-using System.Text;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
 
 // Reference: https://github.com/Unity-Technologies/arfoundation-samples/tree/main/Assets/Scenes/PointClouds
@@ -14,6 +11,7 @@ using UnityEngine.XR.ARFoundation;
 public class PointCloud : MonoBehaviour
 {
     // For logging
+    [NonSerialized]
     public string info = "Total points: 0";
 
     void OnEnable()
