@@ -27,7 +27,7 @@ public class PointCloudVisualizer : MonoBehaviour
     ParticleSystem.Particle[] particles;
     int prevNumParticles = 0;
 
-    float heightToDiscard = 0.2f;
+    float heightToDiscard = 0.15f;
 
     // Access depth data
     DepthImage depthSource;
@@ -39,7 +39,7 @@ public class PointCloudVisualizer : MonoBehaviour
     // Whether to use built-in point cloud mechanisms or manually create points from depth.
     private bool useDepth = false;
 
-    private bool useGrid = true;
+    private bool useGrid = false;
 
     void Awake()
     {
@@ -191,8 +191,11 @@ public class PointCloudVisualizer : MonoBehaviour
 
             if (!useGrid) {
                 // Create/update positions in dictionary
-                for (int i = 0; i < positions.Length; i++)
-                    points[identifiers[i]] = positions[i];
+                for (int i = 0; i < positions.Length; i++) {
+                    ulong id = identifiers[i];
+                    if (confidences.ContainsKey(id) && confidences[id] > 0.35)
+                        points[id] = positions[i];
+                }
 
                 UpdateParticles();
             }
