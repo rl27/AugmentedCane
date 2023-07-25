@@ -227,9 +227,14 @@ public class DepthImage : MonoBehaviour
         // UPDATE DEPTH AVERAGES
         Vector2 rightStats = GetDepthSum(0, depthWidth, 0, depthHeight / 2);
         Vector2 leftStats = GetDepthSum(0, depthWidth, depthHeight / 2, depthHeight);
+        int curIndex = (int) totalCount % numFrames;
         if (leftStats.y > 100 && leftStats.y > 100) {
-            leftAverage[totalCount % numFrames] = leftStats.x / leftStats.y;
-            rightAverage[totalCount % numFrames] = rightStats.x / rightStats.y;
+            leftAverage[curIndex] = leftStats.x / leftStats.y;
+            rightAverage[curIndex] = rightStats.x / rightStats.y;
+        }
+        else {
+            leftAverage[curIndex] = 0;
+            rightAverage[curIndex] = 0;
         }
         totalCount += 1;
 
