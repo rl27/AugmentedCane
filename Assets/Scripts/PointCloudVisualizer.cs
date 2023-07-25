@@ -164,7 +164,13 @@ public class PointCloudVisualizer : MonoBehaviour
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
 
-                    if (depthSource.GetConfidence(x, y) != 255)
+                    int maxConfidence = 255;
+#if UNITY_ANDROID
+                    maxConfidence = 255;
+#elif UNITY_IOS
+                    maxConfidence = 2;
+#endif
+                    if (depthSource.GetConfidence(x, y) != maxConfidence)
                         continue;
 
                     Vector3 v = depthSource.TransformLocalToWorld(depthSource.ComputeVertex(x, y, depthSource.GetDepth(x, y)));
@@ -193,7 +199,7 @@ public class PointCloudVisualizer : MonoBehaviour
                 // Create/update positions in dictionary
                 for (int i = 0; i < positions.Length; i++) {
                     ulong id = identifiers[i];
-                    if (confidences.ContainsKey(id) && confidences[id] > 0.35)
+                    if (!confidences.ContainsKey(id) || confidences[id] > 0.35)
                         points[id] = positions[i];
                 }
 
