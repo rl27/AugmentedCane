@@ -15,11 +15,13 @@ public class AudioPlayer : MonoBehaviour
 
     public void PlayLeft()
     {
-        audioSource.PlayOneShot(left, 1);
+        if (!audioSource.isPlaying)
+            audioSource.PlayOneShot(left, 1);
     }
 
     public void PlayRight()
     {
-        audioSource.PlayOneShot(right, 1);
+        if (!audioSource.isPlaying)
+            audioSource.PlayOneShot(right, 1);
     }
 }
