@@ -120,6 +120,11 @@ public class DepthImage : MonoBehaviour
     private Matrix4x4 screenRotation = Matrix4x4.Rotate(Quaternion.identity);
     private new Camera camera;
 
+    uint totalCount = 0; // Total number of depth images received
+    static int numFrames = 30;
+    float[] leftAverage = new float[numFrames];
+    float[] rightAverage = new float[numFrames];
+
     void Awake()
     {
         if (m_OcclusionManager == null) {
@@ -219,9 +224,20 @@ public class DepthImage : MonoBehaviour
         }
 #endif
 
+        // UPDATE DEPTH AVERAGES
+        Vector2 rightStats = GetDepthSum(0, depthWidth, 0, depthHeight / 2);
+        Vector2 leftStats = GetDepthSum(0, depthWidth, depthHeight / 2, depthHeight);
+        if (leftStats.y > 100 && leftStats.y > 100) {
+            leftAverage[totalCount % numFrames] = leftStats.x / leftStats.y;
+            rightAverage[totalCount % numFrames] = rightStats.x / rightStats.y;
+        }
+        totalCount += 1;
+
         // Display some info.
         m_StringBuilder.Clear();
         m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}");
+        m_StringBuilder.AppendLine($"Width: {depthWidth}");
+        m_StringBuilder.AppendLine($"Height: {depthHeight}");
 
         // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
         // Phone orientation does not change coordinate locations on the screen.
@@ -240,10 +256,35 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"Low: {(float) numLow / numPixels}");
         m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
         m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
-        m_StringBuilder.AppendLine($"Position: {camera.transform.position}");
+        m_StringBuilder.AppendLine($"Camera position: {camera.transform.position}");
 
         m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
         m_StringBuilder.AppendLine($"{sensors.GPSstring()}");
+
+        Vector2 midStats = GetDepthSum(0, depthWidth, depthHeight/2 - 7, depthHeight/2 + 8);
+        if (midStats.y > 100) {
+            if (midStats.x / midStats.y < 1.5)
+                m_StringBuilder.AppendLine("Obstacle: Yes");
+            else
+                m_StringBuilder.AppendLine("Obstacle: No");
+        }
+        else
+            m_StringBuilder.AppendLine("Obstacle: Unknown");
+        if (totalCount >= numFrames) {
+            float rightTotal = 0;
+            for (int i = 0; i < numFrames; i++)
+                rightTotal += rightAverage[i];
+            float leftTotal = 0;
+            for (int i = 0; i < numFrames; i++)
+                leftTotal += leftAverage[i];
+
+            if (leftTotal > rightTotal)
+                m_StringBuilder.AppendLine("Dir: Left");
+            else if (leftTotal < rightTotal)
+                m_StringBuilder.AppendLine("Dir: Right");
+            else
+                m_StringBuilder.AppendLine("Dir: Unknown");
+        }
 
         m_StringBuilder.AppendLine($"{pc.info}");
         m_StringBuilder.AppendLine($"{plane.info}");
@@ -538,5 +579,27 @@ public class DepthImage : MonoBehaviour
     private static Vector2 MultiplyVector2(Vector2 v1, Vector2 v2)
     {
         return new Vector2(v1.x * v2.x, v1.y * v2.y);
+    }
+
+    // Sums depth values over the given coordinates. Returns sum and count of pixels with high enough confidence.
+    Vector2 GetDepthSum(int xmin, int xmax, int ymin, int ymax)
+    {
+        float sum = 0;
+        int count = 0;
+        int maxConfidence = 255;
+#if UNITY_ANDROID
+        maxConfidence = 255;
+#elif UNITY_IOS
+        maxConfidence = 2;
+#endif
+        for (int y = ymin; y < ymax; y++) {
+            for (int x = xmin; x < xmax; x++) {
+                if (GetConfidence(x, y) != maxConfidence)
+                    continue;
+                sum += GetDepth(x, y);
+                count += 1;
+            }
+        }   
+        return new Vector2(sum, count);
     }
 }
