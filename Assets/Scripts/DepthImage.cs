@@ -156,6 +156,7 @@ public class DepthImage : MonoBehaviour
 
         pc = PointCloudHandler.GetComponent<PointCloud>();
         plane = PlaneHandler.GetComponent<Plane>();
+        audioPlayer = AudioHandler.GetComponent<AudioPlayer>();
 
         // Set depth image material
         m_RawImage.material = m_DepthMaterial;

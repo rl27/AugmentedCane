@@ -758,6 +758,7 @@ MonoBehaviour:
   SensorHandler: {fileID: 1310236898}
   PointCloudHandler: {fileID: 3028137}
   PlaneHandler: {fileID: 309596998}
+  AudioHandler: {fileID: 1450406541}
 --- !u!4 &975916387
 Transform:
   m_ObjectHideFlags: 0
