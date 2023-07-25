@@ -1,5 +1,6 @@
 // using System.Collections.Generic;
 using System;
+using System.Linq;
 using System.Collections;
 using System.Text;
 using System.IO;
@@ -103,6 +104,10 @@ public class DepthImage : MonoBehaviour
     GameObject PlaneHandler;
     Plane plane;
 
+    [SerializeField]
+    GameObject AudioHandler;
+    AudioPlayer audioPlayer;
+
     private bool takePicture = false;
     private bool showCameraImage = false;
 
@@ -202,9 +207,9 @@ public class DepthImage : MonoBehaviour
         for (int y = 0; y < depthHeight; y++) {
             for (int x = 0; x < depthWidth; x++) {
                 int val = confidenceArray[(y * depthWidth) + x];
-                if (val < 80)
+                if (val < 40)
                     numLow += 1;
-                else if (val < 160)
+                else if (val < 255)
                     numMed += 1;
                 else if (val == 255)
                     numHigh += 1;
@@ -223,21 +228,6 @@ public class DepthImage : MonoBehaviour
             }
         }
 #endif
-
-        // UPDATE DEPTH AVERAGES
-        Vector2 rightStats = GetDepthSum(0, depthWidth, 0, depthHeight / 2);
-        Vector2 leftStats = GetDepthSum(0, depthWidth, depthHeight / 2, depthHeight);
-        int curIndex = (int) totalCount % numFrames;
-        if (leftStats.y > 100 && leftStats.y > 100) {
-            leftAverage[curIndex] = leftStats.x / leftStats.y;
-            rightAverage[curIndex] = rightStats.x / rightStats.y;
-        }
-        else {
-            leftAverage[curIndex] = 0;
-            rightAverage[curIndex] = 0;
-        }
-        totalCount += 1;
-
         // Display some info.
         m_StringBuilder.Clear();
         m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}");
@@ -245,7 +235,7 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"Height: {depthHeight}");
 
         // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
-        // Phone orientation does not change coordinate locations on the screen.
+        // Screen orientation does not change coordinate locations on the screen.
         m_StringBuilder.AppendLine("DEPTH:");
         m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.1f, 0.1f))}");
         m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f))}");
@@ -266,30 +256,65 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
         m_StringBuilder.AppendLine($"{sensors.GPSstring()}");
 
-        Vector2 midStats = GetDepthSum(0, depthWidth, depthHeight/2 - 7, depthHeight/2 + 8);
+        // UPDATE DEPTH AVERAGES
+        Vector2 midStats;
+        Vector2 rightStats;
+        Vector2 leftStats;
+        switch (Screen.orientation)
+        {
+            case ScreenOrientation.LandscapeRight:
+            case ScreenOrientation.LandscapeLeft:
+                midStats = GetDepthSum(depthWidth/2 - 7, depthWidth/2 + 8, 0, depthHeight);
+                leftStats = GetDepthSum(0, depthWidth/2, 0, depthHeight);
+                rightStats = GetDepthSum(depthWidth/2, depthWidth, 0, depthHeight);
+                if (Screen.orientation == ScreenOrientation.LandscapeRight)
+                    (leftStats, rightStats) = (rightStats, leftStats);
+                break;
+            case ScreenOrientation.Portrait:
+            case ScreenOrientation.PortraitUpsideDown:
+            default:
+                midStats = GetDepthSum(0, depthWidth, depthHeight/2 - 7, depthHeight/2 + 8);
+                leftStats = GetDepthSum(0, depthWidth, depthHeight/2, depthHeight);
+                rightStats = GetDepthSum(0, depthWidth, 0, depthHeight/2);
+                if (Screen.orientation == ScreenOrientation.PortraitUpsideDown)
+                    (leftStats, rightStats) = (rightStats, leftStats);
+                break;
+        }
+        int curIndex = (int) totalCount % numFrames;
+        if (leftStats.y > 100 && rightStats.y > 100) {
+            leftAverage[curIndex] = leftStats.x / leftStats.y;
+            rightAverage[curIndex] = rightStats.x / rightStats.y;
+        }
+        else {
+            leftAverage[curIndex] = 0;
+            rightAverage[curIndex] = 0;
+        }
+        totalCount += 1;
+
         if (midStats.y > 100) {
-            if (midStats.x / midStats.y < 1.5)
+            if (midStats.x / midStats.y < 1.5) {
                 m_StringBuilder.AppendLine("Obstacle: Yes");
+                if (totalCount >= numFrames) {
+                    float rightTotal = rightAverage.Sum();
+                    float leftTotal = leftAverage.Sum();
+                    if (leftTotal > rightTotal) {
+                        m_StringBuilder.AppendLine("Dir: Left");
+                        audioPlayer.PlayLeft();
+                    }
+                    else if (leftTotal < rightTotal) {
+                        m_StringBuilder.AppendLine("Dir: Right");
+                        audioPlayer.PlayRight();
+                    }
+                    else
+                        m_StringBuilder.AppendLine("Dir: Unknown");
+                }
+            }
             else
                 m_StringBuilder.AppendLine("Obstacle: No");
         }
         else
             m_StringBuilder.AppendLine("Obstacle: Unknown");
-        if (totalCount >= numFrames) {
-            float rightTotal = 0;
-            for (int i = 0; i < numFrames; i++)
-                rightTotal += rightAverage[i];
-            float leftTotal = 0;
-            for (int i = 0; i < numFrames; i++)
-                leftTotal += leftAverage[i];
 
-            if (leftTotal > rightTotal)
-                m_StringBuilder.AppendLine("Dir: Left");
-            else if (leftTotal < rightTotal)
-                m_StringBuilder.AppendLine("Dir: Right");
-            else
-                m_StringBuilder.AppendLine("Dir: Unknown");
-        }
 
         m_StringBuilder.AppendLine($"{pc.info}");
         m_StringBuilder.AppendLine($"{plane.info}");
@@ -591,15 +616,15 @@ public class DepthImage : MonoBehaviour
     {
         float sum = 0;
         int count = 0;
-        int maxConfidence = 255;
+        int confidenceThreshold = 40;
 #if UNITY_ANDROID
-        maxConfidence = 255;
+        confidenceThreshold = 40;
 #elif UNITY_IOS
-        maxConfidence = 2;
+        confidenceThreshold = 2;
 #endif
         for (int y = ymin; y < ymax; y++) {
             for (int x = xmin; x < xmax; x++) {
-                if (GetConfidence(x, y) != maxConfidence)
+                if (GetConfidence(x, y) < confidenceThreshold)
                     continue;
                 sum += GetDepth(x, y);
                 count += 1;
