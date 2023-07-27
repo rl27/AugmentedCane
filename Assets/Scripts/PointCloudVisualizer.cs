@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.XR.ARFoundation;
 
@@ -14,24 +15,28 @@ public class PointCloudVisualizer : MonoBehaviour
 
     // Keep track of all points.
     public Dictionary<ulong, Vector3> points = new Dictionary<ulong, Vector3>();
+    public Dictionary<ulong, float> confidences = new Dictionary<ulong, float>();
 
     // Group points based on location.
     public Dictionary<Vector3, Dictionary<ulong, Vector3>> grid = new Dictionary<Vector3, Dictionary<ulong, Vector3>>();
-    float gridScale = 10f;
+    Dictionary<ulong, int> blockingPoints; // point id to index in particles[]
 
-    public HashSet<Vector3> points2 = new HashSet<Vector3>();
-    public Dictionary<ulong, float> confidences = new Dictionary<ulong, float>();
+    // Distance to check for nearby points
+    float nearbyDistance = 0.08f;
+    float gridScale;
+
+    public List<Vector3> points2 = new List<Vector3>();
 
     // ParticleSystem for rendering particles.
     new ParticleSystem particleSystem;
     ParticleSystem.Particle[] particles;
     int prevNumParticles = 0;
 
-    float heightToDiscard = 0.15f;
+    // Height (in meters) above the floor height at which to discard points.
+    float heightToDiscard = 0.3f;
 
-    // Access depth data
+    // Access data from other scripts
     DepthImage depthSource;
-
     Plane planeSource;
 
     ARPointCloud pointCloud;
@@ -40,6 +45,10 @@ public class PointCloudVisualizer : MonoBehaviour
     private bool useDepth = false;
 
     private bool useGrid = false;
+
+    Color32 startColor;
+    Color32 failColor = Color.red;
+    float startSize;
 
     void Awake()
     {
@@ -50,8 +59,12 @@ public class PointCloudVisualizer : MonoBehaviour
     void OnEnable()
     {
         depthSource = GameObject.Find("DepthHandler").GetComponent<DepthImage>();
-
         planeSource = GameObject.Find("PlaneHandler").GetComponent<Plane>();
+
+        startColor = particleSystem.main.startColor.color;
+        startSize = particleSystem.main.startSize.constant;
+
+        gridScale = 1 / (2 * nearbyDistance);
 
         pointCloud.updated += OnPointCloudUpdated;
     }
@@ -61,88 +74,30 @@ public class PointCloudVisualizer : MonoBehaviour
         pointCloud.updated -= OnPointCloudUpdated;
     }
 
-    void UpdateParticles()
+    // Iterate over positions[] if only rendering points in the current frame.
+    // Set numParticles to positions.Length if only rendering points in the current frame.
+    void UpdateParticles(IEnumerable<KeyValuePair<ulong, Vector3>> pts, int numParticles)
     {
+        blockingPoints = new Dictionary<ulong, int>();
+
         // Create or resize particle array if necessary
-        int numParticles = points.Count; // Set this to positions.Length if only rendering points in the current frame.
         if (particles == null || particles.Length < numParticles)
             particles = new ParticleSystem.Particle[(int) (1.5 * numParticles)]; // Create an array with extra space to reduce re-creations.
 
-        Color32 startColor = particleSystem.main.startColor.color;
-        float startSize = particleSystem.main.startSize.constant;
         int index = 0;
-        foreach (var kvp in points) { // Iterate over positions[] if only rendering points in the current frame.
+        foreach (var kvp in pts) {
             Vector3 pos = kvp.Value;
+
             if (pos.y < planeSource.min + heightToDiscard)
-                particles[index].startColor = Color.red;
-            else
+                particles[index].startColor = failColor;
+            else {
                 particles[index].startColor = startColor;
-            particles[index].startSize = startSize;
-            particles[index].position = pos;
-            particles[index].remainingLifetime = 1f;
-            index++;
-        }
-
-        // Remove any extra pre-existing particles
-        for (int i = numParticles; i < prevNumParticles; i++)
-            particles[i].remainingLifetime = -1f;
-
-        particleSystem.SetParticles(particles, Math.Max(numParticles, prevNumParticles));
-        prevNumParticles = numParticles;
-    }
-
-    void UpdateParticles2()
-    {
-        // Create or resize particle array if necessary
-        int numParticles = points2.Count;
-        if (particles == null || particles.Length < numParticles)
-            particles = new ParticleSystem.Particle[(int) (1.5 * numParticles)]; // Create an array with extra space to reduce re-creations.
-
-        Color32 startColor = particleSystem.main.startColor.color;
-        float startSize = particleSystem.main.startSize.constant;
-        int index = 0;
-        foreach (Vector3 pos in points2) {
-            if (pos.y < planeSource.min + heightToDiscard)
-                particles[index].startColor = Color.red;
-            else
-                particles[index].startColor = startColor;
-            particles[index].startSize = startSize;
-            particles[index].position = pos;
-            particles[index].remainingLifetime = 1f;
-            index++;
-        }
-
-        // Remove any extra pre-existing particles
-        for (int i = numParticles; i < prevNumParticles; i++)
-            particles[i].remainingLifetime = -1f;
-
-        particleSystem.SetParticles(particles, Math.Max(numParticles, prevNumParticles));
-        prevNumParticles = numParticles;
-    }
-
-    void UpdateParticles3()
-    {
-        // Create or resize particle array if necessary
-        int numParticles = points.Count; // Set this to positions.Length if only rendering points in the current frame.
-        if (particles == null || particles.Length < numParticles)
-            particles = new ParticleSystem.Particle[(int) (1.5 * numParticles)]; // Create an array with extra space to reduce re-creations.
-
-        Color32 startColor = particleSystem.main.startColor.color;
-        float startSize = particleSystem.main.startSize.constant;
-        int index = 0;
-        foreach (var gtp in grid) {
-            var d = gtp.Value;
-            foreach (var kvp in d) {
-                Vector3 pos = kvp.Value;
-                if (pos.y < planeSource.min + heightToDiscard)
-                    particles[index].startColor = Color.red;
-                else
-                    particles[index].startColor = startColor;
-                particles[index].startSize = startSize;
-                particles[index].position = pos;
-                particles[index].remainingLifetime = 1f;
-                index++;
+                blockingPoints[kvp.Key] = index;
             }
+            particles[index].startSize = startSize;
+            particles[index].position = pos;
+            particles[index].remainingLifetime = 1f;
+            index++;
         }
 
         // Remove any extra pre-existing particles
@@ -165,20 +120,20 @@ public class PointCloudVisualizer : MonoBehaviour
                 for (int x = 0; x < width; x++) {
 
                     int maxConfidence = 255;
-#if UNITY_ANDROID
+                #if UNITY_ANDROID
                     maxConfidence = 255;
-#elif UNITY_IOS
+                #elif UNITY_IOS
                     maxConfidence = 2;
-#endif
+                #endif
                     if (depthSource.GetConfidence(x, y) != maxConfidence)
                         continue;
 
                     Vector3 v = depthSource.TransformLocalToWorld(depthSource.ComputeVertex(x, y, depthSource.GetDepth(x, y)));
-                    points2.Add(SnapToGrid(v));
+                    points[(ulong) points.Count] = SnapToGrid(v);
                 }
             }
 
-            UpdateParticles2();
+            UpdateParticles(points, points.Count);
         }
         else { // Use built-in point cloud system
             if (!pointCloud.positions.HasValue || !pointCloud.identifiers.HasValue)
@@ -203,7 +158,7 @@ public class PointCloudVisualizer : MonoBehaviour
                         points[id] = positions[i];
                 }
 
-                UpdateParticles();
+                UpdateParticles(points, points.Count);
             }
             else {
                 // Create/update positions in dictionary
@@ -224,13 +179,47 @@ public class PointCloudVisualizer : MonoBehaviour
                         grid[gridPoint][id] = pos;
                 }
 
-                UpdateParticles3();
+                IEnumerable<KeyValuePair<ulong, Vector3>> allPts = grid.SelectMany(x => x.Value);
+                UpdateParticles(allPts, points.Count);
+
+                // Identify lone blocking particles and color them blue
+                foreach (var kvp in blockingPoints) {
+                    ulong id = kvp.Key;
+                    
+                    Vector3 gridPt = points[id];
+                    Vector3 pos = grid[gridPt][id];
+
+                    List<Vector3> gridNeighbors = new List<Vector3>();
+
+                    // TODO: Add the rest of the neighboring grid points
+                    gridNeighbors.Add(SnapToGrid(gridPt));
+                    gridNeighbors.Add(SnapToGrid(gridPt + Vector3.up/gridScale));
+                    gridNeighbors.Add(SnapToGrid(gridPt + Vector3.down/gridScale));
+                    gridNeighbors.Add(SnapToGrid(gridPt + Vector3.back/gridScale));
+                    gridNeighbors.Add(SnapToGrid(gridPt + Vector3.forward/gridScale));
+                    gridNeighbors.Add(SnapToGrid(gridPt + Vector3.left/gridScale));
+                    gridNeighbors.Add(SnapToGrid(gridPt + Vector3.right/gridScale));
+
+                    int totalNearby = -1;
+                    foreach (Vector3 gridN in gridNeighbors) {
+                        if (grid.ContainsKey(gridN)) {
+                            foreach (var kvp2 in grid[gridN]) {
+                                if (blockingPoints.ContainsKey(kvp2.Key) && (pos - kvp2.Value).magnitude < nearbyDistance)
+                                    totalNearby += 1;
+                            }
+                        }
+                    }
+                    if (totalNearby < 3)
+                        particles[kvp.Value].startColor = Color.blue;
+                }
+
+                particleSystem.SetParticles(particles, prevNumParticles);
             }
         }
     }
 
     Vector3 SnapToGrid(Vector3 v)
     {
-        return new Vector3(Mathf.Round(v.x * gridScale) / gridScale, Mathf.Round(v.y * gridScale) / gridScale, Mathf.Round(v.z * gridScale) / gridScale);
+        return new Vector3(Mathf.Round(v.x * gridScale)/gridScale, Mathf.Round(v.y * gridScale)/gridScale, Mathf.Round(v.z * gridScale)/gridScale);
     }
 }

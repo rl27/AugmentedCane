@@ -204,31 +204,32 @@ public class DepthImage : MonoBehaviour
         int numMed = 0;
         int numHigh = 0;
 
-#if UNITY_ANDROID
-        for (int y = 0; y < depthHeight; y++) {
-            for (int x = 0; x < depthWidth; x++) {
-                int val = confidenceArray[(y * depthWidth) + x];
-                if (val < 40)
-                    numLow += 1;
-                else if (val < 255)
-                    numMed += 1;
-                else if (val == 255)
-                    numHigh += 1;
+        #if UNITY_ANDROID
+            for (int y = 0; y < depthHeight; y++) {
+                for (int x = 0; x < depthWidth; x++) {
+                    int val = confidenceArray[(y * depthWidth) + x];
+                    if (val < 40)
+                        numLow += 1;
+                    else if (val < 255)
+                        numMed += 1;
+                    else if (val == 255)
+                        numHigh += 1;
+                }
             }
-        }
-#elif UNITY_IOS
-        for (int y = 0; y < depthHeight; y++) {
-            for (int x = 0; x < depthWidth; x++) {
-                int val = confidenceArray[(y * depthWidth) + x];
-                if (val == 0)
-                    numLow += 1;
-                else if (val == 1)
-                    numMed += 1;
-                else if (val == 2)
-                    numHigh += 1;
+        #elif UNITY_IOS
+            for (int y = 0; y < depthHeight; y++) {
+                for (int x = 0; x < depthWidth; x++) {
+                    int val = confidenceArray[(y * depthWidth) + x];
+                    if (val == 0)
+                        numLow += 1;
+                    else if (val == 1)
+                        numMed += 1;
+                    else if (val == 2)
+                        numHigh += 1;
+                }
             }
-        }
-#endif
+        #endif
+
         // Display some info.
         m_StringBuilder.Clear();
         m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}");
@@ -618,11 +619,11 @@ public class DepthImage : MonoBehaviour
         float sum = 0;
         int count = 0;
         int confidenceThreshold = 40;
-#if UNITY_ANDROID
-        confidenceThreshold = 40;
-#elif UNITY_IOS
-        confidenceThreshold = 2;
-#endif
+        #if UNITY_ANDROID
+            confidenceThreshold = 40;
+        #elif UNITY_IOS
+            confidenceThreshold = 2;
+        #endif
         for (int y = ymin; y < ymax; y++) {
             for (int x = xmin; x < xmax; x++) {
                 if (GetConfidence(x, y) < confidenceThreshold)
