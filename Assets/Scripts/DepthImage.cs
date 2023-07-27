@@ -382,9 +382,9 @@ public class DepthImage : MonoBehaviour
             using (cameraImage) {
                 UpdateRawImage(m_RawCameraImage, cameraImage, TextureFormat.RGB24, false);
                 if (takePicture) {
-                    takePicture = false;
+                    // takePicture = false;
                     Texture2D testTex = m_RawCameraImage.texture as Texture2D;
-                    vision.Detect(testTex);
+                    StartCoroutine(vision.Detect(testTex));
                 }
             }
         }
