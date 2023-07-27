@@ -108,7 +108,11 @@ public class DepthImage : MonoBehaviour
     GameObject AudioHandler;
     AudioPlayer audioPlayer;
 
-    private bool takePicture = false;
+    [SerializeField]
+    GameObject VisionHandler;
+    Vision vision;
+
+    private bool takePicture = true;
     private bool showCameraImage = false;
 
     // True if everything is fine and Update() should be called. False if something went wrong.
@@ -157,6 +161,7 @@ public class DepthImage : MonoBehaviour
         pc = PointCloudHandler.GetComponent<PointCloud>();
         plane = PlaneHandler.GetComponent<Plane>();
         audioPlayer = AudioHandler.GetComponent<AudioPlayer>();
+        vision = VisionHandler.GetComponent<Vision>();
 
         // Set depth image material
         m_RawImage.material = m_DepthMaterial;
@@ -375,15 +380,11 @@ public class DepthImage : MonoBehaviour
         // Acquire a camera image and update the corresponding raw image.
         if (m_CameraManager.TryAcquireLatestCpuImage(out XRCpuImage cameraImage)) {
             using (cameraImage) {
-                UpdateRawImage(m_RawCameraImage, cameraImage, TextureFormat.RGBA32, false);
+                UpdateRawImage(m_RawCameraImage, cameraImage, TextureFormat.RGB24, false);
                 if (takePicture) {
                     takePicture = false;
                     Texture2D testTex = m_RawCameraImage.texture as Texture2D;
-                    byte[] bytes = ImageConversion.EncodeToJPG(testTex);
-                    // persistentDataPath directory: https://docs.unity3d.com/ScriptReference/Application-persistentDataPath.html
-                    File.WriteAllBytes(Application.persistentDataPath + "/SavedScreen.jpg", bytes);
-
-                    // NativeArray<byte> data = testTex.getRawTextureData<byte>();
+                    vision.Detect(testTex);
                 }
             }
         }
