@@ -72,29 +72,13 @@ public class DepthImage : MonoBehaviour
     [SerializeField]
     Material m_DepthMaterial;
 
-    // Depth array
-    byte[] depthArray = new byte[0];
-    [NonSerialized]
-    public int depthWidth = 0;
-    [NonSerialized]
-    public int depthHeight = 0;
-    int depthStride = 4; // Should be either 2 or 4
-
-    // Depth confidence array
-    // For iOS, confidence values are 0, 1, or 2. https://forum.unity.com/threads/depth-confidence-error-iphone-12-pro.1201831
-    byte[] confidenceArray = new byte[0];
-    int confidenceStride = 1; // Should be 1
-    
-    // Camera intrinsics
-    Vector2 focalLength = Vector2.zero;
-    Vector2 principalPoint = Vector2.zero;
-
-    // StringBuilder for building strings to be logged.
-    readonly StringBuilder m_StringBuilder = new StringBuilder();
-
     [SerializeField]
     GameObject SensorHandler;
     SensorData sensors;
+
+    [SerializeField]
+    GameObject GPSHandler;
+    GPSData gps;
 
     [SerializeField]
     GameObject PointCloudHandler;
@@ -111,6 +95,26 @@ public class DepthImage : MonoBehaviour
     [SerializeField]
     GameObject VisionHandler;
     Vision vision;
+
+    // StringBuilder for building strings to be logged.
+    readonly StringBuilder m_StringBuilder = new StringBuilder();
+
+    // Depth array
+    byte[] depthArray = new byte[0];
+    [NonSerialized]
+    public int depthWidth = 0;
+    [NonSerialized]
+    public int depthHeight = 0;
+    int depthStride = 4; // Should be either 2 or 4
+
+    // Depth confidence array
+    // For iOS, confidence values are 0, 1, or 2. https://forum.unity.com/threads/depth-confidence-error-iphone-12-pro.1201831
+    byte[] confidenceArray = new byte[0];
+    int confidenceStride = 1; // Should be 1
+    
+    // Camera intrinsics
+    Vector2 focalLength = Vector2.zero;
+    Vector2 principalPoint = Vector2.zero;
 
     private bool takePicture = true;
     private bool showCameraImage = false;
@@ -129,10 +133,20 @@ public class DepthImage : MonoBehaviour
     private Matrix4x4 screenRotation = Matrix4x4.Rotate(Quaternion.identity);
     private new Camera camera;
 
+    // These variables are for naive obstacle avoidance.
     uint totalCount = 0; // Total number of depth images received
     static int numFrames = 30;
     float[] leftAverage = new float[numFrames];
     float[] rightAverage = new float[numFrames];
+    Vector2 leftStats;
+    Vector2 midStats;
+    Vector2 rightStats;
+
+    bool IMUActive = false;
+    bool GPSActive = false;
+    bool pcActive = false;
+    bool planeActive = false;
+    bool visionActive = true;
 
     void Awake()
     {
@@ -155,13 +169,18 @@ public class DepthImage : MonoBehaviour
             return;
         }
 
-        // Initialize GPS/IMU data object
         sensors = SensorHandler.GetComponent<SensorData>();
-
+        gps = GPSHandler.GetComponent<GPSData>();
         pc = PointCloudHandler.GetComponent<PointCloud>();
         plane = PlaneHandler.GetComponent<Plane>();
         audioPlayer = AudioHandler.GetComponent<AudioPlayer>();
         vision = VisionHandler.GetComponent<Vision>();
+
+        SensorHandler.SetActive(IMUActive);
+        GPSHandler.SetActive(GPSActive);
+        PointCloudHandler.SetActive(pcActive);
+        PlaneHandler.SetActive(planeActive);
+        VisionHandler.SetActive(visionActive);
 
         // Set depth image material
         m_RawImage.material = m_DepthMaterial;
@@ -199,11 +218,10 @@ public class DepthImage : MonoBehaviour
             // return;
         }
 
+        StartCoroutine(UpdateImages());
+
         screenRotation = Matrix4x4.Rotate(Quaternion.Euler(0, 0, GetRotationForScreen()));
         localToWorldTransform = camera.transform.localToWorldMatrix * screenRotation;
-
-        StartCoroutine(UpdateImages());
-        StartCoroutine(sensors.UpdateData());
 
         int numLow = 0;
         int numMed = 0;
@@ -260,44 +278,18 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
         m_StringBuilder.AppendLine($"Camera position: {camera.transform.position}");
 
-        m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
-        m_StringBuilder.AppendLine($"{sensors.GPSstring()}");
+        if (IMUActive)
+            m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
+        if (GPSActive)
+            m_StringBuilder.AppendLine($"{gps.GPSstring()}");
+        if (pcActive)
+            m_StringBuilder.AppendLine($"{pc.info}");
+        if (planeActive)
+            m_StringBuilder.AppendLine($"{plane.info}");
 
         // UPDATE DEPTH AVERAGES
-        Vector2 midStats;
-        Vector2 rightStats;
-        Vector2 leftStats;
-        switch (Screen.orientation)
-        {
-            case ScreenOrientation.LandscapeRight:
-            case ScreenOrientation.LandscapeLeft:
-                midStats = GetDepthSum(depthWidth/2 - 7, depthWidth/2 + 8, 0, depthHeight);
-                leftStats = GetDepthSum(0, depthWidth/2, 0, depthHeight);
-                rightStats = GetDepthSum(depthWidth/2, depthWidth, 0, depthHeight);
-                if (Screen.orientation == ScreenOrientation.LandscapeRight)
-                    (leftStats, rightStats) = (rightStats, leftStats);
-                break;
-            case ScreenOrientation.Portrait:
-            case ScreenOrientation.PortraitUpsideDown:
-            default:
-                midStats = GetDepthSum(0, depthWidth, depthHeight/2 - 7, depthHeight/2 + 8);
-                leftStats = GetDepthSum(0, depthWidth, depthHeight/2, depthHeight);
-                rightStats = GetDepthSum(0, depthWidth, 0, depthHeight/2);
-                if (Screen.orientation == ScreenOrientation.PortraitUpsideDown)
-                    (leftStats, rightStats) = (rightStats, leftStats);
-                break;
-        }
-        int curIndex = (int) totalCount % numFrames;
-        if (leftStats.y > 100 && rightStats.y > 100) {
-            leftAverage[curIndex] = leftStats.x / leftStats.y;
-            rightAverage[curIndex] = rightStats.x / rightStats.y;
-        }
-        else {
-            leftAverage[curIndex] = 0;
-            rightAverage[curIndex] = 0;
-        }
         totalCount += 1;
-
+        UpdateDepthAverages();
         if (midStats.y > 100) {
             if (midStats.x / midStats.y < 1.5) {
                 m_StringBuilder.AppendLine("Obstacle: Yes");
@@ -322,9 +314,6 @@ public class DepthImage : MonoBehaviour
         else
             m_StringBuilder.AppendLine("Obstacle: Unknown");
 
-
-        m_StringBuilder.AppendLine($"{pc.info}");
-        m_StringBuilder.AppendLine($"{plane.info}");
         LogText(m_StringBuilder.ToString());
     }
 
@@ -615,7 +604,7 @@ public class DepthImage : MonoBehaviour
     }
 
     // Sums depth values over the given coordinates. Returns sum and count of pixels with high enough confidence.
-    Vector2 GetDepthSum(int xmin, int xmax, int ymin, int ymax)
+    private Vector2 GetDepthSum(int xmin, int xmax, int ymin, int ymax)
     {
         float sum = 0;
         int count = 0;
@@ -634,5 +623,38 @@ public class DepthImage : MonoBehaviour
             }
         }   
         return new Vector2(sum, count);
+    }
+
+    private void UpdateDepthAverages()
+    {
+        switch (Screen.orientation)
+        {
+            case ScreenOrientation.LandscapeRight:
+            case ScreenOrientation.LandscapeLeft:
+                midStats = GetDepthSum(depthWidth/2 - 7, depthWidth/2 + 8, 0, depthHeight);
+                leftStats = GetDepthSum(0, depthWidth/2, 0, depthHeight);
+                rightStats = GetDepthSum(depthWidth/2, depthWidth, 0, depthHeight);
+                if (Screen.orientation == ScreenOrientation.LandscapeRight)
+                    (leftStats, rightStats) = (rightStats, leftStats);
+                break;
+            case ScreenOrientation.Portrait:
+            case ScreenOrientation.PortraitUpsideDown:
+            default:
+                midStats = GetDepthSum(0, depthWidth, depthHeight/2 - 7, depthHeight/2 + 8);
+                leftStats = GetDepthSum(0, depthWidth, depthHeight/2, depthHeight);
+                rightStats = GetDepthSum(0, depthWidth, 0, depthHeight/2);
+                if (Screen.orientation == ScreenOrientation.PortraitUpsideDown)
+                    (leftStats, rightStats) = (rightStats, leftStats);
+                break;
+        }
+        int curIndex = (int) totalCount % numFrames;
+        if (leftStats.y > 100 && rightStats.y > 100) {
+            leftAverage[curIndex] = leftStats.x / leftStats.y;
+            rightAverage[curIndex] = rightStats.x / rightStats.y;
+        }
+        else {
+            leftAverage[curIndex] = 0;
+            rightAverage[curIndex] = 0;
+        }
     }
 }

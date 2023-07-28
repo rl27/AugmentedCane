@@ -36,7 +36,7 @@ public class Vision : MonoBehaviour
             if (++step % stepsPerFrame == 0) yield return null;
         }
         Tensor output = worker.PeekOutput();
-        Debug.unityLogger.Log("mytag", output.ArgMax());
+        Debug.unityLogger.Log("mytag", output.dimensions);
 
         input.Dispose();
         output.Dispose();
