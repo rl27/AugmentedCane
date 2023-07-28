@@ -116,8 +116,7 @@ public class DepthImage : MonoBehaviour
     Vector2 focalLength = Vector2.zero;
     Vector2 principalPoint = Vector2.zero;
 
-    private bool takePicture = true;
-    private bool showCameraImage = false;
+    private bool showCameraImage = true;
 
     // True if everything is fine and Update() should be called. False if something went wrong.
     private bool shouldProceed = false;
@@ -134,6 +133,7 @@ public class DepthImage : MonoBehaviour
     private new Camera camera;
 
     // These variables are for naive obstacle avoidance.
+    float distanceToObstacle = 1.5f; // Distance in meters at which to alert for obstacles
     uint totalCount = 0; // Total number of depth images received
     static int numFrames = 30;
     float[] leftAverage = new float[numFrames];
@@ -291,7 +291,7 @@ public class DepthImage : MonoBehaviour
         totalCount += 1;
         UpdateDepthAverages();
         if (midStats.y > 100) {
-            if (midStats.x / midStats.y < 1.5) {
+            if (midStats.x / midStats.y < distanceToObstacle) {
                 m_StringBuilder.AppendLine("Obstacle: Yes");
                 if (totalCount >= numFrames) {
                     float rightTotal = rightAverage.Sum();
@@ -370,10 +370,25 @@ public class DepthImage : MonoBehaviour
         if (m_CameraManager.TryAcquireLatestCpuImage(out XRCpuImage cameraImage)) {
             using (cameraImage) {
                 UpdateRawImage(m_RawCameraImage, cameraImage, TextureFormat.RGB24, false);
-                if (takePicture) {
-                    // takePicture = false;
+                if (visionActive) {
                     Texture2D testTex = m_RawCameraImage.texture as Texture2D;
                     StartCoroutine(vision.Detect(testTex));
+
+                    // https://stackoverflow.com/questions/48808552/how-to-draw-rectangle-on-texture2d-unity3d
+                    foreach (var bo in vision.boxes) {
+                        Vector4 b = bo.bbox;
+                        for (int x = (int)b[0]; x < (int)b[2]; x++) {
+                            testTex.SetPixel(x, (int)b[1], Color.red);
+                            testTex.SetPixel(x, (int)b[3], Color.red);
+                        }
+                        for (int y = (int)b[1]; y < (int)b[3]; y++) {
+                            testTex.SetPixel((int)b[0], y, Color.red);
+                            testTex.SetPixel((int)b[2], y, Color.red);
+                        }
+
+                        m_RawCameraImage.texture = testTex;
+                        testTex.Apply();
+                    }
                 }
             }
         }
