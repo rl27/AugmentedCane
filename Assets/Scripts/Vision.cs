@@ -12,10 +12,6 @@ public class Vision : MonoBehaviour
 
     private bool working = false;
 
-    private float delay = 0.3f;
-
-    private DateTime startTime;
-
     void Start()
     {
         model = ModelLoader.Load(modelAsset);
@@ -23,34 +19,39 @@ public class Vision : MonoBehaviour
         worker = WorkerFactory.CreateWorker(WorkerFactory.Type.ComputePrecompiled, model);
     }
 
+    // https://forum.unity.com/threads/asynchronous-inference-in-barracuda.1370181/
     public IEnumerator Detect(Texture2D tex)
     {
         if (working)
             yield break;
         working = true;
 
-        startTime = DateTime.Now;
-
         // https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/TensorHandling.html
-        Tensor input = new Tensor(tex); // new Tensor(1, 640, 480, 3);
-        worker.Execute(input);
+        Tensor input = new Tensor(tex);  // Tensor input = new Tensor(1, 640, 480, 3);
 
+        var enumerator = worker.StartManualSchedule(input);
+        int step = 0;
+        int stepsPerFrame = 20;
+        while (enumerator.MoveNext()) {
+            if (++step % stepsPerFrame == 0) yield return null;
+        }
         Tensor output = worker.PeekOutput();
-        
+        Debug.unityLogger.Log("mytag", output.ArgMax());
+
         input.Dispose();
         output.Dispose();
 
-        double timeSpent = (DateTime.Now - startTime).TotalSeconds;
-        double newDelay = delay - timeSpent;
-
-        yield return new WaitForSeconds((float) newDelay);
         working = false;
     }
 
     // Outputs for 640x480 images have dimensions 1,1,6300,84.
     // Need to run non-max suppression manually. https://github.com/ultralytics/ultralytics/blob/main/examples/YOLOv8-OpenCV-ONNX-Python/main.py
+    void NMS()
+    {
 
-    public void Dispose()
+    }
+
+    void OnDisable()
     {
         worker.Dispose();
     }

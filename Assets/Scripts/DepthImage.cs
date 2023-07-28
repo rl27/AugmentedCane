@@ -377,7 +377,7 @@ public class DepthImage : MonoBehaviour
             }
         }
 
-        // Acquire a camera image and update the corresponding raw image.
+        // Acquire a camera image, update the corresponding raw image, and do CV
         if (m_CameraManager.TryAcquireLatestCpuImage(out XRCpuImage cameraImage)) {
             using (cameraImage) {
                 UpdateRawImage(m_RawCameraImage, cameraImage, TextureFormat.RGB24, false);

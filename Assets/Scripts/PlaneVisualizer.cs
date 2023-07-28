@@ -16,8 +16,8 @@ public class PlaneVisualizer : MonoBehaviour
         m_ARPlane = GetComponent<ARPlane>();
         meshRenderer = GetComponent<MeshRenderer>();
 
-        Color planeMatColor = Color.yellow;
-        planeMatColor.a = 0.33f;
-        meshRenderer.material.color = planeMatColor;
+        // Color planeMatColor = Color.yellow;
+        // planeMatColor.a = 0.2f;
+        // meshRenderer.material.color = planeMatColor;
     }
 }

@@ -21,7 +21,7 @@ public class Plane : MonoBehaviour
     {
         apm = GetComponent<ARPlaneManager>();
         defaultColor = Color.yellow;
-        defaultColor.a = 0.25f;
+        defaultColor.a = 0.2f;
     }
 
     void OnEnable()
@@ -54,7 +54,7 @@ public class Plane : MonoBehaviour
         var visualizer = apm.trackables[lowestPlane].GetComponent<PlaneVisualizer>();
         if (visualizer) {
             Color planeMatColor = Color.cyan;
-            planeMatColor.a = 0.25f;
+            planeMatColor.a = 0.2f;
             visualizer.meshRenderer.material.color = planeMatColor;
         }
     }
