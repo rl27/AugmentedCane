@@ -1,15 +1,30 @@
 {
   "dependencies": {
-    "com.unity.barracuda": {
-      "version": "https://github.com/Unity-Technologies/barracuda-release.git",
+    "com.github.asus4.mediapipe": {
+      "version": "2.12.0",
       "depth": 0,
-      "source": "git",
+      "source": "registry",
       "dependencies": {
-        "com.unity.burst": "1.6.0",
-        "com.unity.modules.jsonserialize": "1.0.0",
-        "com.unity.modules.imageconversion": "1.0.0"
+        "com.github.asus4.tflite": "2.12.0",
+        "com.github.asus4.tflite.common": "2.12.0"
       },
-      "hash": "557e93387683363215675397db49479d42d99174"
+      "url": "https://registry.npmjs.com"
+    },
+    "com.github.asus4.tflite": {
+      "version": "2.12.0",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://registry.npmjs.com"
+    },
+    "com.github.asus4.tflite.common": {
+      "version": "2.12.0",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.github.asus4.tflite": "2.12.0"
+      },
+      "url": "https://registry.npmjs.com"
     },
     "com.unity.burst": {
       "version": "1.8.4",
@@ -102,12 +117,51 @@
       "dependencies": {},
       "url": "https://packages.unity.com"
     },
+    "com.unity.render-pipelines.core": {
+      "version": "15.0.5",
+      "depth": 1,
+      "source": "builtin",
+      "dependencies": {
+        "com.unity.mathematics": "1.2.4",
+        "com.unity.ugui": "1.0.0",
+        "com.unity.modules.physics": "1.0.0",
+        "com.unity.modules.terrain": "1.0.0",
+        "com.unity.modules.jsonserialize": "1.0.0"
+      }
+    },
+    "com.unity.render-pipelines.universal": {
+      "version": "15.0.5",
+      "depth": 0,
+      "source": "builtin",
+      "dependencies": {
+        "com.unity.mathematics": "1.2.1",
+        "com.unity.burst": "1.8.2",
+        "com.unity.render-pipelines.core": "15.0.5",
+        "com.unity.shadergraph": "15.0.5"
+      }
+    },
+    "com.unity.searcher": {
+      "version": "4.9.2",
+      "depth": 2,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
     "com.unity.settings-manager": {
       "version": "2.0.1",
       "depth": 2,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
+    },
+    "com.unity.shadergraph": {
+      "version": "15.0.5",
+      "depth": 1,
+      "source": "builtin",
+      "dependencies": {
+        "com.unity.render-pipelines.core": "15.0.5",
+        "com.unity.searcher": "4.9.2"
+      }
     },
     "com.unity.test-framework": {
       "version": "1.3.3",

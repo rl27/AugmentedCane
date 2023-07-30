@@ -93,8 +93,8 @@ public class DepthImage : MonoBehaviour
     AudioPlayer audioPlayer;
 
     [SerializeField]
-    GameObject VisionHandler;
-    Vision vision;
+    GameObject SSDHandler;
+    SsdSample ssd;
 
     // StringBuilder for building strings to be logged.
     readonly StringBuilder m_StringBuilder = new StringBuilder();
@@ -116,7 +116,7 @@ public class DepthImage : MonoBehaviour
     Vector2 focalLength = Vector2.zero;
     Vector2 principalPoint = Vector2.zero;
 
-    private bool showCameraImage = true;
+    private bool showCameraImage = false;
 
     // True if everything is fine and Update() should be called. False if something went wrong.
     private bool shouldProceed = false;
@@ -174,13 +174,13 @@ public class DepthImage : MonoBehaviour
         pc = PointCloudHandler.GetComponent<PointCloud>();
         plane = PlaneHandler.GetComponent<Plane>();
         audioPlayer = AudioHandler.GetComponent<AudioPlayer>();
-        vision = VisionHandler.GetComponent<Vision>();
+        ssd = SSDHandler.GetComponent<SsdSample>();
 
         SensorHandler.SetActive(IMUActive);
         GPSHandler.SetActive(GPSActive);
         PointCloudHandler.SetActive(pcActive);
         PlaneHandler.SetActive(planeActive);
-        VisionHandler.SetActive(visionActive);
+        SSDHandler.SetActive(visionActive);
 
         // Set depth image material
         m_RawImage.material = m_DepthMaterial;
@@ -371,24 +371,7 @@ public class DepthImage : MonoBehaviour
             using (cameraImage) {
                 UpdateRawImage(m_RawCameraImage, cameraImage, TextureFormat.RGB24, false);
                 if (visionActive) {
-                    Texture2D testTex = m_RawCameraImage.texture as Texture2D;
-                    StartCoroutine(vision.Detect(testTex));
-
-                    // https://stackoverflow.com/questions/48808552/how-to-draw-rectangle-on-texture2d-unity3d
-                    foreach (var bo in vision.boxes) {
-                        Vector4 b = bo.bbox;
-                        for (int x = (int)b[0]; x < (int)b[2]; x++) {
-                            testTex.SetPixel(x, (int)b[1], Color.red);
-                            testTex.SetPixel(x, (int)b[3], Color.red);
-                        }
-                        for (int y = (int)b[1]; y < (int)b[3]; y++) {
-                            testTex.SetPixel((int)b[0], y, Color.red);
-                            testTex.SetPixel((int)b[2], y, Color.red);
-                        }
-
-                        m_RawCameraImage.texture = testTex;
-                        testTex.Apply();
-                    }
+                    StartCoroutine(ssd.Invoke(m_RawCameraImage.texture));
                 }
             }
         }
