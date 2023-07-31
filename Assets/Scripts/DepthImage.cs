@@ -146,7 +146,7 @@ public class DepthImage : MonoBehaviour
     bool GPSActive = false;
     bool pcActive = false;
     bool planeActive = false;
-    bool visionActive = true;
+    bool visionActive = false;
 
     void Awake()
     {
@@ -298,10 +298,12 @@ public class DepthImage : MonoBehaviour
                     float leftTotal = leftAverage.Sum();
                     if (leftTotal > rightTotal) {
                         m_StringBuilder.AppendLine("Dir: Left");
+                        AudioHandler.transform.position = new Vector3(-8f, 0f, 0f);
                         audioPlayer.PlayLeft();
                     }
                     else if (leftTotal < rightTotal) {
                         m_StringBuilder.AppendLine("Dir: Right");
+                        AudioHandler.transform.position = new Vector3(8f, 0f, 0f);
                         audioPlayer.PlayRight();
                     }
                     else
