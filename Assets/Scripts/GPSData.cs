@@ -56,16 +56,19 @@ public class GPSData : MonoBehaviour
             yield return new WaitWhile(() => !UnityEditor.EditorApplication.isRemoteConnected);
         }
 #elif UNITY_ANDROID
-        if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.CoarseLocation))
-            UnityEngine.Android.Permission.RequestUserPermission(UnityEngine.Android.Permission.CoarseLocation);
+        // https://forum.unity.com/threads/runtime-permissions-do-not-work-for-gps-location-first-two-runs.1005001
+        if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.FineLocation))
+            UnityEngine.Android.Permission.RequestUserPermission(UnityEngine.Android.Permission.FineLocation);
 
         if (!Input.location.isEnabledByUser) {
             Debug.LogFormat("Android location not enabled");
+            isStarting = false;
             yield break;
         }
 #elif UNITY_IOS
         if (!Input.location.isEnabledByUser) {
             Debug.LogFormat("iOS location not enabled");
+            isStarting = false;
             yield break;
         }
 #endif
@@ -94,11 +97,13 @@ public class GPSData : MonoBehaviour
         // Service didn't initialize in 15 seconds
         if (maxWait < 1) {
             Debug.Log("Timed out");
+            isStarting = false;
             yield break;
         }
 
         if (Input.location.status != LocationServiceStatus.Running) {
             Debug.LogFormat("Unable to determine device location. Failed with status {0}", Input.location.status);
+            isStarting = false;
             yield break;
         }
 
