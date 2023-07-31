@@ -12,10 +12,10 @@ public class GPSData : MonoBehaviour
     // GPS data
     public LocationInfo gps;
 
-    private float desiredAccuracyInMeters = 2f;
-    private float updateDistanceInMeters = 2f;
+    private float desiredAccuracyInMeters = 5f;
+    private float updateDistanceInMeters = 5f;
 
-    private float delay = 0.2f;
+    private float delay = 5.0f;
 
     private bool isStarting = false;
     private bool dataUpdating = false;

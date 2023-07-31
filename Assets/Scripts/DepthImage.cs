@@ -142,8 +142,8 @@ public class DepthImage : MonoBehaviour
     Vector2 midStats;
     Vector2 rightStats;
 
-    bool IMUActive = false;
-    bool GPSActive = false;
+    bool IMUActive = true;
+    bool GPSActive = true;
     bool pcActive = false;
     bool planeActive = false;
     bool visionActive = false;
