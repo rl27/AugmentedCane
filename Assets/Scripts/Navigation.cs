@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -12,6 +13,7 @@ using Newtonsoft.Json.Linq;
 public class Navigation : MonoBehaviour
 {
     private string SERVER_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
+    private string apiKey;
 
     public List<Point> allPoints;
     public JArray steps;
@@ -36,6 +38,10 @@ public class Navigation : MonoBehaviour
 
     void Start()
     {
+        var sr = new StreamReader("Assets/Scripts/apikey.txt");
+        apiKey = sr.ReadLine();
+        sr.Close();
+        Debug.Log(apiKey);
         double startLat = 42.36382619802787;
         double startLng = -71.12962948677604;
         double endLat = 42.360894446542666;
@@ -111,7 +117,7 @@ public class Navigation : MonoBehaviour
             webRequest.uploadHandler = (UploadHandler) new UploadHandlerRaw(jsonToSend);
             webRequest.downloadHandler = (DownloadHandler) new DownloadHandlerBuffer();
             webRequest.SetRequestHeader("Content-Type", "application/json");
-            webRequest.SetRequestHeader("X-Goog-Api-Key", "AIzaSyDI3sMv2y44PSQTMIwuhti7D3XBUQqvo0Y");
+            webRequest.SetRequestHeader("X-Goog-Api-Key", apiKey);
             webRequest.SetRequestHeader("X-Goog-FieldMask", "routes.legs.distanceMeters,routes.legs.duration,routes.legs.polyline,routes.legs.steps");
             yield return webRequest.SendWebRequest();
 
@@ -140,9 +146,8 @@ public class Navigation : MonoBehaviour
                     }
                     stepStartIndices.Add(index);
                 }
+                initialized = true;
             }
-
-            initialized = true;
         }
     }
 
