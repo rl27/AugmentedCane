@@ -17,11 +17,16 @@ public class Navigation : MonoBehaviour
 
     public List<Point> allPoints;
     public JArray steps;
+    [NonSerialized]
     public int curWaypoint = -1;
+    [NonSerialized]
+    public Double curOrientation = 0;
+    [NonSerialized]
     public List<int> stepStartIndices; // The starting location for each step corresponds to a point/index in allPoints.
 
     private double closeRadius = 0.000045;
 
+    [NonSerialized]
     public bool initialized = false;
 
     public class Point {
@@ -34,6 +39,28 @@ public class Navigation : MonoBehaviour
         public override string ToString() {
             return lat + "," + lng;
         }
+    }
+
+    // Compass orientation between two points in degrees
+    private double Orientation(Point start, Point end) {
+        double deltaY = end.lat - start.lat;
+        double deltaX = end.lng - start.lng;
+        double rad = (- Math.Atan2(deltaY, deltaX) + 5 * Math.PI / 2) % (Math.PI * 2);
+        return rad * 180 / Math.PI;
+    }
+
+    public static bool ApproxEq(Point p1, Point p2) {
+        return (Math.Abs(p1.lat - p2.lat) <= 1e-5 && Math.Abs(p1.lng - p2.lng) <= 1e-5);
+    }
+
+    public static bool Between(Point start, Point end, Point pt) {
+        return false;
+    }
+
+    double Dist(Point p1, Point p2) {
+        double latDiff = p1.lat - p2.lat;
+        double lngDiff = p2.lng - p2.lng;
+        return Math.Sqrt(latDiff*latDiff + lngDiff*lngDiff);
     }
 
     void Start()
@@ -59,7 +86,15 @@ public class Navigation : MonoBehaviour
 
     public void OnLocationUpdate(Point loc)
     {
+        if (!initialized)
+            return;
+
         int bestWaypoint = FindBestWaypoint(loc);
+        if (bestWaypoint == allPoints.Count - 1) {
+            Debug.Log("Reached destination");
+            initialized = false;
+            return;
+        }
         if (curWaypoint != bestWaypoint) {
             curWaypoint = bestWaypoint;
             int stepIndex = stepStartIndices.IndexOf(curWaypoint);
@@ -69,13 +104,21 @@ public class Navigation : MonoBehaviour
             }
         }
 
-        double orientation = 0;
-        // Debug.Log(orientation);
+        double ori = Orientation(loc, allPoints[curWaypoint + 1]);
+        if (curOrientation != ori) {
+            curOrientation = ori;
+            Debug.Log("New orientation: " + curOrientation);
+        }
     }
 
     // Find index of most suitable waypoint for a given user location.
     public int FindBestWaypoint(Point loc)
     {
+        // Check if reached final waypiont
+        if (Dist(loc, allPoints[allPoints.Count - 1]) < closeRadius) {
+            return allPoints.Count - 1;
+        }
+
         double minDist = Double.PositiveInfinity;
         int index = -1;
         for (int i = 0; i < allPoints.Count - 1; i++) {
@@ -127,8 +170,8 @@ public class Navigation : MonoBehaviour
                 float distInMeters = (float) values["distanceMeters"];
                 string duration = values["duration"].ToString();
                 allPoints = DecodePolyline(values["polyline"]["encodedPolyline"].ToString());
-                foreach (var asdf in allPoints)
-                    Debug.Log(asdf);
+                // foreach (var asdf in allPoints)
+                //     Debug.Log(asdf);
 
                 // Populate indices of starting locations for each step
                 steps = (JArray) values["steps"];
@@ -224,20 +267,6 @@ public class Navigation : MonoBehaviour
             allPoints.Add(new Point(currentLat / 1E5, currentLng / 1E5));
         }
         return allPoints;
-    }
-
-    public static bool ApproxEq(Point p1, Point p2) {
-        return (Math.Abs(p1.lat - p2.lat) <= 1e-5 && Math.Abs(p1.lng - p2.lng) <= 1e-5);
-    }
-
-    public static bool Between(Point start, Point end, Point pt) {
-        return false;
-    }
-
-    double Dist(Point p1, Point p2) {
-        double latDiff = p1.lat - p2.lat;
-        double lngDiff = p2.lng - p2.lng;
-        return Math.Sqrt(latDiff*latDiff + lngDiff*lngDiff);
     }
 
     JObject ConstructRequest(double startLat, double startLng, double endLat, double endLng)
