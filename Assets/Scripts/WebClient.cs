@@ -119,7 +119,7 @@ public class WebClient : MonoBehaviour
             webRequest.uploadHandler = (UploadHandler) new UploadHandlerRaw(jsonToSend);
             webRequest.downloadHandler = (DownloadHandler) new DownloadHandlerBuffer();
             webRequest.SetRequestHeader("Content-Type", "application/json");
-            webRequest.SetRequestHeader("X-Goog-Api-Key", "AIzaSyAZdUcWnmiot1TISN7jO1AYqXS8mJCcoK8");
+            webRequest.SetRequestHeader("X-Goog-Api-Key", apiKey);
             yield return webRequest.SendWebRequest();
 
             if (checkStatus(webRequest, url.Split('/'))) {
