@@ -15,9 +15,22 @@ public class WebClient : MonoBehaviour
 
     void Awake()
     {
-        var sr = new StreamReader("Assets/Resources/apikey.txt");
-        apiKey = sr.ReadLine();
-        sr.Close();
+        string apikeyPath = Path.Combine(Application.streamingAssetsPath, "apikey.txt");
+        StartCoroutine(GetAPIKey(apikeyPath));
+    }
+
+    private IEnumerator GetAPIKey(string apikeyPath)
+    {
+        #if UNITY_ANDROID
+            UnityWebRequest webRequest = UnityWebRequest.Get(apikeyPath);
+            yield return webRequest.SendWebRequest();
+            if (checkStatus(webRequest, apikeyPath.Split('/')))
+                apiKey = webRequest.downloadHandler.text;
+        #else
+            var sr = new StreamReader(Path.Combine(Application.streamingAssetsPath, "apikey.txt"));
+            apiKey = sr.ReadLine();
+            sr.Close();
+        #endif
     }
 
     public static IEnumerator SendRouteRequest(double startLat, double startLng, double endLat, double endLng, Action<JObject> callback)
@@ -106,7 +119,7 @@ public class WebClient : MonoBehaviour
             webRequest.uploadHandler = (UploadHandler) new UploadHandlerRaw(jsonToSend);
             webRequest.downloadHandler = (DownloadHandler) new DownloadHandlerBuffer();
             webRequest.SetRequestHeader("Content-Type", "application/json");
-            webRequest.SetRequestHeader("X-Goog-Api-Key", apiKey);
+            webRequest.SetRequestHeader("X-Goog-Api-Key", "AIzaSyAZdUcWnmiot1TISN7jO1AYqXS8mJCcoK8");
             yield return webRequest.SendWebRequest();
 
             if (checkStatus(webRequest, url.Split('/'))) {
@@ -142,7 +155,7 @@ public class WebClient : MonoBehaviour
     }
 
     // Returns true on success, false on fail.
-    private static bool checkStatus(UnityWebRequest webRequest, string[] pages)
+    public static bool checkStatus(UnityWebRequest webRequest, string[] pages)
     {
         int page = pages.Length - 1;
         switch (webRequest.result)

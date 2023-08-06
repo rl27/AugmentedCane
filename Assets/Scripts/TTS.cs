@@ -18,7 +18,7 @@ public class TTS : MonoBehaviour
     void Start()
     {
         audioSource = GetComponent<AudioSource>();
-        audioFilePath = Application.persistentDataPath + "/audio.mp3";
+        audioFilePath = Path.Combine(Application.persistentDataPath, "audio.mp3");
 
         // string text = "Head northwest on Ivy Circle toward N Harvard Blvd";
         // RequestTTS(text);
@@ -48,14 +48,13 @@ public class TTS : MonoBehaviour
     // Load local audio file to queue
     IEnumerator LoadAudio()
     {
-        var dh = new DownloadHandlerAudioClip(audioFilePath, AudioType.MPEG);
-        dh.compressed = true;
-     
-        using (UnityWebRequest webRequest = new UnityWebRequest(audioFilePath, "GET", dh, null)) {
+        string uri = "file://" + audioFilePath;
+        using (UnityWebRequest webRequest = UnityWebRequestMultimedia.GetAudioClip(uri, AudioType.MPEG))
+        {
             yield return webRequest.SendWebRequest();
-            if (webRequest.responseCode == 200) {
-                audioToPlay.Enqueue(dh.audioClip);
-            }
+            // if (webRequest.responseCode == 200) 
+            if (WebClient.checkStatus(webRequest, uri.Split('/')))
+                audioToPlay.Enqueue(DownloadHandlerAudioClip.GetContent(webRequest));
         }
     }
 }
