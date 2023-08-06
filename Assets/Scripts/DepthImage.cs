@@ -14,6 +14,10 @@ using UnityEngine.XR.ARSubsystems;
 // https://github.com/Unity-Technologies/arfoundation-samples/blob/main/Assets/Scripts/Runtime/CpuImageSample.cs
 public class DepthImage : MonoBehaviour
 {
+    // For logging
+    [NonSerialized]
+    public StringBuilder m_StringBuilder = new StringBuilder();
+
     // Get or set the AROcclusionManager.
     public AROcclusionManager occlusionManager {
         get => m_OcclusionManager;
@@ -47,14 +51,6 @@ public class DepthImage : MonoBehaviour
     [SerializeField]
     RawImage m_RawCameraImage;
 
-    // UI Text used to display information about the image on screen.
-    public Text imageInfo {
-        get => m_ImageInfo;
-        set => m_ImageInfo = value;
-    }
-    [SerializeField]
-    Text m_ImageInfo;
-
     // UI Text used to display whether depth is supported.
     public Text depthInfo {
         get => m_DepthInfo;
@@ -73,31 +69,12 @@ public class DepthImage : MonoBehaviour
     Material m_DepthMaterial;
 
     [SerializeField]
-    GameObject SensorHandler;
-    SensorData sensors;
-
-    [SerializeField]
-    GameObject GPSHandler;
-    GPSData gps;
-
-    [SerializeField]
-    GameObject PointCloudHandler;
-    PointCloud pc;
-
-    [SerializeField]
-    GameObject PlaneHandler;
-    Plane plane;
-
-    [SerializeField]
     GameObject AudioHandler;
     AudioPlayer audioPlayer;
 
     [SerializeField]
     GameObject SSDHandler;
     SsdSample ssd;
-
-    // StringBuilder for building strings to be logged.
-    readonly StringBuilder m_StringBuilder = new StringBuilder();
 
     // Depth array
     byte[] depthArray = new byte[0];
@@ -142,44 +119,28 @@ public class DepthImage : MonoBehaviour
     Vector2 midStats;
     Vector2 rightStats;
 
-    bool IMUActive = true;
-    bool GPSActive = true;
-    bool pcActive = false;
-    bool planeActive = false;
+    // Perform vision tasks on camera image
     bool visionActive = false;
 
     void Awake()
     {
         if (m_OcclusionManager == null) {
-            LogText("No occlusion manager");
+            LogDepth("No occlusion manager");
             return;
         }
         if (m_CameraManager == null) {
-            LogText("No camera manager");
-            return;
-        }
-        if (SensorHandler == null) {
-            LogText("No sensor handler");
+            LogDepth("No camera manager");
             return;
         }
 
         camera = m_CameraManager.GetComponent<Camera>();
         if (!camera) {
-            LogText("No camera");
+            LogDepth("No camera");
             return;
         }
 
-        sensors = SensorHandler.GetComponent<SensorData>();
-        gps = GPSHandler.GetComponent<GPSData>();
-        pc = PointCloudHandler.GetComponent<PointCloud>();
-        plane = PlaneHandler.GetComponent<Plane>();
         audioPlayer = AudioHandler.GetComponent<AudioPlayer>();
         ssd = SSDHandler.GetComponent<SsdSample>();
-
-        SensorHandler.SetActive(IMUActive);
-        GPSHandler.SetActive(GPSActive);
-        PointCloudHandler.SetActive(pcActive);
-        PlaneHandler.SetActive(planeActive);
         SSDHandler.SetActive(visionActive);
 
         // Set depth image material
@@ -223,69 +184,58 @@ public class DepthImage : MonoBehaviour
         screenRotation = Matrix4x4.Rotate(Quaternion.Euler(0, 0, GetRotationForScreen()));
         localToWorldTransform = camera.transform.localToWorldMatrix * screenRotation;
 
-        int numLow = 0;
-        int numMed = 0;
-        int numHigh = 0;
-
-        #if UNITY_ANDROID
-            for (int y = 0; y < depthHeight; y++) {
-                for (int x = 0; x < depthWidth; x++) {
-                    int val = confidenceArray[(y * depthWidth) + x];
-                    if (val < 40)
-                        numLow += 1;
-                    else if (val < 255)
-                        numMed += 1;
-                    else if (val == 255)
-                        numHigh += 1;
-                }
-            }
-        #elif UNITY_IOS
-            for (int y = 0; y < depthHeight; y++) {
-                for (int x = 0; x < depthWidth; x++) {
-                    int val = confidenceArray[(y * depthWidth) + x];
-                    if (val == 0)
-                        numLow += 1;
-                    else if (val == 1)
-                        numMed += 1;
-                    else if (val == 2)
-                        numHigh += 1;
-                }
-            }
-        #endif
-
-        // Display some info.
         m_StringBuilder.Clear();
-        m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}");
-        m_StringBuilder.AppendLine($"Width: {depthWidth}");
-        m_StringBuilder.AppendLine($"Height: {depthHeight}");
+
+        m_StringBuilder.AppendLine($"Camera position: {camera.transform.position}");
+
+        // m_StringBuilder.AppendLine($"Width: {depthWidth}");
+        // m_StringBuilder.AppendLine($"Height: {depthHeight}");
 
         // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
         // Screen orientation does not change coordinate locations on the screen.
-        m_StringBuilder.AppendLine("DEPTH:");
-        m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.1f, 0.1f))}");
-        m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f))}");
-        m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f))}");
+        // m_StringBuilder.AppendLine("DEPTH:");
+        // m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.1f, 0.1f))}");
+        // m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f))}");
+        // m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f))}");
 
-        m_StringBuilder.AppendLine("CONFIDENCE:");
-        m_StringBuilder.AppendLine($"(0.1,0.1): {GetConfidence(new Vector2(0.1f, 0.1f))}");
-        m_StringBuilder.AppendLine($"(0.5,0.5): {GetConfidence(new Vector2(0.5f, 0.5f))}");
-        m_StringBuilder.AppendLine($"(0.9,0.9): {GetConfidence(new Vector2(0.9f, 0.9f))}");
+        // m_StringBuilder.AppendLine("CONFIDENCE:");
+        // m_StringBuilder.AppendLine($"(0.1,0.1): {GetConfidence(new Vector2(0.1f, 0.1f))}");
+        // m_StringBuilder.AppendLine($"(0.5,0.5): {GetConfidence(new Vector2(0.5f, 0.5f))}");
+        // m_StringBuilder.AppendLine($"(0.9,0.9): {GetConfidence(new Vector2(0.9f, 0.9f))}");
 
-        int numPixels = depthWidth * depthHeight;
-        m_StringBuilder.AppendLine("CONFIDENCE PROPORTIONS:");
-        m_StringBuilder.AppendLine($"Low: {(float) numLow / numPixels}");
-        m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
-        m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
-        m_StringBuilder.AppendLine($"Camera position: {camera.transform.position}");
-
-        if (IMUActive)
-            m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
-        if (GPSActive)
-            m_StringBuilder.AppendLine($"{gps.GPSstring()}");
-        if (pcActive)
-            m_StringBuilder.AppendLine($"{pc.info}");
-        if (planeActive)
-            m_StringBuilder.AppendLine($"{plane.info}");
+        // int numLow = 0;
+        // int numMed = 0;
+        // int numHigh = 0;
+        // #if UNITY_ANDROID
+        //     for (int y = 0; y < depthHeight; y++) {
+        //         for (int x = 0; x < depthWidth; x++) {
+        //             int val = confidenceArray[(y * depthWidth) + x];
+        //             if (val < 40)
+        //                 numLow += 1;
+        //             else if (val < 255)
+        //                 numMed += 1;
+        //             else if (val == 255)
+        //                 numHigh += 1;
+        //         }
+        //     }
+        // #elif UNITY_IOS
+        //     for (int y = 0; y < depthHeight; y++) {
+        //         for (int x = 0; x < depthWidth; x++) {
+        //             int val = confidenceArray[(y * depthWidth) + x];
+        //             if (val == 0)
+        //                 numLow += 1;
+        //             else if (val == 1)
+        //                 numMed += 1;
+        //             else if (val == 2)
+        //                 numHigh += 1;
+        //         }
+        //     }
+        // #endif
+        // int numPixels = depthWidth * depthHeight;
+        // m_StringBuilder.AppendLine("CONFIDENCE PROPORTIONS:");
+        // m_StringBuilder.AppendLine($"Low: {(float) numLow / numPixels}");
+        // m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
+        // m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
 
         // UPDATE DEPTH AVERAGES
         totalCount += 1;
@@ -315,8 +265,6 @@ public class DepthImage : MonoBehaviour
         }
         else
             m_StringBuilder.AppendLine("Obstacle: Unknown");
-
-        LogText(m_StringBuilder.ToString());
     }
 
     IEnumerator UpdateImages()
@@ -386,15 +334,6 @@ public class DepthImage : MonoBehaviour
             yield return new WaitForSeconds((float) newDelay);
         
         imagesUpdating = false;
-    }
-
-    // Log the given text to the screen if the image info UI is set. Otherwise, log the text to debug.
-    void LogText(string text)
-    {
-        if (m_ImageInfo != null)
-            m_ImageInfo.text = text;
-        else
-            Debug.Log(text);
     }
 
     // Log the given text to the depth info text box.
@@ -631,7 +570,7 @@ public class DepthImage : MonoBehaviour
         {
             case ScreenOrientation.LandscapeRight:
             case ScreenOrientation.LandscapeLeft:
-                midStats = GetDepthSum(depthWidth/2 - 7, depthWidth/2 + 8, 0, depthHeight);
+                midStats = GetDepthSum(depthWidth/2 - 11, depthWidth/2 + 12, 0, depthHeight);
                 leftStats = GetDepthSum(0, depthWidth/2, 0, depthHeight);
                 rightStats = GetDepthSum(depthWidth/2, depthWidth, 0, depthHeight);
                 if (Screen.orientation == ScreenOrientation.LandscapeRight)

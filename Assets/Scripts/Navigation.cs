@@ -19,7 +19,7 @@ public class Navigation : MonoBehaviour
     public List<int> stepStartIndices; // The starting location for each step corresponds to a point/index in allPoints.
 
     [SerializeField]
-    GameObject TTSHandler;
+    GameObject AudioHandler;
     TTS tts;
 
     private double closeRadius = 0.000045;
@@ -41,7 +41,7 @@ public class Navigation : MonoBehaviour
 
     void Start()
     {
-        tts = TTSHandler.GetComponent<TTS>();
+        tts = AudioHandler.GetComponent<TTS>();
 
         double startLat = 42.36382619802787;
         double startLng = -71.12962948677604;
