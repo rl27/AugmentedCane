@@ -27,10 +27,11 @@ public class WebClient : MonoBehaviour
             if (checkStatus(webRequest, apikeyPath.Split('/')))
                 apiKey = webRequest.downloadHandler.text;
         #else
-            var sr = new StreamReader(Path.Combine(Application.streamingAssetsPath, "apikey.txt"));
+            var sr = new StreamReader("file://" + apikeyPath);
             apiKey = sr.ReadLine();
             sr.Close();
         #endif
+        yield break;
     }
 
     public static IEnumerator SendRouteRequest(double startLat, double startLng, double endLat, double endLng, Action<JObject> callback)
