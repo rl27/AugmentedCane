@@ -10,7 +10,8 @@ public class GPSData : MonoBehaviour
     private bool isRemote = true; // For using Unity Remote
 
     // GPS data
-    public LocationInfo gps;
+    [NonSerialized]
+    public static LocationInfo gps;
 
     private float desiredAccuracyInMeters = 5f;
     private float updateDistanceInMeters = 5f;

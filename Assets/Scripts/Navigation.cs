@@ -43,6 +43,7 @@ public class Navigation : MonoBehaviour
     {
         tts = AudioHandler.GetComponent<TTS>();
 
+        // TESTING
         double startLat = 42.36382619802787;
         double startLng = -71.12962948677604;
         double endLat = 42.360894446542666;
@@ -55,6 +56,18 @@ public class Navigation : MonoBehaviour
         if (initialized) {
             Point userLoc = new Point(42.36110, -71.12996);
             OnLocationUpdate(userLoc);
+        }
+    }
+
+    public void OnCoordsEntered(string input)
+    {
+        string[] splits = input.Split(',');
+        if (splits.Length != 2)
+            return;
+        float targetLat;
+        float targetLng;
+        if (float.TryParse(splits[0], out targetLat) && float.TryParse(splits[1], out targetLng)) {
+            RequestWaypoints(GPSData.gps.latitude, GPSData.gps.longitude, targetLat, targetLng);
         }
     }
 

@@ -27,7 +27,7 @@ public class WebClient : MonoBehaviour
             if (checkStatus(webRequest, apikeyPath.Split('/')))
                 apiKey = webRequest.downloadHandler.text;
         #else
-            var sr = new StreamReader("file://" + apikeyPath);
+            var sr = new StreamReader(apikeyPath);
             apiKey = sr.ReadLine();
             sr.Close();
         #endif

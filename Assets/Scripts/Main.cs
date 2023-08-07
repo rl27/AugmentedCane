@@ -59,7 +59,6 @@ public class Main : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        // Display some info.
         m_StringBuilder.Clear();
         m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}");
 

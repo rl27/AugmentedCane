@@ -5,23 +5,16 @@ public class AudioPlayer : MonoBehaviour
 {
     AudioSource audioSource;
 
-    public AudioClip left;
-    public AudioClip right;
+    public AudioClip collision;
 
     void Start()
     {
         audioSource = GetComponent<AudioSource>();
     }
 
-    public void PlayLeft()
+    public void PlayCollision()
     {
         if (!audioSource.isPlaying)
-            audioSource.PlayOneShot(left, 1);
-    }
-
-    public void PlayRight()
-    {
-        if (!audioSource.isPlaying)
-            audioSource.PlayOneShot(right, 1);
+            audioSource.PlayOneShot(collision, 1);
     }
 }

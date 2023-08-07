@@ -13,21 +13,37 @@ public class TTS : MonoBehaviour
     AudioSource audioSource;
     private string audioFilePath;
 
-    Queue<AudioClip> audioToPlay = new Queue<AudioClip>();
+    // If an audio clip is older than timeToDiscard, it is discarded.
+    private double timeToDiscard = 4.0;
+
+    private struct AudioWithTime {
+        public AudioClip audioClip;
+        public DateTime timeAdded;
+        public AudioWithTime(AudioClip ac) {
+            audioClip = ac;
+            timeAdded = DateTime.Now;
+        }
+    }
+
+    private Queue<AudioWithTime> audioToPlay = new Queue<AudioWithTime>();
 
     void Start()
     {
         audioSource = GetComponent<AudioSource>();
         audioFilePath = Path.Combine(Application.persistentDataPath, "audio.mp3");
 
+        // TESTING
         // string text = "Head northwest on Ivy Circle toward N Harvard Blvd";
         // RequestTTS(text);
     }
 
     void Update()
     {
-        if (!audioSource.isPlaying && audioToPlay.Count > 0) {
-            audioSource.clip = audioToPlay.Dequeue();
+        if (DepthImage.direction == DepthImage.Direction.None && !audioSource.isPlaying && audioToPlay.Count > 0) {
+            var at = audioToPlay.Dequeue();
+            if ((DateTime.Now - at.timeAdded).TotalSeconds > timeToDiscard)
+                return;
+            audioSource.clip = at.audioClip;
             audioSource.Play();
         }
     }
@@ -54,7 +70,7 @@ public class TTS : MonoBehaviour
             yield return webRequest.SendWebRequest();
             // if (webRequest.responseCode == 200) 
             if (WebClient.checkStatus(webRequest, uri.Split('/')))
-                audioToPlay.Enqueue(DownloadHandlerAudioClip.GetContent(webRequest));
+                audioToPlay.Enqueue(new AudioWithTime(DownloadHandlerAudioClip.GetContent(webRequest)));
         }
     }
 }

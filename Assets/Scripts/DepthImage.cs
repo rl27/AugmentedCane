@@ -111,6 +111,7 @@ public class DepthImage : MonoBehaviour
 
     // These variables are for naive obstacle avoidance.
     float distanceToObstacle = 1.5f; // Distance in meters at which to alert for obstacles
+    int collisionWindowWidth = 11; // Num. pixels left/right of the middle to check for obstacles
     uint totalCount = 0; // Total number of depth images received
     static int numFrames = 30;
     float[] leftAverage = new float[numFrames];
@@ -118,6 +119,9 @@ public class DepthImage : MonoBehaviour
     Vector2 leftStats;
     Vector2 midStats;
     Vector2 rightStats;
+
+    public enum Direction { Left, Right, Unknown, None }
+    public static Direction direction = Direction.None;
 
     // Perform vision tasks on camera image
     bool visionActive = false;
@@ -240,6 +244,7 @@ public class DepthImage : MonoBehaviour
         // UPDATE DEPTH AVERAGES
         totalCount += 1;
         UpdateDepthAverages();
+        direction = Direction.None;
         if (midStats.y > 100) {
             if (midStats.x / midStats.y < distanceToObstacle) {
                 m_StringBuilder.AppendLine("Obstacle: Yes");
@@ -247,21 +252,26 @@ public class DepthImage : MonoBehaviour
                     float rightTotal = rightAverage.Sum();
                     float leftTotal = leftAverage.Sum();
                     if (leftTotal > rightTotal) {
+                        direction = Direction.Left;
                         m_StringBuilder.AppendLine("Dir: Left");
-                        AudioHandler.transform.position = new Vector3(-8f, 0f, 0f);
-                        audioPlayer.PlayLeft();
+                        AudioHandler.transform.position = new Vector3(-5f, 0f, 0f);
+                        audioPlayer.PlayCollision();
                     }
                     else if (leftTotal < rightTotal) {
+                        direction = Direction.Right;
                         m_StringBuilder.AppendLine("Dir: Right");
-                        AudioHandler.transform.position = new Vector3(8f, 0f, 0f);
-                        audioPlayer.PlayRight();
+                        AudioHandler.transform.position = new Vector3(5f, 0f, 0f);
+                        audioPlayer.PlayCollision();
                     }
-                    else
+                    else {
+                        direction = Direction.Unknown;
                         m_StringBuilder.AppendLine("Dir: Unknown");
+                    }
                 }
             }
-            else
+            else {
                 m_StringBuilder.AppendLine("Obstacle: No");
+            }
         }
         else
             m_StringBuilder.AppendLine("Obstacle: Unknown");
@@ -570,7 +580,7 @@ public class DepthImage : MonoBehaviour
         {
             case ScreenOrientation.LandscapeRight:
             case ScreenOrientation.LandscapeLeft:
-                midStats = GetDepthSum(depthWidth/2 - 11, depthWidth/2 + 12, 0, depthHeight);
+                midStats = GetDepthSum(depthWidth/2 - collisionWindowWidth, depthWidth/2 + (collisionWindowWidth + 1), 0, depthHeight);
                 leftStats = GetDepthSum(0, depthWidth/2, 0, depthHeight);
                 rightStats = GetDepthSum(depthWidth/2, depthWidth, 0, depthHeight);
                 if (Screen.orientation == ScreenOrientation.LandscapeRight)
