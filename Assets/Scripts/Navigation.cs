@@ -19,13 +19,15 @@ public class Navigation : MonoBehaviour
     public List<int> stepStartIndices; // The starting location for each step corresponds to a point/index in allPoints.
 
     [SerializeField]
-    GameObject AudioHandler;
+    GameObject TTSHandler;
     TTS tts;
 
     private double closeRadius = 0.000045;
 
-    [NonSerialized]
-    public bool initialized = false;
+    private bool initialized = false; // Tracks whether RequestWaypoints has been called & completed
+
+    private DateTime lastNavigated; // Time at which navigation instructions were last given
+    private float navigationUpdateInterval = 5.0f; // Interval at which to give instructions
 
     public class Point {
         public double lat;
@@ -41,24 +43,32 @@ public class Navigation : MonoBehaviour
 
     void Start()
     {
-        tts = AudioHandler.GetComponent<TTS>();
+        tts = TTSHandler.GetComponent<TTS>();
 
-        // TESTING
-        double startLat = 42.36382619802787;
-        double startLng = -71.12962948677604;
-        double endLat = 42.360894446542666;
-        double endLng = -71.13030875355446;
-        RequestWaypoints(startLat, startLng, endLat, endLng);
+        // Testing - plan a route
+        // double startLat = 42.36382619802787;
+        // double startLng = -71.12962948677604;
+        // double endLat = 42.360894446542666;
+        // double endLng = -71.13030875355446;
+        // RequestWaypoints(startLat, startLng, endLat, endLng);
     }
 
     void Update()
     {
-        if (initialized) {
-            Point userLoc = new Point(42.36110, -71.12996);
-            OnLocationUpdate(userLoc);
+        // Testing - get navigation information based on user location
+        // if (initialized) {
+        //     Point userLoc = new Point(42.36110, -71.12996);
+        //     OnLocationUpdate(userLoc);
+        // }
+
+        // Do navigation tasks
+        if (initialized && (DateTime.Now - lastNavigated).TotalSeconds > navigationUpdateInterval) {
+            lastNavigated = DateTime.Now;
+            OnLocationUpdate(GPSData.EstimatedUserLocation());
         }
     }
 
+    // Parse input location from text box, then request waypoints
     public void OnCoordsEntered(string input)
     {
         string[] splits = input.Split(',');
@@ -67,7 +77,8 @@ public class Navigation : MonoBehaviour
         float targetLat;
         float targetLng;
         if (float.TryParse(splits[0], out targetLat) && float.TryParse(splits[1], out targetLng)) {
-            RequestWaypoints(GPSData.gps.latitude, GPSData.gps.longitude, targetLat, targetLng);
+            Point userLoc = GPSData.EstimatedUserLocation();
+            RequestWaypoints(userLoc.lat, userLoc.lng, targetLat, targetLng);
         }
     }
 
@@ -104,7 +115,7 @@ public class Navigation : MonoBehaviour
         );
     }
 
-    // Call this every time the user location is updated
+    // Call this to get instructions from the latest user location
     public void OnLocationUpdate(Point loc)
     {
         if (!initialized)
@@ -112,7 +123,7 @@ public class Navigation : MonoBehaviour
 
         int bestWaypoint = FindBestWaypoint(loc);
         if (bestWaypoint == allPoints.Count - 1) {
-            tts.RequestTTS("Reached destination");
+            tts.RequestTTS("Arriving at destination");
             initialized = false;
             return;
         }
@@ -136,7 +147,7 @@ public class Navigation : MonoBehaviour
     // Find index of most suitable waypoint for a given user location
     private int FindBestWaypoint(Point loc)
     {
-        // Check if reached final waypiont
+        // Check if reached final waypoint
         if (Dist(loc, allPoints[allPoints.Count - 1]) < closeRadius) {
             return allPoints.Count - 1;
         }

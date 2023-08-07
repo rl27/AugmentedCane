@@ -9,11 +9,11 @@ using UnityEngine;
 public class SensorData : MonoBehaviour
 {
     // IMU data
-    public Vector3 accel;
-    public Vector3 gyro;
-    public Vector3 attitude;
-    public Vector3 mag;
-    public float heading;
+    public static Vector3 accel;
+    public static Vector3 gyro;
+    public static Vector3 attitude;
+    public static Vector3 mag;
+    public static float heading;
 
     private float delay = 0.2f;
 

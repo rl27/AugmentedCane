@@ -32,7 +32,7 @@ public class TTS : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
         audioFilePath = Path.Combine(Application.persistentDataPath, "audio.mp3");
 
-        // TESTING
+        // Testing - speak some text
         // string text = "Head northwest on Ivy Circle toward N Harvard Blvd";
         // RequestTTS(text);
     }

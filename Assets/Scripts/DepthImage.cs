@@ -109,6 +109,9 @@ public class DepthImage : MonoBehaviour
     private Matrix4x4 screenRotation = Matrix4x4.Rotate(Quaternion.identity);
     private new Camera camera;
 
+    public static Vector3 position;
+    public static Vector3 rotation;
+
     // These variables are for naive obstacle avoidance.
     float distanceToObstacle = 1.5f; // Distance in meters at which to alert for obstacles
     int collisionWindowWidth = 11; // Num. pixels left/right of the middle to check for obstacles
@@ -184,6 +187,9 @@ public class DepthImage : MonoBehaviour
         }
 
         StartCoroutine(UpdateImages());
+
+        position = camera.transform.position;
+        rotation = camera.transform.rotation.eulerAngles;
 
         screenRotation = Matrix4x4.Rotate(Quaternion.Euler(0, 0, GetRotationForScreen()));
         localToWorldTransform = camera.transform.localToWorldMatrix * screenRotation;

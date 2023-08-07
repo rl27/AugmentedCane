@@ -16,10 +16,19 @@ public class GPSData : MonoBehaviour
     private float desiredAccuracyInMeters = 5f;
     private float updateDistanceInMeters = 5f;
 
-    private float delay = 5.0f;
+    private float delay = 1.0f;
 
     private bool isStarting = false;
     private bool dataUpdating = false;
+
+    private double lastUpdated = 0;
+    private static Vector3 posAtLastUpdated;
+
+    private const double degreeToMeter = 111139;
+
+    void Start()
+    {
+    }
 
     void Update()
     {
@@ -35,6 +44,10 @@ public class GPSData : MonoBehaviour
         dataUpdating = true;
         if (Input.location.status == LocationServiceStatus.Running) {
             gps = Input.location.lastData;
+            if (lastUpdated != gps.timestamp) {
+                lastUpdated = gps.timestamp;
+                posAtLastUpdated = DepthImage.position;
+            }
         }
         else
             StartCoroutine(LocationStart());
@@ -42,6 +55,20 @@ public class GPSData : MonoBehaviour
         // Wait for a bit before trying to update again
         yield return new WaitForSeconds(delay);
         dataUpdating = false;
+    }
+
+    // Estimate location using AR camera position/rotation, true heading, and GPS.
+    // Replace with geospatial?
+    public static Navigation.Point EstimatedUserLocation()
+    {
+        Vector3 posDiff = DepthImage.position - posAtLastUpdated;
+        float rot = DepthImage.rotation.y;
+        float heading = SensorData.heading;
+        float angleDiff = (heading - rot) * Mathf.Deg2Rad;
+        float sin = Mathf.Sin(angleDiff);
+        float cos = Mathf.Cos(angleDiff);
+        return new Navigation.Point(gps.latitude + (posDiff.z * cos - posDiff.x * sin) / degreeToMeter,
+                                    gps.longitude + (posDiff.z * sin + posDiff.x * cos) / degreeToMeter);
     }
 
     // Start location services
