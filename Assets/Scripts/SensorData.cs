@@ -15,7 +15,7 @@ public class SensorData : MonoBehaviour
     public static Vector3 attitude;
     public static Vector3 mag;
     public static float heading;
-    private float _headingVelocity = 0f;
+    // private float _headingVelocity = 0f;
 
     // private float delay = 0.05f;
 

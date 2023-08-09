@@ -33,7 +33,7 @@ public class Navigation : MonoBehaviour
     TTS tts;
 
     private double closeRadius = 0.00005; // Roughly 5 meters
-    private double tooFarRadius = 0.0002; // Roughly 20 meters
+    private double farRadius = 0.0003; // Roughly 30 meters
 
     private bool initialized = false; // Tracks whether RequestWaypoints has been called & completed
 
@@ -41,7 +41,7 @@ public class Navigation : MonoBehaviour
     private float orientationUpdateInterval = 10.0f; // Minimum interval at which to give orientation
 
     private DateTime lastInstructed; // Time at which instructions were last given
-    private float instructionUpdateInterval = 5.0f; // Minimum interval at which to give instructions
+    private float instructionUpdateInterval = 2.0f; // Minimum interval at which to give instructions
 
     public class Point {
         public double lat;
@@ -72,7 +72,7 @@ public class Navigation : MonoBehaviour
     {
         // Testing - get navigation information based on user location
         // if (initialized) {
-        //     Point userLoc = new Point(42.36337837474685, -71.1278384484297);
+        //     Point userLoc = new Point(42.36335936933116, -71.12763759475467);
         //     OnLocationUpdate(userLoc);
         // }
 
@@ -136,38 +136,43 @@ public class Navigation : MonoBehaviour
             return;
 
         (int bestWaypoint, bool closeToWaypoint) = FindBestWaypoint(loc);
-        if (curWaypoint >= 0 && bestWaypoint == -1)
+        // Recalculate route if too far from any point
+        if (bestWaypoint == -2) {
+            initialized = false;
+            tts.RequestTTS("Recalculating");
+            Point userLoc = GPSData.EstimatedUserLocation();
+            Point end = allPoints[allPoints.Count - 1];
+            RequestWaypoints(userLoc.lat, userLoc.lng, end.lat, end.lng);
             return;
-
+        }
+        // Completed route.
         if (bestWaypoint == allPoints.Count - 1) {
             tts.RequestTTS("Arriving at destination");
             initialized = false;
             return;
         }
 
-        if (curWaypoint != bestWaypoint && (DateTime.Now - lastInstructed).TotalSeconds > instructionUpdateInterval) {
+        if (curWaypoint != bestWaypoint) {
             curWaypoint = bestWaypoint;
-            // Check if new waypoint corresponds with the starting position of a step
-            if (closeToWaypoint) {
+            // Check if new waypoint corresponds with the starting position of a step, i.e. that it has an associated instruction
+            if (closeToWaypoint && (DateTime.Now - lastInstructed).TotalSeconds > instructionUpdateInterval) {
                 int stepIndex = stepStartIndices.IndexOf(curWaypoint);
                 if (stepIndex != -1) {
                     string instr = steps[stepIndex]["navigationInstruction"]["instructions"].ToString();
                     tts.RequestTTS(String.Format("Step {0}: {1}", stepIndex + 1, instr));
                 }
+                lastInstructed = DateTime.Now;
             }
-
-            lastInstructed = DateTime.Now;
         }
 
-        // Orientation to nearest waypoint
+        // Speak orientation & distance to nearest waypoint
         double ori = Orientation(loc, allPoints[curWaypoint + 1]);
         if ((DateTime.Now - lastOriented).TotalSeconds > orientationUpdateInterval) {
-            // double dist = Math.Round(10 * GPSData.degreeToMeter * Dist(loc, allPoints[curWaypoint + 1])) / 10;
             double dist = Math.Round(GPSData.degreeToMeter * Dist(loc, allPoints[curWaypoint + 1]));
-
             tts.RequestTTS(String.Format("{0}, {1} degrees, {2} meters", curWaypoint + 1, (int) ori, dist));
             lastOriented = DateTime.Now;
         }
+        // Play orientation audio
         if (DepthImage.direction == DepthImage.Direction.None && !audioSource.isPlaying) {
             double headingDiff = (ori - SensorData.heading + 360) % 360;
             if (headingDiff > 180) // Move range to [-pi, pi]
@@ -190,27 +195,37 @@ public class Navigation : MonoBehaviour
             return (allPoints.Count - 1, true);
         }
 
-        double minDist = Double.PositiveInfinity;
-        int index = -1;
+        double minPointDist = Double.PositiveInfinity;
+        double minOrthoDist = Double.PositiveInfinity;
+        int pointIndex = -1;
+        int orthoIndex = -1;
         for (int i = 0; i < allPoints.Count - 1; i++) {
             // If close enough to current waypoint, immediately return
-            if (Dist(loc, allPoints[i]) < closeRadius) {
+            double distFromCur = Dist(loc, allPoints[i]);
+            if (distFromCur < closeRadius) {
                 return (i, true);
             }
+            // Track closest point in case orthogonal projection doesn't find anything suitable
+            if (distFromCur < minPointDist) {
+                minPointDist = distFromCur;
+                pointIndex = i - 1;
+            }
             double orthoDist = OrthogonalDist(allPoints[i], allPoints[i+1], loc);
-            if (orthoDist < minDist) {
-                minDist = orthoDist;
-                index = i;
+            if (orthoDist < minOrthoDist) {
+                minOrthoDist = orthoDist;
+                orthoIndex = i;
             }
         }
-        // Too far from any waypoint
-        if (minDist > tooFarRadius)
-            return (-1, false);
-        return (index, false);
+
+        if (minOrthoDist < farRadius)
+            return (orthoIndex, false);
+        if (minPointDist < farRadius)
+            return (pointIndex, false);
+        return (-2, false);
     }
 
     // Projects location onto segment (p1,p2).
-    // If projection is inside segment, returns square of distance to segment. Otherwise, returns infinity.
+    // If projection is inside segment, returns distance to segment. Otherwise, returns infinity.
     private double OrthogonalDist(Point p1, Point p2, Point loc)
     {
         double u1 = loc.lng - p1.lng;
@@ -221,48 +236,16 @@ public class Navigation : MonoBehaviour
         double scalar = (u1*v1 + u2*v2) / (v1*v1 + v2*v2);
         double proj1 = scalar * v1;
         double proj2 = scalar * v2;
-        double d = SquaredDist(0, 0, v1, v2);
-        if (SquaredDist(0, 0, proj1, proj2) < d && SquaredDist(proj1, proj2, v1, v2) < d)
-            return SquaredDist(u1, u2, proj1, proj2);
+        double d = Dist(0, 0, v1, v2);
+        if (Dist(0, 0, proj1, proj2) < d && Dist(proj1, proj2, v1, v2) < d)
+            return Dist(u1, u2, proj1, proj2);
         return Double.PositiveInfinity;
     }
 
-    private double SquaredDist(double x1, double y1, double x2, double y2)
+    private double Dist(double x1, double y1, double x2, double y2)
     {
-        return (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1);
+        return Math.Sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1));
     }
-
-    // // Find index of most suitable waypoint for a given user location
-    // private int FindBestWaypoint(Point loc)
-    // {
-    //     // Check if reached final waypoint
-    //     if (Dist(loc, allPoints[allPoints.Count - 1]) < closeRadius) {
-    //         return allPoints.Count - 1;
-    //     }
-
-    //     double minDist = Double.PositiveInfinity;
-    //     int index = -1;
-    //     for (int i = 0; i < allPoints.Count - 1; i++) {
-    //         // If close enough to current waypoint, immediately return
-    //         double distFromCur = Dist(loc, allPoints[i]);
-    //         if (distFromCur < closeRadius) {
-    //             index = i;
-    //             break;
-    //         }
-    //         // Check for suitable waypoint based on distances from current location to consecutive waypoints
-    //         double curToNext = Dist(allPoints[i], allPoints[i+1]);
-    //         if (distFromCur < curToNext - closeRadius) {
-    //             index = i;
-    //             break;
-    //         }
-    //         // Track closest point as backup in case all else fails
-    //         if (distFromCur < minDist) {
-    //             minDist = distFromCur;
-    //             index = i;
-    //         }
-    //     }
-    //     return index;
-    // }
 
     // https://gist.github.com/shinyzhu/4617989
     private static List<Point> DecodePolyline(string encodedPoints)
