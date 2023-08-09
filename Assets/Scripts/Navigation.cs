@@ -16,12 +16,13 @@ public class Navigation : MonoBehaviour
     public AudioClip onAxis;
     public AudioClip offAxis;
     public AudioClip behind;
-    private double onAxisAngle = 30;
+    private double onAxisAngle = 15;
+    private double offAxisAngle = 90;
 
     public List<Point> allPoints;
     public JArray steps;
     [NonSerialized]
-    public int curWaypoint = -99;
+    public int curWaypoint = -5;
     // [NonSerialized]
     // public int curOrientation = 0;
     [NonSerialized]
@@ -31,8 +32,8 @@ public class Navigation : MonoBehaviour
     GameObject TTSHandler;
     TTS tts;
 
-    private double closeRadius = 0.00005;
-    private double tooFarRadius = 0.0005;
+    private double closeRadius = 0.00005; // Roughly 5 meters
+    private double tooFarRadius = 0.0002; // Roughly 20 meters
 
     private bool initialized = false; // Tracks whether RequestWaypoints has been called & completed
 
@@ -172,9 +173,9 @@ public class Navigation : MonoBehaviour
             if (headingDiff > 180) // Move range to [-pi, pi]
                 headingDiff -= 360;
             AudioSourceObject.transform.position = DepthImage.position + new Vector3(2 * (float) Math.Sin(headingDiff), 2 * (float) Math.Cos(headingDiff), 0);
-            if (Math.Abs(headingDiff) < onAxisAngle/2)
+            if (Math.Abs(headingDiff) < onAxisAngle)
                 audioSource.PlayOneShot(onAxis, 2);
-            else if (Math.Abs(headingDiff) < 90)
+            else if (Math.Abs(headingDiff) < offAxisAngle)
                 audioSource.PlayOneShot(offAxis, 2);
             else
                 audioSource.PlayOneShot(behind, 2);
