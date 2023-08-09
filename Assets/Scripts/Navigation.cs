@@ -32,7 +32,7 @@ public class Navigation : MonoBehaviour
     GameObject TTSHandler;
     TTS tts;
 
-    private double closeRadius = 0.00005; // Roughly 5 meters
+    private double closeRadius = 0.00006; // Roughly 6 meters
     private double farRadius = 0.0004; // Roughly 40 meters
 
     private bool initialized = false; // Tracks whether RequestWaypoints has been called & completed
@@ -159,17 +159,17 @@ public class Navigation : MonoBehaviour
             return;
         }
 
-        if (curWaypoint != bestWaypoint) {
-            curWaypoint = bestWaypoint;
+        if (curWaypoint != bestWaypoint && (DateTime.Now - lastInstructed).TotalSeconds > instructionUpdateInterval) {
             // Check if new waypoint corresponds with the starting position of a step, i.e. that it has an associated instruction
-            if (closeToWaypoint && (DateTime.Now - lastInstructed).TotalSeconds > instructionUpdateInterval) {
-                int stepIndex = stepStartIndices.IndexOf(curWaypoint);
+            if (closeToWaypoint || bestWaypoint == curWaypoint + 1) {
+                int stepIndex = stepStartIndices.IndexOf(bestWaypoint);
                 if (stepIndex != -1) {
                     string instr = steps[stepIndex]["navigationInstruction"]["instructions"].ToString();
                     tts.RequestTTS(String.Format("Step {0}: {1}", stepIndex + 1, instr));
                 }
-                lastInstructed = DateTime.Now;
             }
+            curWaypoint = bestWaypoint;
+            lastInstructed = DateTime.Now;
         }
 
         // Speak orientation & distance to nearest waypoint
