@@ -158,16 +158,20 @@ public class Navigation : MonoBehaviour
             lastInstructed = DateTime.Now;
         }
 
+        // Orientation to nearest waypoint
         double ori = Orientation(loc, allPoints[curWaypoint + 1]);
         if ((DateTime.Now - lastOriented).TotalSeconds > orientationUpdateInterval) {
-            tts.RequestTTS(String.Format("{0}, {1} degrees, {2} meters", curWaypoint + 1, (int) ori, GPSData.degreeToMeter * Dist(loc, allPoints[curWaypoint + 1])), false);
+            // Distance to next waypoint, rounded to nearest tenth
+            double dist = Math.Round(10 * GPSData.degreeToMeter * Dist(loc, allPoints[curWaypoint + 1])) / 10;
+
+            tts.RequestTTS(String.Format("{0}, {1} degrees, {2} meters", curWaypoint + 1, (int) ori, dist), false);
             lastOriented = DateTime.Now;
         }
         if (DepthImage.direction == DepthImage.Direction.None && !audioSource.isPlaying) {
             double headingDiff = (ori - SensorData.heading + 360) % 360;
             if (headingDiff > 180) // Move range to [-pi, pi]
                 headingDiff -= 360;
-            AudioSourceObject.transform.position = DepthImage.position + new Vector3(((float) Math.Sin(headingDiff)), 0, 0);
+            AudioSourceObject.transform.position = DepthImage.position + new Vector3((float) Math.Sin(headingDiff), (float) Math.Cos(headingDiff), 0);
             if (Math.Abs(headingDiff) < onAxisAngle/2)
                 audioSource.PlayOneShot(onAxis, 2);
             else if (Math.Abs(headingDiff) < 90)
@@ -274,7 +278,7 @@ public class Navigation : MonoBehaviour
         int sum;
         int shifter;
 
-        List<Point> allPoints = new List<Point>();
+        List<Point> allPts = new List<Point>();
 
         while (index < polylineChars.Length)
         {
@@ -310,9 +314,9 @@ public class Navigation : MonoBehaviour
 
             currentLng += (sum & 1) == 1 ? ~(sum >> 1) : (sum >> 1);
 
-            allPoints.Add(new Point(currentLat / 1E5, currentLng / 1E5));
+            allPts.Add(new Point(currentLat / 1E5, currentLng / 1E5));
         }
-        return allPoints;
+        return allPts;
     }
 
     // Compass orientation between two points in degrees
@@ -330,7 +334,7 @@ public class Navigation : MonoBehaviour
 
     private double Dist(Point p1, Point p2) {
         double latDiff = p1.lat - p2.lat;
-        double lngDiff = p2.lng - p2.lng;
+        double lngDiff = p1.lng - p2.lng;
         return Math.Sqrt(latDiff*latDiff + lngDiff*lngDiff);
     }
 }
