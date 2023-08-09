@@ -12,6 +12,7 @@ public class WebClient : MonoBehaviour
     private static string ROUTE_SERVER_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
     private static string TTS_SERVER_URL = "https://texttospeech.googleapis.com/v1beta1/text:synthesize";
     private static string apiKey;
+    private static bool apiKeyInitialized = false;
 
     void Awake()
     {
@@ -31,6 +32,7 @@ public class WebClient : MonoBehaviour
             apiKey = sr.ReadLine();
             sr.Close();
         #endif
+        apiKeyInitialized = true;
         yield break;
     }
 
@@ -39,6 +41,8 @@ public class WebClient : MonoBehaviour
         JObject request = ConstructRouteRequest(startLat, startLng, endLat, endLng);
 
         string url = ROUTE_SERVER_URL;
+
+        yield return new WaitUntil(() => apiKeyInitialized);
 
         using (UnityWebRequest webRequest = new UnityWebRequest(url, "POST"))
         {   
@@ -112,6 +116,8 @@ public class WebClient : MonoBehaviour
         JObject request = ConstructTTSRequest(text);
 
         string url = TTS_SERVER_URL;
+
+        yield return new WaitUntil(() => apiKeyInitialized);
 
         using (UnityWebRequest webRequest = new UnityWebRequest(url, "POST"))
         {   

@@ -15,6 +15,6 @@ public class AudioPlayer : MonoBehaviour
     public void PlayCollision()
     {
         if (!audioSource.isPlaying)
-            audioSource.PlayOneShot(collision, 1);
+            audioSource.PlayOneShot(collision, 2);
     }
 }
