@@ -16,7 +16,7 @@ public class Navigation : MonoBehaviour
     public AudioClip onAxis;
     public AudioClip offAxis;
     public AudioClip behind;
-    private double onAxisAngle = 22.5;
+    private double onAxisAngle = 45;
 
     public List<Point> allPoints;
     public JArray steps;
@@ -139,7 +139,7 @@ public class Navigation : MonoBehaviour
         //     return;
 
         if (bestWaypoint == allPoints.Count - 1) {
-            tts.RequestTTS("Arriving at destination");
+            tts.RequestTTS("Arriving at destination", true);
             initialized = false;
             return;
         }
@@ -151,7 +151,7 @@ public class Navigation : MonoBehaviour
                 int stepIndex = stepStartIndices.IndexOf(curWaypoint);
                 if (stepIndex != -1) {
                     string instr = steps[stepIndex]["navigationInstruction"]["instructions"].ToString();
-                    tts.RequestTTS(String.Format("Step {0}: {1}", stepIndex, instr));
+                    tts.RequestTTS(String.Format("Step {0}: {1}", stepIndex, instr), true);
                 }
             }
 
@@ -160,7 +160,7 @@ public class Navigation : MonoBehaviour
 
         double ori = Orientation(loc, allPoints[curWaypoint + 1]);
         if ((DateTime.Now - lastOriented).TotalSeconds > orientationUpdateInterval) {
-            tts.RequestTTS(String.Format("Waypoint {0}, {1} degrees", curWaypoint + 1, (int) ori));
+            tts.RequestTTS(String.Format("{0}, {1} degrees", curWaypoint + 1, (int) ori), false);
             lastOriented = DateTime.Now;
         }
         if (DepthImage.direction == DepthImage.Direction.None && !audioSource.isPlaying) {

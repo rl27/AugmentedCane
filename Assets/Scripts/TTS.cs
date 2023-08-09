@@ -48,9 +48,11 @@ public class TTS : MonoBehaviour
         }
     }
 
-    // Get TTS audio and play it
-    public void RequestTTS(string text)
+    // Get TTS audio and queue it up to be played
+    public void RequestTTS(string text, bool clearQueue)
     {
+        if (clearQueue)
+            audioToPlay.Clear();
         StartCoroutine(WebClient.SendTTSRequest(text,
             response => {
                 string audioText = (string) response["audioContent"];

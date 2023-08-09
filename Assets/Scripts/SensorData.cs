@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections;
 using UnityEngine;
 
@@ -14,15 +15,21 @@ public class SensorData : MonoBehaviour
     public static Vector3 attitude;
     public static Vector3 mag;
     public static float heading;
+    private float _headingVelocity = 0f;
 
-    private float delay = 0.2f;
+    private float delay = 0.05f;
 
     private bool dataUpdating = false;
+
+    // Moving average of heading
+    // private static int numHeadings = 10;
+    // private float[] pastHeadings = new float[numHeadings];
+    // private int headingIndex = 0;
 
     void Awake()
     {
         Input.gyro.enabled = true;
-        Input.gyro.updateInterval = 0.1f;
+        Input.gyro.updateInterval = 0.05f;
         Input.compass.enabled = true;
     }
 
@@ -46,7 +53,12 @@ public class SensorData : MonoBehaviour
         attitude = Input.gyro.attitude.eulerAngles;
 
         mag = Input.compass.rawVector;
-        heading = Input.compass.trueHeading;
+
+        heading = Mathf.SmoothDampAngle(heading, Input.compass.trueHeading, ref _headingVelocity, 0.1f);
+
+        // headingIndex = (headingIndex + 1) % numHeadings;
+        // pastHeadings[headingIndex] = Input.compass.trueHeading;
+        // heading = pastHeadings.Sum();
 
         // Wait for a bit before trying to update again
         yield return new WaitForSeconds(delay);
