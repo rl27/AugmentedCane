@@ -71,7 +71,7 @@ public class Navigation : MonoBehaviour
     {
         // Testing - get navigation information based on user location
         // if (initialized) {
-        //     Point userLoc = new Point(42.36347,-71.1257);
+        //     Point userLoc = new Point(42.36337837474685, -71.1278384484297);
         //     OnLocationUpdate(userLoc);
         // }
 
@@ -135,8 +135,8 @@ public class Navigation : MonoBehaviour
             return;
 
         (int bestWaypoint, bool closeToWaypoint) = FindBestWaypoint(loc);
-        // if (bestWaypoint == -1)
-        //     return;
+        if (curWaypoint >= 0 && bestWaypoint == -1)
+            return;
 
         if (bestWaypoint == allPoints.Count - 1) {
             tts.RequestTTS("Arriving at destination");
@@ -220,9 +220,9 @@ public class Navigation : MonoBehaviour
         double scalar = (u1*v1 + u2*v2) / (v1*v1 + v2*v2);
         double proj1 = scalar * v1;
         double proj2 = scalar * v2;
-        double d = SquaredDist(u1, u2, v1, v2);
-        if (SquaredDist(proj1, proj2, u1, u2) < d && SquaredDist(proj1, proj2, v1, v2) < d)
-            return (u1 - proj1)*(u1 - proj1) + (u2 - proj2)*(u2 - proj2);
+        double d = SquaredDist(0, 0, v1, v2);
+        if (SquaredDist(0, 0, proj1, proj2) < d && SquaredDist(proj1, proj2, v1, v2) < d)
+            return SquaredDist(u1, u2, proj1, proj2);
         return Double.PositiveInfinity;
     }
 
