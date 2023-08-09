@@ -16,7 +16,7 @@ public class Navigation : MonoBehaviour
     public AudioClip onAxis;
     public AudioClip offAxis;
     public AudioClip behind;
-    private double onAxisAngle = 45;
+    private double onAxisAngle = 30;
 
     public List<Point> allPoints;
     public JArray steps;
@@ -31,7 +31,7 @@ public class Navigation : MonoBehaviour
     GameObject TTSHandler;
     TTS tts;
 
-    private double closeRadius = 0.000045;
+    private double closeRadius = 0.00005;
     private double tooFarRadius = 0.0005;
 
     private bool initialized = false; // Tracks whether RequestWaypoints has been called & completed
@@ -161,8 +161,8 @@ public class Navigation : MonoBehaviour
         // Orientation to nearest waypoint
         double ori = Orientation(loc, allPoints[curWaypoint + 1]);
         if ((DateTime.Now - lastOriented).TotalSeconds > orientationUpdateInterval) {
-            // Distance to next waypoint, rounded to nearest tenth
-            double dist = Math.Round(10 * GPSData.degreeToMeter * Dist(loc, allPoints[curWaypoint + 1])) / 10;
+            // double dist = Math.Round(10 * GPSData.degreeToMeter * Dist(loc, allPoints[curWaypoint + 1])) / 10;
+            double dist = Math.Round(GPSData.degreeToMeter * Dist(loc, allPoints[curWaypoint + 1]));
 
             tts.RequestTTS(String.Format("{0}, {1} degrees, {2} meters", curWaypoint + 1, (int) ori, dist), false);
             lastOriented = DateTime.Now;
@@ -171,7 +171,7 @@ public class Navigation : MonoBehaviour
             double headingDiff = (ori - SensorData.heading + 360) % 360;
             if (headingDiff > 180) // Move range to [-pi, pi]
                 headingDiff -= 360;
-            AudioSourceObject.transform.position = DepthImage.position + new Vector3((float) Math.Sin(headingDiff), (float) Math.Cos(headingDiff), 0);
+            AudioSourceObject.transform.position = DepthImage.position + new Vector3(2 * (float) Math.Sin(headingDiff), 2 * (float) Math.Cos(headingDiff), 0);
             if (Math.Abs(headingDiff) < onAxisAngle/2)
                 audioSource.PlayOneShot(onAxis, 2);
             else if (Math.Abs(headingDiff) < 90)
