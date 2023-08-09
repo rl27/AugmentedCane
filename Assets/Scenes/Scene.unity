@@ -1586,9 +1586,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   AudioSourceObject: {fileID: 1210721349}
-  onAxis: {fileID: 8300000, guid: 416d582f194a52544806a580c5dc824e, type: 3}
-  offAxis: {fileID: 8300000, guid: 46b519e3e2842914688cc20fb7b80eab, type: 3}
-  behind: {fileID: 8300000, guid: bf2f90805198cc845a33a70ea9ea08a8, type: 3}
+  onAxis: {fileID: 8300000, guid: 6e74114adf589224aa0dd3a2ee4b9898, type: 3}
+  offAxis: {fileID: 8300000, guid: 2b7597058ee8aee45b004570a17f406a, type: 3}
+  behind: {fileID: 8300000, guid: 0dd36502ba1038841ab97ed77579d89d, type: 3}
   TTSHandler: {fileID: 207288727}
 --- !u!82 &1210721353
 AudioSource:

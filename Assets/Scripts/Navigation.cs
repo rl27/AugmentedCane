@@ -33,7 +33,7 @@ public class Navigation : MonoBehaviour
     TTS tts;
 
     private double closeRadius = 0.00005; // Roughly 5 meters
-    private double farRadius = 0.0003; // Roughly 30 meters
+    private double farRadius = 0.0004; // Roughly 40 meters
 
     private bool initialized = false; // Tracks whether RequestWaypoints has been called & completed
 
@@ -41,7 +41,9 @@ public class Navigation : MonoBehaviour
     private float orientationUpdateInterval = 10.0f; // Minimum interval at which to give orientation
 
     private DateTime lastInstructed; // Time at which instructions were last given
-    private float instructionUpdateInterval = 2.0f; // Minimum interval at which to give instructions
+    private float instructionUpdateInterval = 1.0f; // Minimum interval at which to give instructions
+
+    private bool testing = false;
 
     public class Point {
         public double lat;
@@ -60,25 +62,30 @@ public class Navigation : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
         tts = TTSHandler.GetComponent<TTS>();
 
-        // Testing - plan a route
-        // double startLat = 42.36346643895319;
-        // double startLng = -71.12569797709479;
-        // double endLat = 42.36302180414251;
-        // double endLng = -71.12749282880507;
-        // RequestWaypoints(startLat, startLng, endLat, endLng);
+        if (testing) {
+            // Testing - plan a route
+            double startLat = 42.36346643895319;
+            double startLng = -71.12569797709479;
+            double endLat = 42.36302180414251;
+            double endLng = -71.12749282880507;
+            RequestWaypoints(startLat, startLng, endLat, endLng);
+        }
     }
 
     void Update()
     {
-        // Testing - get navigation information based on user location
-        // if (initialized) {
-        //     Point userLoc = new Point(42.36335936933116, -71.12763759475467);
-        //     OnLocationUpdate(userLoc);
-        // }
-
-        // Do navigation tasks
-        if (initialized) {
-            OnLocationUpdate(GPSData.EstimatedUserLocation());
+        if (testing) {
+            // Testing - get navigation information based on user location
+            if (initialized) {
+                Point userLoc = new Point(42.36346856360623, -71.12569653098912);
+                OnLocationUpdate(userLoc);
+            }
+        }
+        else {
+            // Do navigation tasks
+            if (initialized) {
+                OnLocationUpdate(GPSData.EstimatedUserLocation());
+            }
         }
     }
 
