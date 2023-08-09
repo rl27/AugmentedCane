@@ -37,7 +37,7 @@ public class Navigation : MonoBehaviour
     private bool initialized = false; // Tracks whether RequestWaypoints has been called & completed
 
     private DateTime lastOriented; // Time at which orientation was last given
-    private float orientationUpdateInterval = 7.0f; // Minimum interval at which to give orientation
+    private float orientationUpdateInterval = 9.0f; // Minimum interval at which to give orientation
 
     private DateTime lastInstructed; // Time at which instructions were last given
     private float instructionUpdateInterval = 5.0f; // Minimum interval at which to give instructions
@@ -160,14 +160,14 @@ public class Navigation : MonoBehaviour
 
         double ori = Orientation(loc, allPoints[curWaypoint + 1]);
         if ((DateTime.Now - lastOriented).TotalSeconds > orientationUpdateInterval) {
-            tts.RequestTTS(String.Format("{0}, {1} degrees", curWaypoint + 1, (int) ori), false);
+            tts.RequestTTS(String.Format("{0}, {1} degrees, {2} meters", curWaypoint + 1, (int) ori, GPSData.degreeToMeter * Dist(loc, allPoints[curWaypoint + 1])), false);
             lastOriented = DateTime.Now;
         }
         if (DepthImage.direction == DepthImage.Direction.None && !audioSource.isPlaying) {
             double headingDiff = (ori - SensorData.heading + 360) % 360;
             if (headingDiff > 180) // Move range to [-pi, pi]
                 headingDiff -= 360;
-            AudioSourceObject.transform.position = DepthImage.position + new Vector3(5 * ((float) Math.Sin(headingDiff)), 0, 0);
+            AudioSourceObject.transform.position = DepthImage.position + new Vector3(((float) Math.Sin(headingDiff)), 0, 0);
             if (Math.Abs(headingDiff) < onAxisAngle/2)
                 audioSource.PlayOneShot(onAxis, 2);
             else if (Math.Abs(headingDiff) < 90)

@@ -17,14 +17,14 @@ public class SensorData : MonoBehaviour
     public static float heading;
     private float _headingVelocity = 0f;
 
-    private float delay = 0.05f;
+    // private float delay = 0.05f;
 
     private bool dataUpdating = false;
 
     // Moving average of heading
-    // private static int numHeadings = 10;
-    // private float[] pastHeadings = new float[numHeadings];
-    // private int headingIndex = 0;
+    private static int numHeadings = 5;
+    private float[] pastHeadings = new float[numHeadings];
+    private int headingIndex = 0;
 
     void Awake()
     {
@@ -54,14 +54,14 @@ public class SensorData : MonoBehaviour
 
         mag = Input.compass.rawVector;
 
-        heading = Mathf.SmoothDampAngle(heading, Input.compass.trueHeading, ref _headingVelocity, 0.1f);
+        // heading = Mathf.SmoothDampAngle(heading, Input.compass.trueHeading, ref _headingVelocity, 0.1f);
 
-        // headingIndex = (headingIndex + 1) % numHeadings;
-        // pastHeadings[headingIndex] = Input.compass.trueHeading;
-        // heading = pastHeadings.Sum();
+        headingIndex = (headingIndex + 1) % numHeadings;
+        pastHeadings[headingIndex] = Input.compass.trueHeading;
+        heading = pastHeadings.Sum() / numHeadings;
 
         // Wait for a bit before trying to update again
-        yield return new WaitForSeconds(delay);
+        // yield return new WaitForSeconds(delay);
         dataUpdating = false;
     }
 

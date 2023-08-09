@@ -260,13 +260,13 @@ public class DepthImage : MonoBehaviour
                     if (leftTotal > rightTotal) {
                         direction = Direction.Left;
                         m_StringBuilder.AppendLine("Dir: Left");
-                        AudioHandler.transform.position = position + new Vector3(-5f, 0f, 0f);
+                        AudioHandler.transform.position = position + new Vector3(-1, 0, 0);
                         audioPlayer.PlayCollision();
                     }
                     else if (leftTotal < rightTotal) {
                         direction = Direction.Right;
                         m_StringBuilder.AppendLine("Dir: Right");
-                        AudioHandler.transform.position = position + new Vector3(5f, 0f, 0f);
+                        AudioHandler.transform.position = position + new Vector3(1, 0, 0);
                         audioPlayer.PlayCollision();
                     }
                     else {

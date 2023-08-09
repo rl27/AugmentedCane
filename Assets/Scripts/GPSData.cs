@@ -24,7 +24,7 @@ public class GPSData : MonoBehaviour
     private double lastUpdated = 0;
     private static Vector3 posAtLastUpdated;
 
-    private const double degreeToMeter = 111139;
+    public static double degreeToMeter = 111139;
 
     void Start()
     {
