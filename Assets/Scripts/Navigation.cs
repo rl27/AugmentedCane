@@ -21,7 +21,7 @@ public class Navigation : MonoBehaviour
     public List<Point> allPoints;
     public JArray steps;
     [NonSerialized]
-    public int curWaypoint = -1;
+    public int curWaypoint = -99;
     // [NonSerialized]
     // public int curOrientation = 0;
     [NonSerialized]
@@ -37,7 +37,7 @@ public class Navigation : MonoBehaviour
     private bool initialized = false; // Tracks whether RequestWaypoints has been called & completed
 
     private DateTime lastOriented; // Time at which orientation was last given
-    private float orientationUpdateInterval = 9.0f; // Minimum interval at which to give orientation
+    private float orientationUpdateInterval = 10.0f; // Minimum interval at which to give orientation
 
     private DateTime lastInstructed; // Time at which instructions were last given
     private float instructionUpdateInterval = 5.0f; // Minimum interval at which to give instructions
@@ -60,10 +60,10 @@ public class Navigation : MonoBehaviour
         tts = TTSHandler.GetComponent<TTS>();
 
         // Testing - plan a route
-        // double startLat = 42.36382619802787;
-        // double startLng = -71.12962948677604;
-        // double endLat = 42.360894446542666;
-        // double endLng = -71.13030875355446;
+        // double startLat = 42.36346643895319;
+        // double startLng = -71.12569797709479;
+        // double endLat = 42.36302180414251;
+        // double endLng = -71.12749282880507;
         // RequestWaypoints(startLat, startLng, endLat, endLng);
     }
 
@@ -71,7 +71,7 @@ public class Navigation : MonoBehaviour
     {
         // Testing - get navigation information based on user location
         // if (initialized) {
-        //     Point userLoc = new Point(42.36110, -71.12996);
+        //     Point userLoc = new Point(42.36347,-71.1257);
         //     OnLocationUpdate(userLoc);
         // }
 
@@ -139,7 +139,7 @@ public class Navigation : MonoBehaviour
         //     return;
 
         if (bestWaypoint == allPoints.Count - 1) {
-            tts.RequestTTS("Arriving at destination", true);
+            tts.RequestTTS("Arriving at destination");
             initialized = false;
             return;
         }
@@ -151,7 +151,7 @@ public class Navigation : MonoBehaviour
                 int stepIndex = stepStartIndices.IndexOf(curWaypoint);
                 if (stepIndex != -1) {
                     string instr = steps[stepIndex]["navigationInstruction"]["instructions"].ToString();
-                    tts.RequestTTS(String.Format("Step {0}: {1}", stepIndex, instr), true);
+                    tts.RequestTTS(String.Format("Step {0}: {1}", stepIndex + 1, instr));
                 }
             }
 
@@ -164,7 +164,7 @@ public class Navigation : MonoBehaviour
             // double dist = Math.Round(10 * GPSData.degreeToMeter * Dist(loc, allPoints[curWaypoint + 1])) / 10;
             double dist = Math.Round(GPSData.degreeToMeter * Dist(loc, allPoints[curWaypoint + 1]));
 
-            tts.RequestTTS(String.Format("{0}, {1} degrees, {2} meters", curWaypoint + 1, (int) ori, dist), false);
+            tts.RequestTTS(String.Format("{0}, {1} degrees, {2} meters", curWaypoint + 1, (int) ori, dist));
             lastOriented = DateTime.Now;
         }
         if (DepthImage.direction == DepthImage.Direction.None && !audioSource.isPlaying) {
@@ -189,15 +189,12 @@ public class Navigation : MonoBehaviour
             return (allPoints.Count - 1, true);
         }
 
-        bool closeToWaypoint = false;
         double minDist = Double.PositiveInfinity;
         int index = -1;
         for (int i = 0; i < allPoints.Count - 1; i++) {
             // If close enough to current waypoint, immediately return
             if (Dist(loc, allPoints[i]) < closeRadius) {
-                index = i;
-                closeToWaypoint = true;
-                break;
+                return (i, true);
             }
             double orthoDist = OrthogonalDist(allPoints[i], allPoints[i+1], loc);
             if (orthoDist < minDist) {
@@ -208,7 +205,7 @@ public class Navigation : MonoBehaviour
         // Too far from any waypoint
         if (minDist > tooFarRadius)
             return (-1, false);
-        return (index, closeToWaypoint);
+        return (index, false);
     }
 
     // Projects location onto segment (p1,p2).
