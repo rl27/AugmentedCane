@@ -46,14 +46,24 @@ public class Navigation : MonoBehaviour
     private bool testing = false;
 
     public class Point {
+        public bool isAddress; // True for address, false for lat/long coords
+        public string address;
         public double lat;
         public double lng;
         public Point(double x, double y) {
             this.lat = x;
             this.lng = y;
+            this.address = "";
+            this.isAddress = false;
+        }
+        public Point(string addr) {
+            this.lat = 0;
+            this.lng = 0;
+            this.address = addr;
+            this.isAddress = true;
         }
         public override string ToString() {
-            return lat + "," + lng;
+            return address + ": " + lat + "," + lng;
         }
     }
 
@@ -64,32 +74,29 @@ public class Navigation : MonoBehaviour
 
         if (testing) {
             // Testing - plan a route
-            double startLat = 42.36346643895319;
-            double startLng = -71.12569797709479;
-            double endLat = 42.36302180414251;
-            double endLng = -71.12749282880507;
-            RequestWaypoints(startLat, startLng, endLat, endLng);
+            Point start = new Point(42.36346643895319,-71.12569797709479);
+            // Point end = new Point(42.36302180414251,-71.12749282880507);
+            Point end = new Point("swissbakers allston");
+            RequestWaypoints(start, end);
         }
     }
 
     void Update()
     {
+        if (!initialized)
+            return;
         if (testing) {
             // Testing - get navigation information based on user location
-            if (initialized) {
-                Point userLoc = new Point(42.36346856360623, -71.12569653098912);
-                OnLocationUpdate(userLoc);
-            }
+            Point userLoc = new Point(42.36346856360623, -71.12569653098912);
+            OnLocationUpdate(userLoc);
         }
         else {
             // Do navigation tasks
-            if (initialized) {
-                OnLocationUpdate(GPSData.EstimatedUserLocation());
-            }
+            OnLocationUpdate(GPSData.EstimatedUserLocation());
         }
     }
 
-    // Parse input location from text box, then request waypoints
+    // Parse input location from lat/long text box, then request waypoints
     public void OnCoordsEntered(string input)
     {
         string[] splits = input.Split(',');
@@ -98,16 +105,25 @@ public class Navigation : MonoBehaviour
         float targetLat;
         float targetLng;
         if (float.TryParse(splits[0], out targetLat) && float.TryParse(splits[1], out targetLng)) {
-            Point userLoc = GPSData.EstimatedUserLocation();
-            RequestWaypoints(userLoc.lat, userLoc.lng, targetLat, targetLng);
+            RequestWaypoints(GPSData.EstimatedUserLocation(), new Point(targetLat, targetLng));
         }
     }
 
-    // Call this first to request a route and populate variables
-    public void RequestWaypoints(double startLat, double startLng, double endLat, double endLng)
+    // Parse input location from address text box, then request waypoints
+    public void OnAddressEntered(string input)
     {
-        StartCoroutine(WebClient.SendRouteRequest(startLat, startLng, endLat, endLng,
+        RequestWaypoints(GPSData.EstimatedUserLocation(), new Point(input));
+    }
+
+    // Call this first to request a route and populate variables
+    public void RequestWaypoints(Point start, Point end)
+    {
+        StartCoroutine(WebClient.SendRouteRequest(start, end,
             response => {
+                if (!response.HasValues) {
+                    tts.RequestTTS("Route request failed");
+                    return;
+                }
                 var values = response["routes"][0]["legs"][0];
                 float distInMeters = (float) values["distanceMeters"];
                 string duration = values["duration"].ToString();
@@ -147,9 +163,7 @@ public class Navigation : MonoBehaviour
         if (bestWaypoint == -2) {
             initialized = false;
             tts.RequestTTS("Recalculating");
-            Point userLoc = GPSData.EstimatedUserLocation();
-            Point end = allPoints[allPoints.Count - 1];
-            RequestWaypoints(userLoc.lat, userLoc.lng, end.lat, end.lng);
+            RequestWaypoints(GPSData.EstimatedUserLocation(), allPoints[allPoints.Count - 1]);
             return;
         }
         // Completed route.

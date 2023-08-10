@@ -36,9 +36,15 @@ public class WebClient : MonoBehaviour
         yield break;
     }
 
-    public static IEnumerator SendRouteRequest(double startLat, double startLng, double endLat, double endLng, Action<JObject> callback)
+    public static IEnumerator SendRouteRequest(Navigation.Point start, Navigation.Point end, Action<JObject> callback)
     {
-        JObject request = ConstructRouteRequest(startLat, startLng, endLat, endLng);
+        JObject request;
+        if (!start.isAddress && !end.isAddress)
+            request = ConstructRouteRequest(start.lat, start.lng, end.lat, end.lng);
+        else if (!start.isAddress && end.isAddress)
+            request = ConstructRouteRequest(start.lat, start.lng, end.address);
+        else
+            yield break;
 
         string url = ROUTE_SERVER_URL;
 
@@ -94,6 +100,45 @@ public class WebClient : MonoBehaviour
                                 )
                             )
                         )
+                    )
+                ),
+                new JProperty("travelMode", "WALK"),
+                new JProperty("polylineQuality", "OVERVIEW"), // "HIGH_QUALITY"
+                new JProperty("computeAlternativeRoutes", false),
+                new JProperty("routeModifiers",
+                    new JObject(
+                        new JProperty("avoidTolls", false),
+                        new JProperty("avoidHighways", false),
+                        new JProperty("avoidFerries", false)
+                    )
+                ),
+                new JProperty("languageCode", "en-US"),
+                new JProperty("units", "METRIC")
+            );
+    }
+
+    // This version takes in a destination address.
+    private static JObject ConstructRouteRequest(double startLat, double startLng, string destAddress)
+    {
+        return
+            new JObject(
+                new JProperty("origin",
+                    new JObject(
+                        new JProperty("location",
+                            new JObject(
+                                new JProperty("latLng",
+                                    new JObject(
+                                        new JProperty("latitude", startLat),
+                                        new JProperty("longitude", startLng)
+                                    )
+                                )
+                            )
+                        )
+                    )
+                ),
+                new JProperty("destination",
+                    new JObject(
+                        new JProperty("address", destAddress)
                     )
                 ),
                 new JProperty("travelMode", "WALK"),
