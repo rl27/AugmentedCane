@@ -38,13 +38,7 @@ public class WebClient : MonoBehaviour
 
     public static IEnumerator SendRouteRequest(Navigation.Point start, Navigation.Point end, Action<JObject> callback)
     {
-        JObject request;
-        if (!start.isAddress && !end.isAddress)
-            request = ConstructRouteRequest(start.lat, start.lng, end.lat, end.lng);
-        else if (!start.isAddress && end.isAddress)
-            request = ConstructRouteRequest(start.lat, start.lng, end.address);
-        else
-            yield break;
+        JObject request = ConstructRouteRequest(start, end);
 
         string url = ROUTE_SERVER_URL;
 
@@ -70,56 +64,28 @@ public class WebClient : MonoBehaviour
 
     // https://developers.google.com/maps/documentation/routes/compute_route_directions
     // https://developers.google.com/maps/documentation/routes/reference/rest/v2/TopLevel/computeRoutes
-    private static JObject ConstructRouteRequest(double startLat, double startLng, double endLat, double endLng)
+    private static JObject ConstructRouteRequest(Navigation.Point start, Navigation.Point end)
     {
-        return
+        JObject destinationObject = new JObject();
+        if (!start.isAddress && !end.isAddress) {
+            destinationObject =
             new JObject(
-                new JProperty("origin",
+                new JProperty("location",
                     new JObject(
-                        new JProperty("location",
+                        new JProperty("latLng",
                             new JObject(
-                                new JProperty("latLng",
-                                    new JObject(
-                                        new JProperty("latitude", startLat),
-                                        new JProperty("longitude", startLng)
-                                    )
-                                )
+                                new JProperty("latitude", end.lat),
+                                new JProperty("longitude", end.lng)
                             )
                         )
                     )
-                ),
-                new JProperty("destination",
-                    new JObject(
-                        new JProperty("location",
-                            new JObject(
-                                new JProperty("latLng",
-                                    new JObject(
-                                        new JProperty("latitude", endLat),
-                                        new JProperty("longitude", endLng)
-                                    )
-                                )
-                            )
-                        )
-                    )
-                ),
-                new JProperty("travelMode", "WALK"),
-                new JProperty("polylineQuality", "OVERVIEW"), // "HIGH_QUALITY"
-                new JProperty("computeAlternativeRoutes", false),
-                new JProperty("routeModifiers",
-                    new JObject(
-                        new JProperty("avoidTolls", false),
-                        new JProperty("avoidHighways", false),
-                        new JProperty("avoidFerries", false)
-                    )
-                ),
-                new JProperty("languageCode", "en-US"),
-                new JProperty("units", "METRIC")
+                )
             );
-    }
+        }
+        else if (!start.isAddress && end.isAddress) {
+            destinationObject = new JObject(new JProperty("address", end.address));
+        }
 
-    // This version takes in a destination address.
-    private static JObject ConstructRouteRequest(double startLat, double startLng, string destAddress)
-    {
         return
             new JObject(
                 new JProperty("origin",
@@ -128,8 +94,8 @@ public class WebClient : MonoBehaviour
                             new JObject(
                                 new JProperty("latLng",
                                     new JObject(
-                                        new JProperty("latitude", startLat),
-                                        new JProperty("longitude", startLng)
+                                        new JProperty("latitude", start.lat),
+                                        new JProperty("longitude", start.lng)
                                     )
                                 )
                             )
@@ -137,9 +103,7 @@ public class WebClient : MonoBehaviour
                     )
                 ),
                 new JProperty("destination",
-                    new JObject(
-                        new JProperty("address", destAddress)
-                    )
+                    destinationObject
                 ),
                 new JProperty("travelMode", "WALK"),
                 new JProperty("polylineQuality", "OVERVIEW"), // "HIGH_QUALITY"

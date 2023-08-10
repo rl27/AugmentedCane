@@ -76,7 +76,7 @@ public class Navigation : MonoBehaviour
             // Testing - plan a route
             Point start = new Point(42.36346643895319,-71.12569797709479);
             // Point end = new Point(42.36302180414251,-71.12749282880507);
-            Point end = new Point("swissbakers allston");
+            Point end = new Point("trader joes allston");
             RequestWaypoints(start, end);
         }
     }
@@ -112,7 +112,8 @@ public class Navigation : MonoBehaviour
     // Parse input location from address text box, then request waypoints
     public void OnAddressEntered(string input)
     {
-        RequestWaypoints(GPSData.EstimatedUserLocation(), new Point(input));
+        if (input != "")
+            RequestWaypoints(GPSData.EstimatedUserLocation(), new Point(input));
     }
 
     // Call this first to request a route and populate variables
