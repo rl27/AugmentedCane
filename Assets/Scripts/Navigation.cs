@@ -161,7 +161,7 @@ public class Navigation : MonoBehaviour
 
         if (curWaypoint != bestWaypoint && (DateTime.Now - lastInstructed).TotalSeconds > instructionUpdateInterval) {
             // Check if new waypoint corresponds with the starting position of a step, i.e. that it has an associated instruction
-            if (closeToWaypoint || bestWaypoint == curWaypoint + 1) {
+            if (closeToWaypoint || bestWaypoint > curWaypoint) {
                 int stepIndex = stepStartIndices.IndexOf(bestWaypoint);
                 if (stepIndex != -1) {
                     string instr = steps[stepIndex]["navigationInstruction"]["instructions"].ToString();
