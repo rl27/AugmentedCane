@@ -41,7 +41,7 @@ public class Navigation : MonoBehaviour
     private float orientationUpdateInterval = 10.0f; // Minimum interval at which to give orientation
 
     private DateTime lastInstructed; // Time at which instructions were last given
-    private float instructionUpdateInterval = 1.0f; // Minimum interval at which to give instructions
+    private float instructionUpdateInterval = 2.0f; // Minimum interval at which to give instructions
 
     private bool testing = false;
 
@@ -164,7 +164,7 @@ public class Navigation : MonoBehaviour
         if (bestWaypoint == -2) {
             initialized = false;
             tts.RequestTTS("Recalculating");
-            RequestWaypoints(GPSData.EstimatedUserLocation(), allPoints[allPoints.Count - 1]);
+            RequestWaypoints(loc, allPoints[allPoints.Count - 1]);
             return;
         }
         // Completed route.

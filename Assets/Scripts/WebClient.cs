@@ -36,6 +36,23 @@ public class WebClient : MonoBehaviour
         yield break;
     }
 
+    public static IEnumerator SendLogData(Dictionary<string, dynamic> coords)
+    {
+        string url = "raymondl.pythonanywhere.com";
+
+        using (UnityWebRequest webRequest = new UnityWebRequest(url, "POST"))
+        {
+            byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(JsonConvert.SerializeObject(coords));
+            webRequest.uploadHandler = (UploadHandler) new UploadHandlerRaw(jsonToSend);
+            webRequest.downloadHandler = (DownloadHandler) new DownloadHandlerBuffer();
+            webRequest.SetRequestHeader("Content-Type", "application/json");
+            yield return webRequest.SendWebRequest();
+            if (checkStatus(webRequest, url.Split('/'))) {
+                Debug.Log("log success");
+            }
+        }
+    }
+
     public static IEnumerator SendRouteRequest(Navigation.Point start, Navigation.Point end, Action<JObject> callback)
     {
         JObject request = ConstructRouteRequest(start, end);

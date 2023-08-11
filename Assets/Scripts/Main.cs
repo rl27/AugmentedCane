@@ -1,4 +1,5 @@
 using System.Text;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -41,6 +42,10 @@ public class Main : MonoBehaviour
     bool pcActive = false;
     bool planeActive = false;
 
+    List<double> gpsCoords = new List<double>();
+    List<byte[]> depthArrays = new List<byte[]>();
+    Dictionary<string, dynamic> log = new Dictionary<string, dynamic>();
+
     void Awake()
     {
         depth = DepthHandler.GetComponent<DepthImage>();
@@ -56,9 +61,21 @@ public class Main : MonoBehaviour
         PlaneHandler.SetActive(planeActive);
     }
 
+    public void LogButtonPress()
+    {   
+        depthArrays.Add(DepthImage.depthArray);
+        // log["gps"] = gpsCoords;
+        log["depth"] = depthArrays;
+        StartCoroutine(WebClient.SendLogData(log));
+    }
+
     // Update is called once per frame
     void Update()
     {
+        Navigation.Point loc = GPSData.EstimatedUserLocation();
+        gpsCoords.Add(loc.lat);
+        gpsCoords.Add(loc.lng);
+
         m_StringBuilder.Clear();
         m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}");
 

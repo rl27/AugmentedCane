@@ -77,7 +77,8 @@ public class DepthImage : MonoBehaviour
     SsdSample ssd;
 
     // Depth array
-    byte[] depthArray = new byte[0];
+    [NonSerialized]
+    public static byte[] depthArray = new byte[0];
     [NonSerialized]
     public int depthWidth = 0;
     [NonSerialized]
@@ -308,6 +309,9 @@ public class DepthImage : MonoBehaviour
                 Debug.Assert(image.planeCount == 1, "Plane count is not 1");
                 depthStride = image.GetPlane(0).pixelStride;
                 int numBytes = numPixels * depthStride;
+                Debug.unityLogger.Log("mytag",depthWidth);
+                Debug.unityLogger.Log("mytag",depthHeight);
+                Debug.unityLogger.Log("mytag",depthStride);
                 if (depthArray.Length != numBytes)
                     depthArray = new byte[numBytes];
                 image.GetPlane(0).data.CopyTo(depthArray);
