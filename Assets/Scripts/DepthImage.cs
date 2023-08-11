@@ -309,9 +309,6 @@ public class DepthImage : MonoBehaviour
                 Debug.Assert(image.planeCount == 1, "Plane count is not 1");
                 depthStride = image.GetPlane(0).pixelStride;
                 int numBytes = numPixels * depthStride;
-                Debug.unityLogger.Log("mytag",depthWidth);
-                Debug.unityLogger.Log("mytag",depthHeight);
-                Debug.unityLogger.Log("mytag",depthStride);
                 if (depthArray.Length != numBytes)
                     depthArray = new byte[numBytes];
                 image.GetPlane(0).data.CopyTo(depthArray);
