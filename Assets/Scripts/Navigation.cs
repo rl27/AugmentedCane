@@ -48,6 +48,8 @@ public class Navigation : MonoBehaviour
     private DateTime lastInstructed; // Time at which instructions were last given
     private float instructionUpdateInterval = 2.0f; // Minimum interval at which to give instructions
 
+    private float minPitch = 0.5f; // Minimum pitch to apply to audio
+
     private bool testing = false;
 
     public class Point {
@@ -208,7 +210,7 @@ public class Navigation : MonoBehaviour
             float sin = Mathf.Sin(rad);
             double absDiff = Math.Abs(headingDiff);
             AudioSourceObject.transform.position = DepthImage.position + new Vector3(sin, 0, 0);
-            audioSource.pitch = (float) (1 - 0.5 * (absDiff / offAxisAngle));
+            audioSource.pitch = (float) (1 - (1 - minPitch) * (absDiff / offAxisAngle)); // Range: [minPitch, 1]
             if (absDiff < onAxisAngle)
                 audioSource.PlayOneShot(onAxis, 2.5f);
             else if (absDiff < offAxisAngle)
