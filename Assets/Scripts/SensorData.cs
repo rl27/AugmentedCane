@@ -22,7 +22,7 @@ public class SensorData : MonoBehaviour
     private bool dataUpdating = false;
 
     // Moving average of heading
-    private static int numHeadings = 5;
+    private static int numHeadings = 8;
     private float[] pastHeadings = new float[numHeadings];
     private int headingIndex = 0;
 

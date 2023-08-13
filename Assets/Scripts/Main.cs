@@ -83,8 +83,10 @@ public class Main : MonoBehaviour
             m_StringBuilder.AppendLine($"{depth.m_StringBuilder.ToString()}");
         if (IMUActive)
             m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
-        if (GPSActive)
+        if (GPSActive) {
             m_StringBuilder.AppendLine($"{gps.GPSstring()}");
+            m_StringBuilder.AppendLine($"{Navigation.info}");
+        }
         if (pcActive)
             m_StringBuilder.AppendLine($"{pc.info}");
         if (planeActive)

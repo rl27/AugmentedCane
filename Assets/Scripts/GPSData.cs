@@ -26,10 +26,6 @@ public class GPSData : MonoBehaviour
 
     public static double degreeToMeter = 111139;
 
-    void Start()
-    {
-    }
-
     void Update()
     {
         StartCoroutine(UpdateData());

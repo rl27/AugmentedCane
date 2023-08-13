@@ -197,7 +197,8 @@ public class DepthImage : MonoBehaviour
 
         m_StringBuilder.Clear();
 
-        m_StringBuilder.AppendLine($"Camera position: {camera.transform.position}");
+        m_StringBuilder.AppendLine($"Camera position: {position}");
+        m_StringBuilder.AppendLine($"Camera rotation: {rotation.y}");
 
         // m_StringBuilder.AppendLine($"Width: {depthWidth}");
         // m_StringBuilder.AppendLine($"Height: {depthHeight}");
