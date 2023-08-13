@@ -1909,8 +1909,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   AudioSourceObject: {fileID: 1210721349}
-  onAxis: {fileID: 8300000, guid: 6e74114adf589224aa0dd3a2ee4b9898, type: 3}
-  offAxis: {fileID: 8300000, guid: 2b7597058ee8aee45b004570a17f406a, type: 3}
+  onAxis: {fileID: 8300000, guid: 26ca265b7d51267458d8fca1a3efd27e, type: 3}
+  offAxis: {fileID: 8300000, guid: 4e9fccc9d8ca5c24ba418b93e73a98c9, type: 3}
   behind: {fileID: 8300000, guid: 0dd36502ba1038841ab97ed77579d89d, type: 3}
   TTSHandler: {fileID: 207288727}
 --- !u!82 &1210721353
@@ -2219,7 +2219,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 50246b63cbcb77c4d902b7c96ebfc7f6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  collision: {fileID: 8300000, guid: 1b1f715d5f4809147a14d91834cbf517, type: 3}
+  collision: {fileID: 8300000, guid: fa1c1aad42cb70e4db7242a13b90e5ba, type: 3}
 --- !u!82 &1450406544
 AudioSource:
   m_ObjectHideFlags: 0

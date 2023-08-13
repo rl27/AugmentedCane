@@ -19,9 +19,9 @@ public class Navigation : MonoBehaviour
     AudioSource audioSource;
     public AudioClip onAxis;
     public AudioClip offAxis;
-    public AudioClip behind;
+    // public AudioClip behind;
     private double onAxisAngle = 15;
-    private double offAxisAngle = 90;
+    // private double offAxisAngle = 90;
 
     public List<Point> allPoints;
     public JArray steps;
@@ -203,13 +203,14 @@ public class Navigation : MonoBehaviour
             double headingDiff = (ori - SensorData.heading + 360) % 360;
             if (headingDiff > 180) // Move range to [-pi, pi]
                 headingDiff -= 360;
-            AudioSourceObject.transform.position = DepthImage.position + new Vector3(2 * (float) Math.Sin(headingDiff), 2 * (float) Math.Cos(headingDiff), 0);
+
+            float sin = Mathf.Sin((float) headingDiff * Mathf.Deg2Rad);
+            AudioSourceObject.transform.position = DepthImage.position + new Vector3(sin, 0, 0);
+            audioSource.pitch = 1 - sin/2; // max 1, min 0.5
             if (Math.Abs(headingDiff) < onAxisAngle)
-                audioSource.PlayOneShot(onAxis, 2);
-            else if (Math.Abs(headingDiff) < offAxisAngle)
-                audioSource.PlayOneShot(offAxis, 2);
+                audioSource.PlayOneShot(onAxis, 2.5f);
             else
-                audioSource.PlayOneShot(behind, 2);
+                audioSource.PlayOneShot(offAxis, 2.5f);
         }
 
         // TTS orientation info
