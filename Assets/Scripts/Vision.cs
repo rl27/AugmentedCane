@@ -34,14 +34,13 @@ public class Vision : MonoBehaviour
         // See worker types here: https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/Worker.html
         worker = WorkerFactory.CreateWorker(WorkerFactory.Type.ComputePrecompiled, model);
 
-        Tensor input = new Tensor(1, 640, 480, 3);
-        worker.Execute(input);
+        // Tensor input = new Tensor(1, 640, 480, 3);
+        // worker.Execute(input);
     }
 
     // https://forum.unity.com/threads/asynchronous-inference-in-barracuda.1370181/
     public IEnumerator Detect(Texture2D tex)
     {
-        working = true;
         if (working)
             yield break;
         working = true;

@@ -148,8 +148,8 @@ public class DepthImage : MonoBehaviour
         }
 
         audioPlayer = AudioHandler.GetComponent<AudioPlayer>();
-        // ssd = SSDHandler.GetComponent<SsdSample>();
-        // SSDHandler.SetActive(visionActive);
+        vision = VisionHandler.GetComponent<Vision>();
+        VisionHandler.SetActive(visionActive);
 
         // Set depth image material
         m_RawImage.material = m_DepthMaterial;
