@@ -73,8 +73,8 @@ public class DepthImage : MonoBehaviour
     AudioPlayer audioPlayer;
 
     [SerializeField]
-    GameObject SSDHandler;
-    SsdSample ssd;
+    GameObject VisionHandler;
+    Vision vision;
 
     // Depth array
     [NonSerialized]
@@ -128,7 +128,7 @@ public class DepthImage : MonoBehaviour
     public static Direction direction = Direction.None;
 
     // Perform vision tasks on camera image
-    bool visionActive = false;
+    bool visionActive = true;
 
     void Awake()
     {
@@ -148,8 +148,8 @@ public class DepthImage : MonoBehaviour
         }
 
         audioPlayer = AudioHandler.GetComponent<AudioPlayer>();
-        ssd = SSDHandler.GetComponent<SsdSample>();
-        SSDHandler.SetActive(visionActive);
+        // ssd = SSDHandler.GetComponent<SsdSample>();
+        // SSDHandler.SetActive(visionActive);
 
         // Set depth image material
         m_RawImage.material = m_DepthMaterial;
@@ -339,7 +339,8 @@ public class DepthImage : MonoBehaviour
             using (cameraImage) {
                 UpdateRawImage(m_RawCameraImage, cameraImage, TextureFormat.RGB24, false);
                 if (visionActive) {
-                    StartCoroutine(ssd.Invoke(m_RawCameraImage.texture));
+                    Texture2D testTex = m_RawCameraImage.texture as Texture2D;
+                    StartCoroutine(vision.Detect(testTex));
                 }
             }
         }
