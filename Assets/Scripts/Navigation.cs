@@ -37,13 +37,13 @@ public class Navigation : MonoBehaviour
     TTS tts;
 
     // Rough conversion: 0.00001 = 1 meter
-    private double closeRadius = 0.00005;
-    private double farRadius = 0.00025;
+    private double closeRadius = 0.00004;
+    private double farRadius = 0.00020;
 
     private bool initialized = false; // Tracks whether RequestWaypoints has been called & completed
 
     private DateTime lastOriented; // Time at which orientation was last given
-    private float orientationUpdateInterval = 10.0f; // Minimum interval at which to give orientation
+    private float orientationUpdateInterval = 12.0f; // Minimum interval at which to give orientation
 
     private DateTime lastInstructed; // Time at which instructions were last given
     private float instructionUpdateInterval = 2.0f; // Minimum interval at which to give instructions
