@@ -244,16 +244,13 @@ public class Navigation : MonoBehaviour
         int pointIndex = -1;
         int orthoIndex = -1;
         for (int i = 0; i < allPoints.Count - 1; i++) {
-            // If close enough to current waypoint, immediately return
             double distFromCur = Dist(loc, allPoints[i]);
-            if (distFromCur < closeRadius) {
-                return (i, true);
-            }
-            // Track closest point in case orthogonal projection doesn't find anything suitable
+            // Track closest point
             if (distFromCur < minPointDist) {
                 minPointDist = distFromCur;
-                pointIndex = i - 1;
+                pointIndex = i;
             }
+            // Track closest line segment between points
             double orthoDist = OrthogonalDist(allPoints[i], allPoints[i+1], loc);
             if (orthoDist < minOrthoDist) {
                 minOrthoDist = orthoDist;
@@ -261,10 +258,16 @@ public class Navigation : MonoBehaviour
             }
         }
 
+        // If very close to closest waypoint, use that point
+        if (minPointDist < closeRadius)
+            return (pointIndex, true);
+        // Otherwise, if close enough to closest line segment, use that
         if (minOrthoDist < farRadius)
             return (orthoIndex, false);
+        // Otherwise, if close enough to waypoint, use that point
         if (minPointDist < farRadius)
-            return (pointIndex, false);
+            return (pointIndex - 1, false);
+        // Otherwise, should recalculate
         return (-2, false);
     }
 
