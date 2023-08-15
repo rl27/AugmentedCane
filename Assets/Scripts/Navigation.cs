@@ -249,8 +249,12 @@ public class Navigation : MonoBehaviour
         double minOrthoDist = Double.PositiveInfinity;
         int pointIndex = -1;
         int orthoIndex = -1;
+        int latestClose = -1; // Highest index waypoint that is very close to user location
         for (int i = 0; i < allPoints.Count - 1; i++) {
             double distFromCur = Dist(loc, allPoints[i]);
+            if (distFromCur < closeRadius) {
+                latestClose = i;
+            }
             // Track closest point
             if (distFromCur < minPointDist) {
                 minPointDist = distFromCur;
@@ -265,8 +269,8 @@ public class Navigation : MonoBehaviour
         }
 
         // If very close to closest waypoint, use that point
-        if (minPointDist < closeRadius)
-            return (pointIndex, true);
+        if (latestClose != -1)
+            return (latestClose, true);
         // Otherwise, if close enough to closest line segment, use that
         if (minOrthoDist < farRadius)
             return (orthoIndex, false);
