@@ -7,6 +7,32 @@
       "dependencies": {},
       "hash": "65640405eab3109fddb6a87f50796c8c00d1a546"
     },
+    "com.github.asus4.mediapipe": {
+      "version": "2.12.0",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.github.asus4.tflite": "2.12.0",
+        "com.github.asus4.tflite.common": "2.12.0"
+      },
+      "url": "https://registry.npmjs.com"
+    },
+    "com.github.asus4.tflite": {
+      "version": "2.12.0",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://registry.npmjs.com"
+    },
+    "com.github.asus4.tflite.common": {
+      "version": "2.12.0",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.github.asus4.tflite": "2.12.0"
+      },
+      "url": "https://registry.npmjs.com"
+    },
     "com.unity.barracuda": {
       "version": "https://github.com/Unity-Technologies/barracuda-release.git",
       "depth": 0,

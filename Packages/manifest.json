@@ -1,5 +1,24 @@
 {
+  "scopedRegistries": [
+    {
+      "name": "package.openupm.com",
+      "url": "https://package.openupm.com",
+      "scopes": [
+        "com.cysharp.unitask"
+      ]
+    },
+    {
+      "name": "npm",
+      "url": "https://registry.npmjs.com",
+      "scopes": [
+        "com.github.asus4"
+      ]
+    }
+  ],
   "dependencies": {
+    "com.github.asus4.mediapipe": "2.12.0",
+    "com.github.asus4.tflite": "2.12.0",
+    "com.github.asus4.tflite.common": "2.12.0",
     "com.unity.barracuda": "https://github.com/Unity-Technologies/barracuda-release.git",
     "com.github-glitchenzo.nugetforunity": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",
     "com.unity.collab-proxy": "2.0.3",

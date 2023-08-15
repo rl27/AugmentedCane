@@ -1808,6 +1808,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1168124738}
   - component: {fileID: 1168124739}
+  - component: {fileID: 1168124740}
   m_Layer: 0
   m_Name: VisionHandler
   m_TagString: Untagged
@@ -1843,6 +1844,26 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   modelAsset: {fileID: 5022602860645237092, guid: 3c9ea3777fca7cd4db6541d39f0cbc26, type: 3}
+--- !u!114 &1168124740
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1168124737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7fb4138b830554fb3998a569eb701fb7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  options:
+    modelPath: coco_ssd_mobilenet_quant.tflite
+    aspectMode: 1
+    accelerator: 2
+  frameContainer: {fileID: 237722658}
+  framePrefab: {fileID: 3820330068002586715, guid: 717c89ea2a05f4537b007f12d6357590, type: 3}
+  scoreThreshold: 0.5
+  labelMap: {fileID: 4900000, guid: bae4ee124cc4849e589f4cd1aa62e7db, type: 3}
 --- !u!1 &1210721349
 GameObject:
   m_ObjectHideFlags: 0
