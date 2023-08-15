@@ -76,6 +76,7 @@ public class DepthImage : MonoBehaviour
     GameObject VisionHandler;
     Vision vision;
     SsdSample ssd;
+    YOLOSample yolo;
 
     // Depth array
     [NonSerialized]
@@ -152,6 +153,7 @@ public class DepthImage : MonoBehaviour
         audioPlayer = AudioHandler.GetComponent<AudioPlayer>();
         vision = VisionHandler.GetComponent<Vision>();
         ssd = VisionHandler.GetComponent<SsdSample>();
+        yolo = VisionHandler.GetComponent<YOLOSample>();
         VisionHandler.SetActive(visionActive);
 
         // Set depth image material
@@ -343,7 +345,8 @@ public class DepthImage : MonoBehaviour
                 UpdateRawImage(m_RawCameraImage, cameraImage, TextureFormat.RGB24, false);
                 if (visionActive) {
                     if (tflite) {
-                        StartCoroutine(ssd.DoInvoke(m_RawCameraImage.texture));
+                        // StartCoroutine(ssd.DoInvoke(m_RawCameraImage.texture));
+                        StartCoroutine(yolo.DoInvoke(m_RawCameraImage.texture));
                     }
                     else {
                         Texture2D testTex = m_RawCameraImage.texture as Texture2D;

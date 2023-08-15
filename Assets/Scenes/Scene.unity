@@ -1809,6 +1809,7 @@ GameObject:
   - component: {fileID: 1168124738}
   - component: {fileID: 1168124739}
   - component: {fileID: 1168124740}
+  - component: {fileID: 1168124741}
   m_Layer: 0
   m_Name: VisionHandler
   m_TagString: Untagged
@@ -1862,9 +1863,29 @@ MonoBehaviour:
     aspectMode: 1
     accelerator: 2
   frameContainer: {fileID: 237722658}
-  framePrefab: {fileID: 3820330068002586715, guid: 717c89ea2a05f4537b007f12d6357590, type: 3}
+  framePrefab: {fileID: 3820330068002586715, guid: 6e1b6b8d66fdfdd45abed5b58c2cee75, type: 3}
   scoreThreshold: 0.5
   labelMap: {fileID: 4900000, guid: bae4ee124cc4849e589f4cd1aa62e7db, type: 3}
+--- !u!114 &1168124741
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1168124737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d589e9cf51cc4a246b5123470884107d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  options:
+    modelPath: yolov8n_float16.tflite
+    aspectMode: 1
+    accelerator: 2
+  frameContainer: {fileID: 237722658}
+  framePrefab: {fileID: 3820330068002586715, guid: 6e1b6b8d66fdfdd45abed5b58c2cee75, type: 3}
+  scoreThreshold: 0.5
+  labelMap: {fileID: 4900000, guid: 368961115ffa335468095bd4739ea7c6, type: 3}
 --- !u!1 &1210721349
 GameObject:
   m_ObjectHideFlags: 0
