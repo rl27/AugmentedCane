@@ -36,7 +36,8 @@ public class SsdSample : MonoBehaviour
     private void Start()
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
-        // This is an example usage of the NNAPI delegate.
+        // Using NNAPI for Android.
+        // if (options.accelerator == SSD.Accelerator.NNAPI && !Application.isEditor)
         if (!Application.isEditor)
         {
             options.accelerator = SSD.Accelerator.NNAPI;
