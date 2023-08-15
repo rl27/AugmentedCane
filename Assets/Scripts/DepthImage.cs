@@ -343,7 +343,7 @@ public class DepthImage : MonoBehaviour
                 UpdateRawImage(m_RawCameraImage, cameraImage, TextureFormat.RGB24, false);
                 if (visionActive) {
                     if (tflite) {
-                        StartCoroutine(ssd.Invoke(m_RawCameraImage.texture));
+                        StartCoroutine(ssd.DoInvoke(m_RawCameraImage.texture));
                     }
                     else {
                         Texture2D testTex = m_RawCameraImage.texture as Texture2D;

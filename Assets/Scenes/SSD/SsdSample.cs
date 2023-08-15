@@ -1,5 +1,7 @@
 ﻿using System.Collections;
+using System.Threading;
 using TensorFlowLite;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -26,6 +28,10 @@ public class SsdSample : MonoBehaviour
 
     private bool working = false;
     private float delay = 0.033f;
+
+    private UniTask<bool> task;
+    private CancellationToken cancellationToken;
+    private bool runBackground = true;
 
     private void Start()
     {
@@ -58,6 +64,8 @@ public class SsdSample : MonoBehaviour
         }
 
         labels = labelMap.text.Split('\n');
+
+        cancellationToken = this.GetCancellationTokenOnDestroy();
     }
 
     private void OnDestroy()
@@ -65,21 +73,39 @@ public class SsdSample : MonoBehaviour
         ssd?.Dispose();
     }
 
-    public IEnumerator Invoke(Texture texture)
+    private void Invoke(Texture texture)
+    {
+        ssd.Invoke(texture);
+        SSD.Result[] results = ssd.GetResults();
+        Vector2 size = (frameContainer.transform as RectTransform).rect.size;
+        for (int i = 0; i < 10; i++)
+            SetFrame(frames[i], results[i], size);
+    }
+
+    public IEnumerator DoInvoke(Texture texture)
     {
         if (working)
             yield break;
         working = true;
 
-        ssd.Invoke(texture);
-
-        SSD.Result[] results = ssd.GetResults();
-        Vector2 size = (frameContainer.transform as RectTransform).rect.size;
-        for (int i = 0; i < 10; i++)
-            SetFrame(frames[i], results[i], size);
+        if (runBackground) {
+            if (task.Status.IsCompleted())
+                task = InvokeAsync(texture);
+        }
+        else
+            Invoke(texture);
 
         yield return new WaitForSeconds(delay);
         working = false;
+    }
+
+    private async UniTask<bool> InvokeAsync(Texture texture)
+    {
+        SSD.Result[] results = await ssd.InvokeAsync(texture, cancellationToken);
+        Vector2 size = (frameContainer.transform as RectTransform).rect.size;
+        for (int i = 0; i < 10; i++)
+            SetFrame(frames[i], results[i], size);
+        return true;
     }
 
     private void SetFrame(Text frame, SSD.Result result, Vector2 size)
