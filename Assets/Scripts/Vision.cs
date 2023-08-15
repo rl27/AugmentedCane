@@ -28,6 +28,10 @@ public class Vision : MonoBehaviour
 
     public List<Box> boxes = new List<Box>();
 
+    [SerializeField]
+    private TextAsset labelMap = null;
+    private string[] labels;
+
     void Start()
     {
         model = ModelLoader.Load(modelAsset);
@@ -36,6 +40,8 @@ public class Vision : MonoBehaviour
 
         // Tensor input = new Tensor(1, 640, 480, 3);
         // worker.Execute(input);
+
+        labels = labelMap.text.Split('\n');
     }
 
     // https://forum.unity.com/threads/asynchronous-inference-in-barracuda.1370181/
@@ -79,7 +85,7 @@ public class Vision : MonoBehaviour
             Debug.unityLogger.Log("mytag", "x");
             NMS(boxes, 0.45f);
             foreach (var b in boxes) {
-                Debug.unityLogger.Log("mytag", b.cls);
+                Debug.unityLogger.Log("mytag", b.cls + " " + labels[b.cls]);
                 Debug.unityLogger.Log("mytag", b.score);
             }
         }

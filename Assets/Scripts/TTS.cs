@@ -14,7 +14,7 @@ public class TTS : MonoBehaviour
     private string audioFilePath;
 
     // If an audio clip is older than timeToDiscard, it is discarded.
-    private double timeToDiscard = 4.0;
+    private double timeToDiscard = 999.0; // Get rid of this? If user stands in front of obstacle for too long they may miss an instruction.
 
     private struct AudioWithTime {
         public AudioClip audioClip;
@@ -26,6 +26,8 @@ public class TTS : MonoBehaviour
     }
 
     private Queue<AudioWithTime> audioToPlay = new Queue<AudioWithTime>();
+
+    private DateTime lastNonDepth;
 
     void Start()
     {

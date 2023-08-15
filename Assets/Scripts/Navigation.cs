@@ -22,6 +22,7 @@ public class Navigation : MonoBehaviour
     public AudioClip behind;
     private double onAxisAngle = 15;
     private double offAxisAngle = 90;
+    public AudioClip reachWaypoint;
 
     public List<Point> allPoints;
     public JArray steps;
@@ -182,12 +183,18 @@ public class Navigation : MonoBehaviour
         }
 
         if (curWaypoint != bestWaypoint && (DateTime.Now - lastInstructed).TotalSeconds > instructionUpdateInterval) {
-            // Check if new waypoint corresponds with the starting position of a step, i.e. that it has an associated instruction
             if (closeToWaypoint || bestWaypoint > curWaypoint) {
+                audioSource.Stop();
+                AudioSourceObject.transform.position = DepthImage.position;
+                audioSource.PlayOneShot(reachWaypoint, 2.2f);
+
+                // Check if new waypoint corresponds with the starting position of a step, i.e. that it has an associated instruction
                 int stepIndex = stepStartIndices.IndexOf(bestWaypoint);
                 if (stepIndex != -1) {
                     string instr = steps[stepIndex]["navigationInstruction"]["instructions"].ToString();
                     tts.RequestTTS(String.Format("Step {0}: {1}", stepIndex + 1, instr));
+                }
+                else { // Otherwise, give basic instruction? e.g. "Turn right"
                 }
             }
             curWaypoint = bestWaypoint;
@@ -198,7 +205,7 @@ public class Navigation : MonoBehaviour
         int targetWaypoint = curWaypoint + 1;
         double ori = Orientation(loc, allPoints[targetWaypoint]);
         double dist = GPSData.degreeToMeter * Dist(loc, allPoints[targetWaypoint]);
-        info = String.Format("WP {0}, {1}°, {2} m", targetWaypoint, Math.Round(ori), Math.Round(dist));
+        info = String.Format("WP {0}, {1}°, {2} m", targetWaypoint, Math.Round(ori), Math.Round(dist, 1));
 
         // Play orientation audio
         if (DepthImage.direction == DepthImage.Direction.None && !audioSource.isPlaying) {
@@ -226,7 +233,6 @@ public class Navigation : MonoBehaviour
             string facingCardinal = CardinalOrientation(SensorData.heading);
             string targetCardinal = CardinalOrientation(ori);
             tts.RequestTTS(String.Format("Facing {0}, head {1} for {2} meters", facingCardinal, targetCardinal, Math.Round(dist)));
-            // tts.RequestTTS(String.Format("{0}, {1} degrees, {2} meters", targetWaypoint, Math.Round(ori), Math.Round(dist)));
             lastOriented = DateTime.Now;
         }
     }
