@@ -20,7 +20,7 @@ public class Navigation : MonoBehaviour
     public AudioClip onAxis;
     public AudioClip offAxis;
     public AudioClip behind;
-    private double onAxisAngle = 15;
+    private double onAxisAngle = 22.5;
     private double offAxisAngle = 90;
     public AudioClip reachWaypoint;
 
@@ -40,7 +40,7 @@ public class Navigation : MonoBehaviour
     // Rough conversion: 0.00001 = 1 meter
     private double closeRadius = 0.00004;
     private double farRadius = 0.00020;
-    private double farLineDist = 0.00015;
+    private double farLineDist = 0.00020;
 
     private bool initialized = false; // Tracks whether RequestWaypoints has been called & completed
 
