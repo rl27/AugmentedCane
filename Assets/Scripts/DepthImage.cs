@@ -131,7 +131,7 @@ public class DepthImage : MonoBehaviour
     public static Direction direction = Direction.None;
 
     // Perform vision tasks on camera image
-    bool visionActive = true;
+    bool visionActive = false;
     bool tflite = true;
 
     void Awake()
@@ -152,10 +152,15 @@ public class DepthImage : MonoBehaviour
         }
 
         audioPlayer = AudioHandler.GetComponent<AudioPlayer>();
+
         vision = VisionHandler.GetComponent<Vision>();
         ssd = VisionHandler.GetComponent<SsdSample>();
         yolo = VisionHandler.GetComponent<YOLOSample>();
         deeplab = VisionHandler.GetComponent<DeepLabSample>();
+        if (!visionActive) {
+            yolo.frameContainer.enabled = false;
+            deeplab.outputView.enabled = false;
+        }
         VisionHandler.SetActive(visionActive);
 
         // Set depth image material
@@ -342,10 +347,10 @@ public class DepthImage : MonoBehaviour
         }
 
         // Acquire a camera image, update the corresponding raw image, and do CV
-        if (m_CameraManager.TryAcquireLatestCpuImage(out XRCpuImage cameraImage)) {
-            using (cameraImage) {
-                UpdateRawImage(m_RawCameraImage, cameraImage, TextureFormat.RGB24, false);
-                if (visionActive) {
+        if (visionActive) {
+            if (m_CameraManager.TryAcquireLatestCpuImage(out XRCpuImage cameraImage)) {
+                using (cameraImage) {
+                    UpdateRawImage(m_RawCameraImage, cameraImage, TextureFormat.RGB24, false);
                     if (tflite) {
                         // StartCoroutine(ssd.DoInvoke(m_RawCameraImage.texture));
                         // StartCoroutine(yolo.DoInvoke(m_RawCameraImage.texture));

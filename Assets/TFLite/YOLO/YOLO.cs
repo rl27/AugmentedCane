@@ -8,6 +8,8 @@ namespace TensorFlowLite
 {
     public class YOLO : BaseImagePredictor<float>
     {
+        private float scoreThreshold = 0.5f;
+
         [System.Serializable]
         public class Options
         {
@@ -105,7 +107,7 @@ namespace TensorFlowLite
                         maxIndex = i - 4;
                     }
                 }
-                if (maxScore >= 0.5f) {
+                if (maxScore >= scoreThreshold) {
                     Vector4 bbox = YOLOtoBbox(output[0, j], output[1, j], output[2, j], output[3, j]);
                     boxes.Add(new Box(bbox, maxScore, maxIndex));
                 }

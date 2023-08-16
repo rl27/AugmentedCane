@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 using System.Collections.Generic;
 using UnityEngine;
@@ -46,6 +47,9 @@ public class Main : MonoBehaviour
     List<byte[]> depthArrays = new List<byte[]>();
     Dictionary<string, dynamic> log = new Dictionary<string, dynamic>();
 
+    private DateTime gpsLastLog;
+    private float gpsLogInterval = 0.2f;
+
     void Awake()
     {
         depth = DepthHandler.GetComponent<DepthImage>();
@@ -63,18 +67,20 @@ public class Main : MonoBehaviour
 
     public void LogButtonPress()
     {   
-        depthArrays.Add(DepthImage.depthArray);
-        // log["gps"] = gpsCoords;
-        log["depth"] = depthArrays;
+        // depthArrays.Add(DepthImage.depthArray);
+        // log["depth"] = depthArrays;
+        log["gps"] = gpsCoords;
         StartCoroutine(WebClient.SendLogData(log));
     }
 
     // Update is called once per frame
     void Update()
     {
-        // Navigation.Point loc = GPSData.EstimatedUserLocation();
-        // gpsCoords.Add(loc.lat);
-        // gpsCoords.Add(loc.lng);
+        if ((DateTime.Now - gpsLastLog).TotalSeconds > gpsLogInterval) {
+            Navigation.Point loc = GPSData.EstimatedUserLocation();
+            gpsCoords.Add(loc.lat);
+            gpsCoords.Add(loc.lng);
+        }
 
         m_StringBuilder.Clear();
         m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}");

@@ -7,7 +7,7 @@ using UnityEngine.UI;
 public class DeepLabSample : MonoBehaviour
 {
     [SerializeField]
-    private RawImage outputView = null;
+    public RawImage outputView = null;
 
     [SerializeField]
     private DeepLab.Options options = default;

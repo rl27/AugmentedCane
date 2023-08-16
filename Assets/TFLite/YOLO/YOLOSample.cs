@@ -13,7 +13,7 @@ public class YOLOSample : MonoBehaviour
     private YOLO.Options options = default;
 
     [SerializeField]
-    private AspectRatioFitter frameContainer = null;
+    public AspectRatioFitter frameContainer = null;
 
     [SerializeField]
     private Text framePrefab = null;

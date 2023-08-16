@@ -38,7 +38,7 @@ public class Navigation : MonoBehaviour
     TTS tts;
 
     // Rough conversion: 0.00001 = 1 meter
-    private double closeRadius = 0.00004;
+    private double closeRadius = 0.000045;
     private double farRadius = 0.00020;
     private double farLineDist = 0.00020;
 
