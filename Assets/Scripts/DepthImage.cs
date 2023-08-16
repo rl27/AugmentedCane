@@ -77,6 +77,7 @@ public class DepthImage : MonoBehaviour
     Vision vision;
     SsdSample ssd;
     YOLOSample yolo;
+    DeepLabSample deeplab;
 
     // Depth array
     [NonSerialized]
@@ -154,6 +155,7 @@ public class DepthImage : MonoBehaviour
         vision = VisionHandler.GetComponent<Vision>();
         ssd = VisionHandler.GetComponent<SsdSample>();
         yolo = VisionHandler.GetComponent<YOLOSample>();
+        deeplab = VisionHandler.GetComponent<DeepLabSample>();
         VisionHandler.SetActive(visionActive);
 
         // Set depth image material
@@ -346,7 +348,8 @@ public class DepthImage : MonoBehaviour
                 if (visionActive) {
                     if (tflite) {
                         // StartCoroutine(ssd.DoInvoke(m_RawCameraImage.texture));
-                        StartCoroutine(yolo.DoInvoke(m_RawCameraImage.texture));
+                        // StartCoroutine(yolo.DoInvoke(m_RawCameraImage.texture));
+                        deeplab.DoInvoke(m_RawCameraImage.texture);
                     }
                     else {
                         Texture2D testTex = m_RawCameraImage.texture as Texture2D;
