@@ -39,7 +39,7 @@ public class Navigation : MonoBehaviour
 
     // Rough conversion: 0.00001 = 1 meter
     private double closeRadius = 0.00004;
-    private double farRadius = 0.00020;
+    private double farRadius = 0.00025;
 
     private bool initialized = false; // Tracks whether RequestWaypoints has been called & completed
 
@@ -50,6 +50,8 @@ public class Navigation : MonoBehaviour
     private float instructionUpdateInterval = 2.0f; // Minimum interval at which to give instructions
 
     private float minPitch = 0.5f; // Minimum pitch to apply to audio
+
+    private bool reachedFirstWaypoint = false;
 
     private bool testing = false;
 
@@ -157,6 +159,7 @@ public class Navigation : MonoBehaviour
                     stepStartIndices.Add(index);
                 }
                 initialized = true;
+                reachedFirstWaypoint = false;
             })
         );
     }
@@ -241,6 +244,15 @@ public class Navigation : MonoBehaviour
     // Find index of most suitable waypoint for a given user location
     private (int, bool) FindBestWaypoint(Point loc)
     {
+        // Guide user to first waypoint before doing all the other navigation stuff
+        if (!reachedFirstWaypoint) {
+            if (Dist(loc, allPoints[0]) < closeRadius) {
+                reachedFirstWaypoint = true;
+                return (0, true);
+            }
+            return (-1, false);
+        }
+
         // Check if reached final waypoint
         if (Dist(loc, allPoints[allPoints.Count - 1]) < closeRadius) {
             return (allPoints.Count - 1, true);
@@ -269,7 +281,7 @@ public class Navigation : MonoBehaviour
             }
         }
 
-        // If very close to closest waypoint, use that point
+        // If very close to a waypoint, use that point
         if (latestClose != -1)
             return (latestClose, true);
         // Otherwise, if close enough to closest line segment, use that
