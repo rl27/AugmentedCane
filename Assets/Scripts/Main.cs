@@ -72,9 +72,9 @@ public class Main : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Navigation.Point loc = GPSData.EstimatedUserLocation();
-        gpsCoords.Add(loc.lat);
-        gpsCoords.Add(loc.lng);
+        // Navigation.Point loc = GPSData.EstimatedUserLocation();
+        // gpsCoords.Add(loc.lat);
+        // gpsCoords.Add(loc.lng);
 
         m_StringBuilder.Clear();
         m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}");
