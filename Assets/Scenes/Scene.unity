@@ -1879,12 +1879,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   options:
-    modelPath: yolov8n_float16.tflite
+    modelPath: yolov8n_320_320_float16.tflite
     aspectMode: 1
     accelerator: 2
   frameContainer: {fileID: 237722658}
   framePrefab: {fileID: 3820330068002586715, guid: 6e1b6b8d66fdfdd45abed5b58c2cee75, type: 3}
-  scoreThreshold: 0.5
   labelMap: {fileID: 4900000, guid: 368961115ffa335468095bd4739ea7c6, type: 3}
 --- !u!1 &1210721349
 GameObject:
