@@ -39,7 +39,8 @@ public class Navigation : MonoBehaviour
 
     // Rough conversion: 0.00001 = 1 meter
     private double closeRadius = 0.00004;
-    private double farRadius = 0.00025;
+    private double farRadius = 0.00020;
+    private double farLineDist = 0.00015;
 
     private bool initialized = false; // Tracks whether RequestWaypoints has been called & completed
 
@@ -285,7 +286,7 @@ public class Navigation : MonoBehaviour
         if (latestClose != -1)
             return (latestClose, true);
         // Otherwise, if close enough to closest line segment, use that
-        if (minOrthoDist < farRadius)
+        if (minOrthoDist < farLineDist)
             return (orthoIndex, false);
         // Otherwise, if close enough to waypoint, use that point
         if (minPointDist < farRadius)
