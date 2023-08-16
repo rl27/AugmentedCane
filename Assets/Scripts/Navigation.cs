@@ -186,7 +186,8 @@ public class Navigation : MonoBehaviour
             if (closeToWaypoint || bestWaypoint > curWaypoint) {
                 audioSource.Stop();
                 AudioSourceObject.transform.position = DepthImage.position;
-                audioSource.PlayOneShot(reachWaypoint, 2.2f);
+                audioSource.pitch = 1;
+                audioSource.PlayOneShot(reachWaypoint, 1f);
 
                 // Check if new waypoint corresponds with the starting position of a step, i.e. that it has an associated instruction
                 int stepIndex = stepStartIndices.IndexOf(bestWaypoint);
