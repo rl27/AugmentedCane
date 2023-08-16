@@ -27,7 +27,7 @@ public class SsdSample : MonoBehaviour
     private string[] labels;
 
     private bool working = false;
-    private float delay = 0.033f;
+    private float delay = 0.05f;
 
     private UniTask<bool> task;
     private CancellationToken cancellationToken;
@@ -75,15 +75,6 @@ public class SsdSample : MonoBehaviour
         ssd?.Dispose();
     }
 
-    private void Invoke(Texture texture)
-    {
-        ssd.Invoke(texture);
-        SSD.Result[] results = ssd.GetResults();
-        Vector2 size = (frameContainer.transform as RectTransform).rect.size;
-        for (int i = 0; i < 10; i++)
-            SetFrame(frames[i], results[i], size);
-    }
-
     public IEnumerator DoInvoke(Texture texture)
     {
         if (working)
@@ -101,6 +92,15 @@ public class SsdSample : MonoBehaviour
         working = false;
     }
 
+    private void Invoke(Texture texture)
+    {
+        ssd.Invoke(texture);
+        SSD.Result[] results = ssd.GetResults();
+        Vector2 size = (frameContainer.transform as RectTransform).rect.size;
+        for (int i = 0; i < 10; i++)
+            SetFrame(frames[i], results[i], size);
+    }
+
     private async UniTask<bool> InvokeAsync(Texture texture)
     {
         SSD.Result[] results = await ssd.InvokeAsync(texture, cancellationToken);
@@ -112,19 +112,14 @@ public class SsdSample : MonoBehaviour
 
     private void SetFrame(Text frame, SSD.Result result, Vector2 size)
     {
-        if (result.score < scoreThreshold)
-        {
+        if (result.score < scoreThreshold) {
             frame.gameObject.SetActive(false);
             return;
         }
         else
-        {
             frame.gameObject.SetActive(true);
-        }
 
-        Debug.unityLogger.Log("mytag", result.rect.position);
-
-        size = size * 6f;
+        size = size * 6.4f;
         frame.text = $"{GetLabelName(result.classID)} : {(int)(result.score * 100)}%";
         var rt = frame.transform as RectTransform;
         rt.anchoredPosition = result.rect.position * size - size * 0.5f;
@@ -134,9 +129,7 @@ public class SsdSample : MonoBehaviour
     private string GetLabelName(int id)
     {
         if (id < 0 || id >= labels.Length - 1)
-        {
             return "?";
-        }
         return labels[id + 1];
     }
 

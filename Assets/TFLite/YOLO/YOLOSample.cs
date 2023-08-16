@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Threading;
 using TensorFlowLite;
 using Cysharp.Threading.Tasks;
@@ -16,8 +18,8 @@ public class YOLOSample : MonoBehaviour
     [SerializeField]
     private Text framePrefab = null;
 
-    [SerializeField, Range(0f, 1f)]
-    private float scoreThreshold = 0.5f;
+    // [SerializeField, Range(0f, 1f)]
+    // private float scoreThreshold = 0.5f;
 
     [SerializeField]
     private TextAsset labelMap = null;
@@ -74,15 +76,6 @@ public class YOLOSample : MonoBehaviour
         yolo?.Dispose();
     }
 
-    private void Invoke(Texture texture)
-    {
-        yolo.Invoke(texture);
-        YOLO.Result[] results = yolo.GetResults();
-        Vector2 size = (frameContainer.transform as RectTransform).rect.size;
-        for (int i = 0; i < 10; i++)
-            SetFrame(frames[i], results[i], size);
-    }
-
     public IEnumerator DoInvoke(Texture texture)
     {
         if (working)
@@ -100,30 +93,31 @@ public class YOLOSample : MonoBehaviour
         working = false;
     }
 
+    private void Invoke(Texture texture)
+    {
+        yolo.Invoke(texture);
+        List<YOLO.Result> results = yolo.GetResults();
+        Vector2 size = (frameContainer.transform as RectTransform).rect.size;
+        for (int i = 0; i < Math.Min(results.Count, 10); i++)
+            SetFrame(frames[i], results[i], size);
+    }
+
     private async UniTask<bool> InvokeAsync(Texture texture)
     {
-        YOLO.Result[] results = await yolo.InvokeAsync(texture, cancellationToken);
+        List<YOLO.Result> results = await yolo.InvokeAsync(texture, cancellationToken);
         Vector2 size = (frameContainer.transform as RectTransform).rect.size;
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < Math.Min(results.Count, 10); i++)
             SetFrame(frames[i], results[i], size);
+        for (int i = results.Count; i < 10; i++)
+            frames[i].gameObject.SetActive(false);
         return true;
     }
 
     private void SetFrame(Text frame, YOLO.Result result, Vector2 size)
     {
-        if (result.score < scoreThreshold)
-        {
-            frame.gameObject.SetActive(false);
-            return;
-        }
-        else
-        {
-            frame.gameObject.SetActive(true);
-        }
+        frame.gameObject.SetActive(true);
 
-        Debug.unityLogger.Log("mytag", result.rect.position);
-
-        size = size * 6f;
+        size = size * 6.4f;
         frame.text = $"{GetLabelName(result.classID)} : {(int)(result.score * 100)}%";
         var rt = frame.transform as RectTransform;
         rt.anchoredPosition = result.rect.position * size - size * 0.5f;
@@ -133,10 +127,8 @@ public class YOLOSample : MonoBehaviour
     private string GetLabelName(int id)
     {
         if (id < 0 || id >= labels.Length - 1)
-        {
             return "?";
-        }
-        return labels[id + 1];
+        return labels[id];
     }
 
 }
