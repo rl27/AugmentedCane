@@ -74,7 +74,10 @@ public class Navigation : MonoBehaviour
             this.isAddress = true;
         }
         public override string ToString() {
-            return address + ": " + lat + "," + lng;
+            string ll = Math.Round(lat, 7) + "," + Math.Round(lng, 7);
+            if (!isAddress)
+                return ll;
+            return address + ": " + ll;
         }
     }
 
@@ -210,7 +213,7 @@ public class Navigation : MonoBehaviour
         int targetWaypoint = curWaypoint + 1;
         double ori = Orientation(loc, allPoints[targetWaypoint]);
         double dist = GPSData.degreeToMeter * Dist(loc, allPoints[targetWaypoint]);
-        info = String.Format("WP {0}, {1}°, {2} m", targetWaypoint, Math.Round(ori), Math.Round(dist, 1));
+        info = String.Format("WP {0}, {1}°, {2} m", targetWaypoint, Math.Round(ori), Math.Round(dist, 2));
 
         // Play orientation audio
         if (DepthImage.direction == DepthImage.Direction.None && !audioSource.isPlaying) {

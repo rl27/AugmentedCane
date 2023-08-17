@@ -48,7 +48,7 @@ public class Main : MonoBehaviour
     Dictionary<string, dynamic> log = new Dictionary<string, dynamic>();
 
     private DateTime gpsLastLog;
-    private float gpsLogInterval = 0.2f;
+    private float gpsLogInterval = 1.0f;
 
     void Awake()
     {

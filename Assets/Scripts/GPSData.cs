@@ -145,7 +145,7 @@ public class GPSData : MonoBehaviour
         // return string.Format("Latitude: {0} \nLongitude: {1} \nAltitude: {2} \nHorizontal accuracy: {3} \nTimestamp: {4}", gps.latitude, gps.longitude, gps.altitude, gps.horizontalAccuracy, DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp));
         // return string.Format("GPS last update: {0} \nLatitude: {1} \nLongitude: {2} \nHorizontal accuracy: {3}",
         //     DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp).LocalDateTime.TimeOfDay, gps.latitude.ToString("R"), gps.longitude.ToString("R"), gps.horizontalAccuracy);
-        return string.Format("GPS last update: {0} \nLatitude: {1} \nLongitude: {2} \nHorizontal accuracy: {3} \n{4}",
-            DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp).LocalDateTime.TimeOfDay, gps.latitude.ToString("R"), gps.longitude.ToString("R"), gps.horizontalAccuracy, EstimatedUserLocation());
+        return string.Format("GPS updated: {0} \nAccuracy: {1} \nLat/Long: {2}, {3} \nEst. loc: {4}\n",
+            DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp).LocalDateTime.TimeOfDay, gps.horizontalAccuracy, gps.latitude, gps.longitude, EstimatedUserLocation());
     }
 }
