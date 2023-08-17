@@ -48,7 +48,7 @@ public class Main : MonoBehaviour
     Dictionary<string, dynamic> log = new Dictionary<string, dynamic>();
 
     private DateTime gpsLastLog;
-    private float gpsLogInterval = 1.0f;
+    private float gpsLogInterval = 0.2f;
 
     void Awake()
     {
@@ -69,6 +69,7 @@ public class Main : MonoBehaviour
     {   
         // depthArrays.Add(DepthImage.depthArray);
         // log["depth"] = depthArrays;
+        log["model"] = SystemInfo.deviceModel;
         log["gps"] = gpsCoords;
         StartCoroutine(WebClient.SendLogData(log));
     }
@@ -80,6 +81,7 @@ public class Main : MonoBehaviour
             Navigation.Point loc = GPSData.EstimatedUserLocation();
             gpsCoords.Add(loc.lat);
             gpsCoords.Add(loc.lng);
+            gpsLastLog = DateTime.Now;
         }
 
         m_StringBuilder.Clear();
