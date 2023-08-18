@@ -91,7 +91,7 @@ public class Vision : MonoBehaviour
         }
 
         input.Dispose();
-        output.Dispose();
+        // output.Dispose();
 
         working = false;
     }
