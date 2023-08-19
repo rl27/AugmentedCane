@@ -16,7 +16,6 @@ public class SsdSample : MonoBehaviour
     [SerializeField]
     private Text framePrefab = null;
 
-    [SerializeField, Range(0f, 1f)]
     private float scoreThreshold = 0.5f;
 
     [SerializeField]
