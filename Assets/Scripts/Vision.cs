@@ -40,6 +40,15 @@ public class Vision : MonoBehaviour
 
         // Tensor input = new Tensor(1, 640, 480, 3);
         // worker.Execute(input);
+        
+        // BurstCPUOps ops = new BurstCPUOps();
+        // Tensor o0 = new Tensor(32, 1, 1, 2100);
+        // Tensor o1 = new Tensor(6400, 1, 1, 32);
+        // Tensor o2 = ops.MatMul(o0, true, o1, true);
+        // Debug.Log(o2.shape);
+        // o0.Dispose();
+        // o1.Dispose();
+        // o2.Dispose();
 
         labels = labelMap.text.Split('\n');
     }

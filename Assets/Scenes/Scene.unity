@@ -1811,6 +1811,7 @@ GameObject:
   - component: {fileID: 1168124740}
   - component: {fileID: 1168124741}
   - component: {fileID: 1168124742}
+  - component: {fileID: 1168124743}
   m_Layer: 0
   m_Name: VisionHandler
   m_TagString: Untagged
@@ -1904,6 +1905,24 @@ MonoBehaviour:
     aspectMode: 1
     accelerator: 2
     compute: {fileID: 7200000, guid: 28738c161f6164ecd877b935ec023169, type: 3}
+--- !u!114 &1168124743
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1168124737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76a9449ecf5d88b46b1ce1432444bfb6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  outputView: {fileID: 2000448427}
+  options:
+    modelPath: yolov8s-seg_320_320_float16.tflite
+    aspectMode: 1
+    accelerator: 2
+    compute: {fileID: 7200000, guid: 6de96bc3d6eef584ab90b9582fac472c, type: 3}
 --- !u!1 &1210721349
 GameObject:
   m_ObjectHideFlags: 0
