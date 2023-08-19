@@ -4,15 +4,15 @@ using TensorFlowLite;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class SegmentSample : MonoBehaviour
+public class YOLOSegSample : MonoBehaviour
 {
     [SerializeField]
     public RawImage outputView = null;
 
     [SerializeField]
-    private Segment.Options options = default;
+    private YOLOSeg.Options options = default;
 
-    private Segment segment;
+    private YOLOSeg segment;
 
     private UniTask<bool> task;
     private CancellationToken cancellationToken;
@@ -23,22 +23,22 @@ public class SegmentSample : MonoBehaviour
 #if UNITY_ANDROID && !UNITY_EDITOR
         if (!Application.isEditor)
         {
-            options.accelerator = Segment.Accelerator.NNAPI;
+            options.accelerator = YOLOSeg.Accelerator.NNAPI;
             string cacheDir = Application.persistentDataPath;
-            string modelToken = "segment-token";
+            string modelToken = "YOLOSeg-token";
             var interpreterOptions = new InterpreterOptions();
             var nnapiOptions = NNAPIDelegate.DefaultOptions;
             nnapiOptions.AllowFp16 = true;
             nnapiOptions.CacheDir = cacheDir;
             nnapiOptions.ModelToken = modelToken;
             interpreterOptions.AddDelegate(new NNAPIDelegate(nnapiOptions));
-            segment = new Segment(options, interpreterOptions);
+            segment = new YOLOSeg(options, interpreterOptions);
         }
         else
 #endif
         {
-            options.accelerator = Segment.Accelerator.GPU;
-            segment = new Segment(options);
+            options.accelerator = YOLOSeg.Accelerator.GPU;
+            segment = new YOLOSeg(options);
         }
 
         cancellationToken = this.GetCancellationTokenOnDestroy();

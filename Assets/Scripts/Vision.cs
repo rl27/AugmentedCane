@@ -34,23 +34,33 @@ public class Vision : MonoBehaviour
 
     void Start()
     {
+        labels = labelMap.text.Split('\n');
+
         model = ModelLoader.Load(modelAsset);
         // See worker types here: https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/Worker.html
         worker = WorkerFactory.CreateWorker(WorkerFactory.Type.ComputePrecompiled, model);
 
         // Tensor input = new Tensor(1, 640, 480, 3);
         // worker.Execute(input);
-        
-        // BurstCPUOps ops = new BurstCPUOps();
-        // Tensor o0 = new Tensor(32, 1, 1, 2100);
-        // Tensor o1 = new Tensor(6400, 1, 1, 32);
-        // Tensor o2 = ops.MatMul(o0, true, o1, true);
-        // Debug.Log(o2.shape);
-        // o0.Dispose();
-        // o1.Dispose();
-        // o2.Dispose();
 
-        labels = labelMap.text.Split('\n');
+        BurstCPUOps ops = new BurstCPUOps();
+        float[,] data = new float[,]{{1,2,3,9},
+                                     {5,6,7,8},
+                                     {9,10,11,12}};
+        Tensor tt = new Tensor(3,4,data);
+
+        float[,] data2 = new float[,]{{1,2,3},
+                                      {5,6,7},
+                                      {9,10,11},
+                                      {-1000,-4,-7}};
+        Tensor t = ops.Transpose(tt);
+        Debug.Log(t.shape);
+        Debug.Log(t[0]);
+        Debug.Log(t[1]);
+        Debug.Log(t[2]);
+        Debug.Log(t[3]);
+        tt.Dispose();
+        t.Dispose();
     }
 
     // https://forum.unity.com/threads/asynchronous-inference-in-barracuda.1370181/
