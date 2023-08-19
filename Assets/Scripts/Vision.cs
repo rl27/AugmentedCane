@@ -42,25 +42,6 @@ public class Vision : MonoBehaviour
 
         // Tensor input = new Tensor(1, 640, 480, 3);
         // worker.Execute(input);
-
-        BurstCPUOps ops = new BurstCPUOps();
-        float[,] data = new float[,]{{1,2,3,9},
-                                     {5,6,7,8},
-                                     {9,10,11,12}};
-        Tensor tt = new Tensor(3,4,data);
-
-        float[,] data2 = new float[,]{{1,2,3},
-                                      {5,6,7},
-                                      {9,10,11},
-                                      {-1000,-4,-7}};
-        Tensor t = ops.Transpose(tt);
-        Debug.Log(t.shape);
-        Debug.Log(t[0]);
-        Debug.Log(t[1]);
-        Debug.Log(t[2]);
-        Debug.Log(t[3]);
-        tt.Dispose();
-        t.Dispose();
     }
 
     // https://forum.unity.com/threads/asynchronous-inference-in-barracuda.1370181/
