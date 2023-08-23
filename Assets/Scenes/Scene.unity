@@ -1937,7 +1937,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   outputView: {fileID: 2000448427}
   options:
-    modelPath: deeplab_v3_plus_mnv3_decoder_256_integer_quant.tflite
+    modelPath: deeplabv3plus_resnet18_mapillary.tflite
     aspectMode: 1
     accelerator: 2
     compute: {fileID: 7200000, guid: 9f44466672401fb42a57fe13c79b9c9b, type: 3}
