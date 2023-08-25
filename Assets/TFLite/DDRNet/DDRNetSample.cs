@@ -23,7 +23,7 @@ public class DDRNetSample : MonoBehaviour
     private CancellationToken cancellationToken;
     private bool working = false;
 
-    bool testing = false;
+    bool testing = true;
     Texture testPNG;
 
     private void Start()
@@ -59,7 +59,8 @@ public class DDRNetSample : MonoBehaviour
 
     private void OnDestroy()
     {
-        model?.Dispose();
+        if (task.Status.IsCompleted())
+            model?.Dispose();
     }
 
     public void DoInvoke(Texture texture)
