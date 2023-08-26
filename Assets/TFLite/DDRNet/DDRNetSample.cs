@@ -54,7 +54,7 @@ public class DDRNetSample : MonoBehaviour
         aspectRatioFitter = outputViewParent.GetComponent<AspectRatioFitter>();
 
         if (testing)
-            testPNG = LoadPNG("Assets/demo2.png");
+            testPNG = LoadPNG("Assets/test4.png");
     }
 
     private void OnDestroy()

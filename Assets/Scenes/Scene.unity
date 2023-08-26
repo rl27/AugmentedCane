@@ -1938,7 +1938,7 @@ MonoBehaviour:
   outputView: {fileID: 2000448427}
   outputViewParent: {fileID: 2000448425}
   options:
-    modelPath: ddrnet_slim_512x512_cityscapes.tflite
+    modelPath: ddrnet_slim_cityscapes_640x480.tflite
     aspectMode: 1
     accelerator: 2
     compute: {fileID: 7200000, guid: 9f44466672401fb42a57fe13c79b9c9b, type: 3}
