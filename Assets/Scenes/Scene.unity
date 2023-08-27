@@ -1863,7 +1863,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   options:
     modelPath: coco_ssd_mobilenet_quant.tflite
-    aspectMode: 1
+    aspectMode: 0
     accelerator: 2
   frameContainer: {fileID: 237722658}
   framePrefab: {fileID: 3820330068002586715, guid: 6e1b6b8d66fdfdd45abed5b58c2cee75, type: 3}
@@ -1882,7 +1882,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   options:
     modelPath: yolov8n_320_320_float16.tflite
-    aspectMode: 1
+    aspectMode: 0
     accelerator: 2
   frameContainer: {fileID: 237722658}
   framePrefab: {fileID: 3820330068002586715, guid: 6e1b6b8d66fdfdd45abed5b58c2cee75, type: 3}
@@ -1902,7 +1902,7 @@ MonoBehaviour:
   outputView: {fileID: 2000448427}
   options:
     modelPath: deeplabv3_257_mv_gpu.tflite
-    aspectMode: 1
+    aspectMode: 0
     accelerator: 2
     compute: {fileID: 7200000, guid: 28738c161f6164ecd877b935ec023169, type: 3}
 --- !u!114 &1168124743
@@ -1920,7 +1920,7 @@ MonoBehaviour:
   outputView: {fileID: 2000448427}
   options:
     modelPath: yolov8s-seg_320_320_float16.tflite
-    aspectMode: 1
+    aspectMode: 0
     accelerator: 2
     compute: {fileID: 7200000, guid: 6de96bc3d6eef584ab90b9582fac472c, type: 3}
 --- !u!114 &1168124744
@@ -1939,7 +1939,7 @@ MonoBehaviour:
   outputViewParent: {fileID: 2000448425}
   options:
     modelPath: ddrnet_slim_cityscapes_480x480.tflite
-    aspectMode: 1
+    aspectMode: 0
     accelerator: 2
     compute: {fileID: 7200000, guid: 9f44466672401fb42a57fe13c79b9c9b, type: 3}
 --- !u!1 &1210721349

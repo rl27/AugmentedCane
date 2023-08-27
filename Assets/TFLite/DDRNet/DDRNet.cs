@@ -2,7 +2,6 @@
 using Cysharp.Threading.Tasks;
 using System.Linq;
 using UnityEngine;
-using Unity.Barracuda;
 
 namespace TensorFlowLite
 {
@@ -144,8 +143,6 @@ public class DDRNet : BaseImagePredictor<float>
         // Init RGBA color table
         var table = COLOR_TABLE.Select(c => (Color)c).ToArray();
         colorTableBuffer.SetData(table);
-
-        ops = new BurstCPUOps();
     }
 
     public override void Dispose()
@@ -195,49 +192,20 @@ public class DDRNet : BaseImagePredictor<float>
         return tex;
     }
 
-    IOps ops;
-    Tensor mean = new Tensor(1, 3, new float[]{0.485f, 0.456f, 0.406f});
-    Tensor std = new Tensor(1, 3, new float[]{0.229f, 0.224f, 0.225f});
-    Tensor mean4 = new Tensor(1, 4, new float[]{0.485f, 0.456f, 0.406f, 0});
-    Tensor std4 = new Tensor(1, 4, new float[]{0.229f, 0.224f, 0.225f, 1});
-
     public async UniTask<Texture2D> InvokeAsync(Texture inputTex, CancellationToken cancellationToken)
     {
-        Tensor input = new Tensor(inputTex);
-        float[] data = new float[0];
-        int ch = input.channels;
-        if (ch == 3) {
-            Tensor processed = ops.Sub(new Tensor[]{input, mean});
-            Tensor processed2 = ops.Div(new Tensor[]{processed, std});
-            data = processed2.AsFloats();
-            processed.Dispose();
-            processed2.Dispose();
-        }
-        else if (ch == 4) {
-            Tensor resampled = ops.Resample2D(input, new int[]{480, 480}, true);
-            Tensor processed = ops.Sub(new Tensor[]{resampled, mean4});
-            Tensor processed2 = ops.Div(new Tensor[]{processed, std4});
-            data = processed2.AsFloats();
-            resampled.Dispose();
-            processed.Dispose();
-            processed2.Dispose();   
-        }
-
-        input.Dispose();
-
         // return resizer.Resize(inputTex, resizeOptions);
 
-        // await ToTensorAsync(inputTex, inputs, cancellationToken);
+        await ToTensorAsync(inputTex, inputs, cancellationToken);
         await UniTask.SwitchToThreadPool();
 
-        // inputs2: 3x640x480, data: 480x640x3
-        int h = inputs2.GetLength(1);
-        int w = inputs2.GetLength(2);
-        for (int i = 0; i < w; i++) {
-            for (int j = 0; j < h; j++) {
-                inputs2[0, h-j-1, i] = data[ch*h*i + ch*j];
-                inputs2[1, h-j-1, i] = data[ch*h*i + ch*j + 1];
-                inputs2[2, h-j-1, i] = data[ch*h*i + ch*j + 2];
+        // subtract (0.485, 0.456, 0.406)
+        // divide by (0.229, 0.224, 0.225)
+        for (int i = 0; i < inputs.GetLength(0); i++) {
+            for (int j = 0; j < inputs.GetLength(1); j++) {
+                inputs2[0, i, j] = (inputs[i, j, 0] - 0.485f) / 0.229f;
+                inputs2[1, i, j] = (inputs[i, j, 1] - 0.456f) / 0.224f;
+                inputs2[2, i, j] = (inputs[i, j, 2] - 0.406f) / 0.225f;
             }
         }
 
