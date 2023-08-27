@@ -5,6 +5,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.IO;
 
+using Unity.Barracuda;
+
 public class DDRNetSample : MonoBehaviour
 {
     [SerializeField]
@@ -55,6 +57,68 @@ public class DDRNetSample : MonoBehaviour
 
         if (testing)
             testPNG = LoadPNG("Assets/test4.png");
+
+        // IOps ops = new BurstCPUOps();
+        // float[] data = new float[]{1,2,3,4, 5,6,7,8, 9,10,11,12};
+        // Tensor t = new Tensor(1, 2, 2, 3, data);
+        // Debug.Log(t[0,0,0,0]);
+        // Debug.Log(t[0,0,0,1]);
+        // Debug.Log(t[0,0,0,2]);
+
+        // Debug.Log(t[0,0,1,0]);
+        // Debug.Log(t[0,0,1,1]);
+        // Debug.Log(t[0,0,1,2]);
+
+        // Debug.Log(t[0,1,0,0]);
+        // Debug.Log(t[0,1,0,1]);
+        // Debug.Log(t[0,1,0,2]);
+
+        // Debug.Log(t[0,1,1,0]);
+        // Debug.Log(t[0,1,1,1]);
+        // Debug.Log(t[0,1,1,2]);
+
+        // // Tensor t2 = ops.Resample2D(t, new int[]{480, 480}, true);
+        // Tensor mean = new Tensor(1, 3, new float[]{0.485f, 0.456f, 0.406f});
+        // Tensor std = new Tensor(1, 3, new float[]{0.229f, 0.224f, 0.225f});
+        // Tensor processed = ops.Sub(new Tensor[]{t, mean});
+        // Tensor t2 = ops.Div(new Tensor[]{processed, std});
+
+        // Debug.Log(t2[0,0,0,0]);
+        // Debug.Log(t2[0,0,0,1]);
+        // Debug.Log(t2[0,0,0,2]);
+
+        // Debug.Log(t2[0,0,1,0]);
+        // Debug.Log(t2[0,0,1,1]);
+        // Debug.Log(t2[0,0,1,2]);
+
+        // Debug.Log(t2[0,1,0,0]);
+        // Debug.Log(t2[0,1,0,1]);
+        // Debug.Log(t2[0,1,0,2]);
+
+        // Debug.Log(t2[0,1,1,0]);
+        // Debug.Log(t2[0,1,1,1]);
+        // Debug.Log(t2[0,1,1,2]);
+        
+        // t.Dispose();
+        // // t2.Dispose();
+        // mean.Dispose();
+        // std.Dispose();
+        // processed.Dispose();
+        // t2.Dispose();
+
+        // Tensor t3 = new Tensor(testPNG);
+        // PrintShape(t3);
+        // Tensor t4 = ops.Transpose(t3, new int[]{0, 3, 2, 1});
+        // PrintShape(t4);
+        // t3.Dispose();
+        // t4.Dispose();
+    }
+
+    private void PrintShape(Tensor t){
+        Debug.Log(t.batch);
+        Debug.Log(t.height);
+        Debug.Log(t.width);
+        Debug.Log(t.channels);
     }
 
     private void OnDestroy()
@@ -100,7 +164,7 @@ public class DDRNetSample : MonoBehaviour
         var tex = await model.InvokeAsync(texture, cancellationToken);
         outputView.texture = tex;
         aspectRatioFitter.aspectRatio = (float) tex.width / tex.height;
-        Debug.Log("success");
+        // Debug.Log("success");
         return true;
     }
 }
