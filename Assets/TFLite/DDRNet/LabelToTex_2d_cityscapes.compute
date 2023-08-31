@@ -1,0 +1,24 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel Init
+#pragma kernel LabelToTex
+
+uint Width;
+uint Height;
+StructuredBuffer<int> LabelBuffer;
+StructuredBuffer<float4> ColorTable;
+RWTexture2D<float4> Result;
+
+[numthreads(1,1,1)]
+void Init (uint2 tid : SV_DispatchThreadID)
+{
+    Result[tid] = float4(0, 0, 0, 1);
+}
+
+[numthreads(8,8,1)]
+void LabelToTex (uint2 tid : SV_DispatchThreadID)
+{
+    uint gid = (Height - 1 - tid.y) * Width + tid.x;
+    int cls = LabelBuffer[2*gid]; // Double index because labelBuffer is int while model output is long
+    float4 c = ColorTable[cls];
+    Result[tid] = c;
+}

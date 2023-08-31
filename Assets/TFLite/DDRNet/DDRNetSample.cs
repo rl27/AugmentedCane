@@ -23,7 +23,7 @@ public class DDRNetSample : MonoBehaviour
     private CancellationToken cancellationToken;
     private bool working = false;
 
-    bool testing = true;
+    bool testing = false;
     Texture testPNG;
 
     private void Start()
