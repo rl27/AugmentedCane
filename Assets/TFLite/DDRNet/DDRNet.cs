@@ -138,11 +138,7 @@ public class DDRNet : BaseImagePredictor<float>
     private void Construct(Options options)
     {
         resizeOptions.aspectMode = options.aspectMode;
-        #if UNITY_EDITOR
         resizeOptions.rotationDegree = 90f;
-        #else
-        resizeOptions.rotationDegree = 90f;
-        #endif
 
         var oShape0 = interpreter.GetOutputTensorInfo(0).shape; // 1, 1, height, width
         resizeOptions.height = oShape0[2];
@@ -194,8 +190,10 @@ public class DDRNet : BaseImagePredictor<float>
         interpreter.GetOutputTensorData(0, outputs0);
     }
 
-    public async UniTask<RenderTexture> InvokeAsync(Texture inputTex, CancellationToken cancellationToken)
+    public async UniTask<(RenderTexture, RenderTexture)> InvokeAsync(Texture inputTex, CancellationToken cancellationToken)
     {
+        resizeOptions.rotationDegree = DepthImage.GetRotation();
+
         // return resizer.Resize(inputTex, resizeOptions);
         RenderTexture resizedTex = resizer.Resize(inputTex, resizeOptions);
         var pixels = RenderTo2D(resizedTex).GetRawTextureData<Color32>();
@@ -219,7 +217,7 @@ public class DDRNet : BaseImagePredictor<float>
         interpreter.GetOutputTensorData(0, outputs0);
 
         await UniTask.SwitchToMainThread(cancellationToken);
-        return GetResultTexture();
+        return (resizedTex, GetResultTexture());
     }
 
     Texture2D tex2D;

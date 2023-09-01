@@ -547,7 +547,7 @@ public class DepthImage : MonoBehaviour
     }
 
     // https://github.com/Unity-Technologies/arfoundation-samples/issues/266#issuecomment-523316133
-    private static int GetRotation() => Screen.orientation switch
+    public static int GetRotation() => Screen.orientation switch
     {
         ScreenOrientation.Portrait => 90,
         ScreenOrientation.LandscapeLeft => 180,

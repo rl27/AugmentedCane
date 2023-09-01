@@ -11,8 +11,15 @@ public class DDRNetSample : MonoBehaviour
     public RawImage outputView = null;
 
     [SerializeField]
+    public RawImage inputView = null;
+
+    [SerializeField]
     public GameObject outputViewParent;
-    private AspectRatioFitter aspectRatioFitter;
+    private AspectRatioFitter outputAspectRatioFitter;
+
+    [SerializeField]
+    public GameObject inputViewParent;
+    private AspectRatioFitter inputAspectRatioFitter;
 
     [SerializeField]
     private DDRNet.Options options = default;
@@ -51,10 +58,13 @@ public class DDRNetSample : MonoBehaviour
 
         cancellationToken = this.GetCancellationTokenOnDestroy();
 
-        aspectRatioFitter = outputViewParent.GetComponent<AspectRatioFitter>();
+        outputAspectRatioFitter = outputViewParent.GetComponent<AspectRatioFitter>();
+        inputAspectRatioFitter = inputViewParent.GetComponent<AspectRatioFitter>();
 
-        if (testing)
+        #if UNITY_EDITOR
+            testing = true;
             testPNG = LoadPNG("Assets/test4.png");
+        #endif
     }
 
     private void OnDestroy()
@@ -97,10 +107,29 @@ public class DDRNetSample : MonoBehaviour
 
     private async UniTask<bool> InvokeAsync(Texture texture)
     {
-        var tex = await model.InvokeAsync(texture, cancellationToken);
-        outputView.texture = tex;
-        aspectRatioFitter.aspectRatio = (float) tex.width / tex.height;
+        RenderTexture input;
+        RenderTexture output;
+        (input, output) = await model.InvokeAsync(texture, cancellationToken);
+        inputView.texture = input;
+        outputView.texture = output;
+
+        outputView.rectTransform.sizeDelta = new Vector2(480, 480);
+        inputView.rectTransform.sizeDelta = new Vector2(480, 480);
+        outputAspectRatioFitter.aspectMode = GetMode();
+        inputAspectRatioFitter.aspectMode = GetMode();
+        outputAspectRatioFitter.aspectRatio = (float) output.width / output.height;
+        inputAspectRatioFitter.aspectRatio = (float) input.width / input.height;
+
         // Debug.Log("success");
         return true;
     }
+
+    private static AspectRatioFitter.AspectMode GetMode() => Screen.orientation switch
+    {
+        ScreenOrientation.Portrait => AspectRatioFitter.AspectMode.WidthControlsHeight,
+        ScreenOrientation.LandscapeLeft => AspectRatioFitter.AspectMode.HeightControlsWidth,
+        ScreenOrientation.PortraitUpsideDown => AspectRatioFitter.AspectMode.WidthControlsHeight,
+        ScreenOrientation.LandscapeRight => AspectRatioFitter.AspectMode.HeightControlsWidth,
+        _ => AspectRatioFitter.AspectMode.WidthControlsHeight
+    };
 }
