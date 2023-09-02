@@ -17,106 +17,106 @@ public class DDRNet : BaseImagePredictor<float>
         public ComputeShader compute = null;
     }
 
-    // public static readonly Color32[] COLOR_TABLE = new Color32[]
-    // {
-    //     new Color32(165, 42, 42, 255),
-    //     new Color32(0, 192, 0, 255),
-    //     new Color32(196, 196, 196, 255),
-    //     new Color32(190, 153, 153, 255),
-    //     new Color32(180, 165, 180, 255),
-    //     new Color32(90, 120, 150, 255),
-    //     new Color32(102, 102, 156, 255),
-    //     new Color32(128, 64, 255, 255),
-    //     new Color32(140, 140, 200, 255),
-    //     new Color32(170, 170, 170, 255),
-    //     new Color32(250, 170, 160, 255),
-    //     new Color32(96, 96, 96, 255),
-    //     new Color32(230, 150, 140, 255),
-    //     new Color32(128, 64, 128, 255),
-    //     new Color32(110, 110, 110, 255),
-    //     new Color32(244, 35, 232, 255),
-    //     new Color32(150, 100, 100, 255),
-    //     new Color32(70, 70, 70, 255),
-    //     new Color32(150, 120, 90, 255),
-    //     new Color32(220, 20, 60, 255),
-    //     new Color32(255, 0, 0, 255),
-    //     new Color32(255, 0, 100, 255),
-    //     new Color32(255, 0, 200, 255),
-    //     new Color32(200, 128, 128, 255),
-    //     new Color32(255, 255, 255, 255),
-    //     new Color32(64, 170, 64, 255),
-    //     new Color32(230, 160, 50, 255),
-    //     new Color32(70, 130, 180, 255),
-    //     new Color32(190, 255, 255, 255),
-    //     new Color32(152, 251, 152, 255),
-    //     new Color32(107, 142, 35, 255),
-    //     new Color32(0, 170, 30, 255),
-    //     new Color32(255, 255, 128, 255),
-    //     new Color32(250, 0, 30, 255),
-    //     new Color32(100, 140, 180, 255),
-    //     new Color32(220, 220, 220, 255),
-    //     new Color32(220, 128, 128, 255),
-    //     new Color32(222, 40, 40, 255),
-    //     new Color32(100, 170, 30, 255),
-    //     new Color32(40, 40, 40, 255),
-    //     new Color32(33, 33, 33, 255),
-    //     new Color32(100, 128, 160, 255),
-    //     new Color32(142, 0, 0, 255),
-    //     new Color32(70, 100, 150, 255),
-    //     new Color32(210, 170, 100, 255),
-    //     new Color32(153, 153, 153, 255),
-    //     new Color32(128, 128, 128, 255),
-    //     new Color32(0, 0, 80, 255),
-    //     new Color32(250, 170, 30, 255),
-    //     new Color32(192, 192, 192, 255),
-    //     new Color32(220, 220, 0, 255),
-    //     new Color32(140, 140, 20, 255),
-    //     new Color32(119, 11, 32, 255),
-    //     new Color32(150, 0, 255, 255),
-    //     new Color32(0, 60, 100, 255),
-    //     new Color32(0, 0, 142, 255),
-    //     new Color32(0, 0, 90, 255),
-    //     new Color32(0, 0, 230, 255),
-    //     new Color32(0, 80, 100, 255),
-    //     new Color32(128, 64, 64, 255),
-    //     new Color32(0, 0, 110, 255),
-    //     new Color32(0, 0, 70, 255),
-    //     new Color32(0, 0, 192, 255),
-    //     new Color32(32, 32, 32, 255),
-    //     new Color32(120, 10, 10, 255),
-    //     new Color32(0, 0, 0, 255)
-    // };
-
     public static readonly Color32[] COLOR_TABLE = new Color32[]
     {
-        new Color32(0, 0, 0, 255),
-        new Color32(0, 0, 255, 255),
-        new Color32(217, 217, 217, 255),
-        new Color32(198, 89, 17, 255),
-        new Color32(128, 128, 128, 255),
-        new Color32(255, 230, 153, 255),
-        new Color32(55, 86, 35, 255),
-        new Color32(110, 168, 70, 255),
-        new Color32(255, 255, 0, 255),
-        new Color32(128, 96, 0, 255),
-        new Color32(255, 128, 255, 255),
-        new Color32(255, 0, 255, 255),
-        new Color32(230, 170, 255, 255),
-        new Color32(208, 88, 255, 255),
-        new Color32(138, 60, 200, 255),
-        new Color32(88, 38, 128, 255),
-        new Color32(255, 155, 155, 255),
-        new Color32(255, 192, 0, 255),
+        new Color32(165, 42, 42, 255),
+        new Color32(0, 192, 0, 255),
+        new Color32(196, 196, 196, 255),
+        new Color32(190, 153, 153, 255),
+        new Color32(180, 165, 180, 255),
+        new Color32(90, 120, 150, 255),
+        new Color32(102, 102, 156, 255),
+        new Color32(128, 64, 255, 255),
+        new Color32(140, 140, 200, 255),
+        new Color32(170, 170, 170, 255),
+        new Color32(250, 170, 160, 255),
+        new Color32(96, 96, 96, 255),
+        new Color32(230, 150, 140, 255),
+        new Color32(128, 64, 128, 255),
+        new Color32(110, 110, 110, 255),
+        new Color32(244, 35, 232, 255),
+        new Color32(150, 100, 100, 255),
+        new Color32(70, 70, 70, 255),
+        new Color32(150, 120, 90, 255),
+        new Color32(220, 20, 60, 255),
         new Color32(255, 0, 0, 255),
-        new Color32(0, 255, 0, 255),
-        new Color32(255, 128, 0, 255),
-        new Color32(105, 105, 255, 255)
+        new Color32(255, 0, 100, 255),
+        new Color32(255, 0, 200, 255),
+        new Color32(200, 128, 128, 255),
+        new Color32(255, 255, 255, 255),
+        new Color32(64, 170, 64, 255),
+        new Color32(230, 160, 50, 255),
+        new Color32(70, 130, 180, 255),
+        new Color32(190, 255, 255, 255),
+        new Color32(152, 251, 152, 255),
+        new Color32(107, 142, 35, 255),
+        new Color32(0, 170, 30, 255),
+        new Color32(255, 255, 128, 255),
+        new Color32(250, 0, 30, 255),
+        new Color32(100, 140, 180, 255),
+        new Color32(220, 220, 220, 255),
+        new Color32(220, 128, 128, 255),
+        new Color32(222, 40, 40, 255),
+        new Color32(100, 170, 30, 255),
+        new Color32(40, 40, 40, 255),
+        new Color32(33, 33, 33, 255),
+        new Color32(100, 128, 160, 255),
+        new Color32(142, 0, 0, 255),
+        new Color32(70, 100, 150, 255),
+        new Color32(210, 170, 100, 255),
+        new Color32(153, 153, 153, 255),
+        new Color32(128, 128, 128, 255),
+        new Color32(0, 0, 80, 255),
+        new Color32(250, 170, 30, 255),
+        new Color32(192, 192, 192, 255),
+        new Color32(220, 220, 0, 255),
+        new Color32(140, 140, 20, 255),
+        new Color32(119, 11, 32, 255),
+        new Color32(150, 0, 255, 255),
+        new Color32(0, 60, 100, 255),
+        new Color32(0, 0, 142, 255),
+        new Color32(0, 0, 90, 255),
+        new Color32(0, 0, 230, 255),
+        new Color32(0, 80, 100, 255),
+        new Color32(128, 64, 64, 255),
+        new Color32(0, 0, 110, 255),
+        new Color32(0, 0, 70, 255),
+        new Color32(0, 0, 192, 255),
+        new Color32(32, 32, 32, 255),
+        new Color32(120, 10, 10, 255),
+        new Color32(0, 0, 0, 255)
     };
+
+    // public static readonly Color32[] COLOR_TABLE = new Color32[]
+    // {
+    //     new Color32(0, 0, 0, 255),
+    //     new Color32(0, 0, 255, 255),
+    //     new Color32(217, 217, 217, 255),
+    //     new Color32(198, 89, 17, 255),
+    //     new Color32(128, 128, 128, 255),
+    //     new Color32(255, 230, 153, 255),
+    //     new Color32(55, 86, 35, 255),
+    //     new Color32(110, 168, 70, 255),
+    //     new Color32(255, 255, 0, 255),
+    //     new Color32(128, 96, 0, 255),
+    //     new Color32(255, 128, 255, 255),
+    //     new Color32(255, 0, 255, 255),
+    //     new Color32(230, 170, 255, 255),
+    //     new Color32(208, 88, 255, 255),
+    //     new Color32(138, 60, 200, 255),
+    //     new Color32(88, 38, 128, 255),
+    //     new Color32(255, 155, 155, 255),
+    //     new Color32(255, 192, 0, 255),
+    //     new Color32(255, 0, 0, 255),
+    //     new Color32(0, 255, 0, 255),
+    //     new Color32(255, 128, 0, 255),
+    //     new Color32(105, 105, 255, 255)
+    // };
 
     private float[,,] inputs;
     private float[,,] inputs2;
     // private long[,] outputs0;
-    private float[,,] outputs0;
+    private long[,] outputs0;
 
     private ComputeShader compute;
     private ComputeBuffer labelBuffer;
@@ -145,14 +145,14 @@ public class DDRNet : BaseImagePredictor<float>
         resizeOptions.width = oShape0[3];
         // inputs = new float[oShape0[2], oShape0[3], 3];
         inputs2 = new float[3, oShape0[2], oShape0[3]];
-        // outputs0 = new long[oShape0[2], oShape0[3]];
-        outputs0 = new float[22, oShape0[2], oShape0[3]];
+        outputs0 = new long[oShape0[2], oShape0[3]];
+        // outputs0 = new float[22, oShape0[2], oShape0[3]];
 
         // Init compute shader resources
         labelTex = new RenderTexture(resizeOptions.width, resizeOptions.height, 0, RenderTextureFormat.ARGB32);
         labelTex.enableRandomWrite = true;
         labelTex.Create();
-        labelBuffer = new ComputeBuffer(oShape0[1] * oShape0[2] * oShape0[3], sizeof(float));
+        labelBuffer = new ComputeBuffer(oShape0[1] * oShape0[2] * oShape0[3], sizeof(long));
         colorTableBuffer = new ComputeBuffer(COLOR_TABLE.Length, sizeof(float) * 4);
 
         compute = options.compute;
