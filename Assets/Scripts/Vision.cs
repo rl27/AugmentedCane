@@ -169,12 +169,12 @@ public class Vision : MonoBehaviour
 
         var enumerator = worker.StartManualSchedule(input);
         int step = 0;
-        int stepsPerFrame = 8;
+        int stepsPerFrame = 80;
         while (enumerator.MoveNext()) {
             if (++step % stepsPerFrame == 0) yield return null;
         }
         Tensor output = worker.PeekOutput(); // BHCW: 1, 1, 480, 480
-        // Debug.Log(output.shape);
+        Debug.Log(output.shape);
 
         inputView.texture = resizedTex;
         outputView.texture = GetResultTexture(output.ToReadOnlyArray());
