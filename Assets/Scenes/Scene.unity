@@ -1898,8 +1898,6 @@ GameObject:
   - component: {fileID: 1168124739}
   - component: {fileID: 1168124740}
   - component: {fileID: 1168124741}
-  - component: {fileID: 1168124742}
-  - component: {fileID: 1168124743}
   - component: {fileID: 1168124744}
   m_Layer: 0
   m_Name: VisionHandler
@@ -1955,7 +1953,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   options:
     modelPath: coco_ssd_mobilenet_quant.tflite
-    aspectMode: 0
+    aspectMode: 2
     accelerator: 2
   frameContainer: {fileID: 237722658}
   framePrefab: {fileID: 3820330068002586715, guid: 6e1b6b8d66fdfdd45abed5b58c2cee75, type: 3}
@@ -1974,47 +1972,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   options:
     modelPath: yolov8n_320_320_float16.tflite
-    aspectMode: 0
+    aspectMode: 2
     accelerator: 2
   frameContainer: {fileID: 237722658}
   framePrefab: {fileID: 3820330068002586715, guid: 6e1b6b8d66fdfdd45abed5b58c2cee75, type: 3}
   labelMap: {fileID: 4900000, guid: 368961115ffa335468095bd4739ea7c6, type: 3}
---- !u!114 &1168124742
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1168124737}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c0e63e15ed9e540ae9418fd0ff1f6e62, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  outputView: {fileID: 2000448427}
-  options:
-    modelPath: deeplabv3_257_mv_gpu.tflite
-    aspectMode: 2
-    accelerator: 2
-    compute: {fileID: 7200000, guid: 28738c161f6164ecd877b935ec023169, type: 3}
---- !u!114 &1168124743
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1168124737}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 76a9449ecf5d88b46b1ce1432444bfb6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  outputView: {fileID: 2000448427}
-  options:
-    modelPath: yolov8s-seg_320_320_float16.tflite
-    aspectMode: 0
-    accelerator: 2
-    compute: {fileID: 7200000, guid: 6de96bc3d6eef584ab90b9582fac472c, type: 3}
 --- !u!114 &1168124744
 MonoBehaviour:
   m_ObjectHideFlags: 0

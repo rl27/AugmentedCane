@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using TensorFlowLite;
@@ -29,7 +28,6 @@ public class YOLOSample : MonoBehaviour
     private string[] labels;
 
     private bool working = false;
-    // private float delay = 0.033f;
 
     private UniTask<bool> task;
     private CancellationToken cancellationToken;
@@ -76,10 +74,10 @@ public class YOLOSample : MonoBehaviour
         yolo?.Dispose();
     }
 
-    public IEnumerator DoInvoke(Texture texture)
+    public void DoInvoke(Texture texture)
     {
         if (working)
-            yield break;
+            return;
         working = true;
 
         if (runBackground) {
@@ -89,7 +87,6 @@ public class YOLOSample : MonoBehaviour
         else
             Invoke(texture);
 
-        // yield return new WaitForSeconds(delay);
         working = false;
     }
 

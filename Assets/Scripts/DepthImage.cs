@@ -77,9 +77,7 @@ public class DepthImage : MonoBehaviour
     Vision vision;
     SsdSample ssd;
     YOLOSample yolo;
-    DeepLabSample deeplab;
     DDRNetSample ddrnet;
-    YOLOSegSample yoloseg;
 
     // Depth array
     [NonSerialized]
@@ -158,9 +156,7 @@ public class DepthImage : MonoBehaviour
         vision = VisionHandler.GetComponent<Vision>();
         ssd = VisionHandler.GetComponent<SsdSample>();
         yolo = VisionHandler.GetComponent<YOLOSample>();
-        deeplab = VisionHandler.GetComponent<DeepLabSample>();
         ddrnet = VisionHandler.GetComponent<DDRNetSample>();
-        yoloseg = VisionHandler.GetComponent<YOLOSegSample>();
 
         if (!visionActive) {
             yolo.frameContainer.enabled = false;
@@ -358,11 +354,9 @@ public class DepthImage : MonoBehaviour
                 using (cameraImage) {
                     UpdateRawImage(m_RawCameraImage, cameraImage, TextureFormat.RGB24, false);
                     if (tflite) {
-                        // StartCoroutine(ssd.DoInvoke(m_RawCameraImage.texture));
-                        // StartCoroutine(yolo.DoInvoke(m_RawCameraImage.texture));
-                        // deeplab.DoInvoke(m_RawCameraImage.texture);
+                        // ssd.DoInvoke(m_RawCameraImage.texture);
+                        // yolo.DoInvoke(m_RawCameraImage.texture);
                         ddrnet.DoInvoke(m_RawCameraImage.texture);
-                        // yoloseg.DoInvoke(m_RawCameraImage.texture);
                     }
                     else {
                         StartCoroutine(vision.Detect(m_RawCameraImage.texture));
