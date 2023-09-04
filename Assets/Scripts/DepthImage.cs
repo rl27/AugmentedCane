@@ -161,11 +161,13 @@ public class DepthImage : MonoBehaviour
         deeplab = VisionHandler.GetComponent<DeepLabSample>();
         ddrnet = VisionHandler.GetComponent<DDRNetSample>();
         yoloseg = VisionHandler.GetComponent<YOLOSegSample>();
+
         if (!visionActive) {
             yolo.frameContainer.enabled = false;
-            deeplab.outputView.enabled = false;
+            vision.outputView.enabled = false;
+            vision.inputView.enabled = false;
+            VisionHandler.SetActive(false);
         }
-        VisionHandler.SetActive(visionActive);
 
         // Set depth image material
         m_RawImage.material = m_DepthMaterial;
@@ -363,8 +365,7 @@ public class DepthImage : MonoBehaviour
                         // yoloseg.DoInvoke(m_RawCameraImage.texture);
                     }
                     else {
-                        Texture2D testTex = m_RawCameraImage.texture as Texture2D;
-                        StartCoroutine(vision.Detect(testTex));
+                        StartCoroutine(vision.Detect(m_RawCameraImage.texture));
                     }
                 }
             }
