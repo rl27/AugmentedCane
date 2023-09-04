@@ -1939,7 +1939,7 @@ MonoBehaviour:
   inputView: {fileID: 630529197}
   outputViewParent: {fileID: 2000448425}
   inputViewParent: {fileID: 630529194}
-  modelAsset: {fileID: 5022602860645237092, guid: 2dac97d68008c604e88ccd885a927dfd, type: 3}
+  modelAsset: {fileID: 5022602860645237092, guid: cb59acf796701bd4088e97aae8a7ce2e, type: 3}
   compute: {fileID: 7200000, guid: f07148396908444429733077acb4ee0c, type: 3}
 --- !u!114 &1168124740
 MonoBehaviour:
