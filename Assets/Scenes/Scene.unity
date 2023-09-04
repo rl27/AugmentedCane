@@ -1935,8 +1935,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 533a09e00c8ba20469ae2b0e1b86048f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  modelAsset: {fileID: 5022602860645237092, guid: 3c9ea3777fca7cd4db6541d39f0cbc26, type: 3}
-  labelMap: {fileID: 4900000, guid: 368961115ffa335468095bd4739ea7c6, type: 3}
+  outputView: {fileID: 2000448427}
+  inputView: {fileID: 630529197}
+  outputViewParent: {fileID: 2000448425}
+  inputViewParent: {fileID: 630529194}
+  modelAsset: {fileID: 5022602860645237092, guid: 2dac97d68008c604e88ccd885a927dfd, type: 3}
+  compute: {fileID: 7200000, guid: f07148396908444429733077acb4ee0c, type: 3}
 --- !u!114 &1168124740
 MonoBehaviour:
   m_ObjectHideFlags: 0

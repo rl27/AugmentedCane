@@ -1,47 +1,150 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 using Unity.Barracuda;
+using TensorFlowLite;
 
 // https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/GettingStarted.html
 public class Vision : MonoBehaviour
 {
+    [SerializeField]
+    public RawImage outputView = null;
+
+    [SerializeField]
+    public RawImage inputView = null;
+
+    [SerializeField]
+    public GameObject outputViewParent;
+    private AspectRatioFitter outputAspectRatioFitter;
+
+    [SerializeField]
+    public GameObject inputViewParent;
+    private AspectRatioFitter inputAspectRatioFitter;
+
     public NNModel modelAsset;
     private Model model;
     private IWorker worker;
 
+    TextureResizer resizer;
+    TextureResizer.ResizeOptions resizeOptions;
+
     private bool working = false;
 
-    public struct Box {
-        public Box(Vector4 b, float s, int c) {
-            bbox = b;
-            score = s;
-            cls = c;
-            area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1]);
-        }
-        public Vector4 bbox;
-        public float score;
-        public int cls;
-        public float area;
-    }
+    bool testing = false;
+    Texture2D testPNG;
 
-    public List<Box> boxes = new List<Box>();
+    public ComputeShader compute;
+    private ComputeBuffer labelBuffer;
+    private ComputeBuffer colorTableBuffer;
+    private RenderTexture labelTex;
+    private int labelToTexKernel;
 
-    [SerializeField]
-    private TextAsset labelMap = null;
-    private string[] labels;
+    private IOps ops;
+
+    public static readonly Color32[] COLOR_TABLE = new Color32[]
+    {
+        new Color32(0, 0, 0, 255),
+        new Color32(0, 0, 255, 255),
+        new Color32(217, 217, 217, 255),
+        new Color32(198, 89, 17, 255),
+        new Color32(128, 128, 128, 255),
+        new Color32(255, 230, 153, 255),
+        new Color32(55, 86, 35, 255),
+        new Color32(110, 168, 70, 255),
+        new Color32(255, 255, 0, 255),
+        new Color32(128, 96, 0, 255),
+        new Color32(255, 128, 255, 255),
+        new Color32(255, 0, 255, 255),
+        new Color32(230, 170, 255, 255),
+        new Color32(208, 88, 255, 255),
+        new Color32(138, 60, 200, 255),
+        new Color32(88, 38, 128, 255),
+        new Color32(255, 155, 155, 255),
+        new Color32(255, 192, 0, 255),
+        new Color32(255, 0, 0, 255),
+        new Color32(0, 255, 0, 255),
+        new Color32(255, 128, 0, 255),
+        new Color32(105, 105, 255, 255)
+    };
 
     void Start()
     {
-        labels = labelMap.text.Split('\n');
-
         model = ModelLoader.Load(modelAsset);
         // See worker types here: https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/Worker.html
         worker = WorkerFactory.CreateWorker(WorkerFactory.Type.ComputePrecompiled, model);
 
+        ops = new BurstCPUOps();
+
         // Tensor input = new Tensor(1, 640, 480, 3);
         // worker.Execute(input);
+
+        outputAspectRatioFitter = outputViewParent.GetComponent<AspectRatioFitter>();
+        inputAspectRatioFitter = inputViewParent.GetComponent<AspectRatioFitter>();
+
+        resizer = new TextureResizer();
+        resizeOptions = new TextureResizer.ResizeOptions()
+        {
+            aspectMode = AspectMode.Fill,
+            rotationDegree = 90,
+            mirrorHorizontal = false,
+            mirrorVertical = false,
+            width = 480,
+            height = 480,
+        };
+
+        #if UNITY_EDITOR
+            testing = true;
+            testPNG = (Texture2D) DDRNetSample.LoadPNG("Assets/MP_SEL_SUR_000108.png");
+        #endif
+
+        // Init compute shader resources
+        labelTex = new RenderTexture(resizeOptions.width, resizeOptions.height, 0, RenderTextureFormat.ARGB32);
+        labelTex.enableRandomWrite = true;
+        labelTex.Create();
+        labelBuffer = new ComputeBuffer(resizeOptions.width * resizeOptions.height, sizeof(float));
+        colorTableBuffer = new ComputeBuffer(COLOR_TABLE.Length, sizeof(float) * 4);
+
+        int initKernel = compute.FindKernel("Init");
+        compute.SetInt("Width", resizeOptions.width);
+        compute.SetInt("Height", resizeOptions.height);
+        compute.SetTexture(initKernel, "Result", labelTex);
+        compute.Dispatch(initKernel, resizeOptions.width, resizeOptions.height, 1);
+
+        labelToTexKernel = compute.FindKernel("LabelToTex");
+
+        // Init RGBA color table
+        var table = COLOR_TABLE.Select(c => (Color)c).ToArray();
+        colorTableBuffer.SetData(table);
+    }
+
+    void Update()
+    {
+        if (testing)
+            StartCoroutine(Detect(testPNG));
+    }
+
+    private Texture2D ResizeTexture(Texture inputTex)
+    {
+        resizeOptions.rotationDegree = DepthImage.GetRotation();
+        RenderTexture resizedTex = resizer.Resize(inputTex, resizeOptions);
+        return RenderTo2D(resizedTex);
+    }
+
+    Texture2D tex2D;
+    private Texture2D RenderTo2D(RenderTexture texture)
+    {
+        if (tex2D == null || tex2D.width != texture.width || tex2D.height != texture.height)
+            tex2D = new Texture2D(texture.width, texture.height, TextureFormat.RGB24, false);
+        var prevRT = RenderTexture.active;
+        RenderTexture.active = texture;
+
+        tex2D.ReadPixels(new Rect(0, 0, texture.width, texture.height), 0, 0);
+        tex2D.Apply();
+
+        RenderTexture.active = prevRT;
+
+        return tex2D;
     }
 
     // https://forum.unity.com/threads/asynchronous-inference-in-barracuda.1370181/
@@ -52,102 +155,54 @@ public class Vision : MonoBehaviour
         working = true;
 
         // https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/TensorHandling.html
-        Tensor input = new Tensor(tex);  // Tensor input = new Tensor(1, 640, 480, 3);
+        // Tensor input = new Tensor(1, 480, 480, 3);
+        // Tensor input = new Tensor(tex);
+        Texture2D resizedTex = ResizeTexture(tex);
+        Tensor input = new Tensor(resizedTex); // BHWC: 1, 480, 480, 3
+
+        // float[] mean = new float[] {0.5f, 0.5f, 0.5f};
+        // float[] std = new float[] {0.5f, 0.5f, 0.5f};
+        // Tensor meanT = new Tensor(1, 3, mean);
+        // Tensor stdT = new Tensor(1, 3, std);
+        // Tensor input2 = ops.Sub(new Tensor[]{input, meanT});
+        // Tensor input3 = ops.Div(new Tensor[]{input2, stdT});
 
         var enumerator = worker.StartManualSchedule(input);
         int step = 0;
-        int stepsPerFrame = 20;
+        int stepsPerFrame = 8;
         while (enumerator.MoveNext()) {
             if (++step % stepsPerFrame == 0) yield return null;
         }
-        Tensor output = worker.PeekOutput(); // (n:1, h:1, w:6300, c:84)
+        Tensor output = worker.PeekOutput(); // BHCW: 1, 1, 480, 480
+        // Debug.Log(output.shape);
 
-        // Find boxes with high confidence
-        // https://github.com/ultralytics/ultralytics/blob/main/examples/YOLOv8-OpenCV-ONNX-Python/main.py#L41
-        boxes = new List<Box>();
-        for (int i = 0; i < output.width; i++) {
-            float maxScore = -1f;
-            int maxIndex = -1;
-            for (int j = 4; j < output.channels; j++) {
-                float score = output[0, 0, i, j];
-                if (score > maxScore) {
-                    maxScore = score;
-                    maxIndex = j - 4;
-                }
-            }
-            if (maxScore >= 0.5f) {
-                Vector4 bbox = YOLOtoBbox(output[0, 0, i, 0], output[0, 0, i, 1], output[0, 0, i, 2], output[0, 0, i, 3]);
-                boxes.Add(new Box(bbox, maxScore, maxIndex));
-            }
-        }
+        inputView.texture = resizedTex;
+        outputView.texture = GetResultTexture(output.ToReadOnlyArray());
 
-        if (boxes.Count > 0) {
-            Debug.unityLogger.Log("mytag", "x");
-            NMS(boxes, 0.45f);
-            foreach (var b in boxes) {
-                Debug.unityLogger.Log("mytag", b.cls + " " + labels[b.cls]);
-                Debug.unityLogger.Log("mytag", b.score);
-            }
-        }
+        outputView.rectTransform.sizeDelta = new Vector2(480, 480);
+        inputView.rectTransform.sizeDelta = new Vector2(480, 480);
+        outputAspectRatioFitter.aspectMode = DDRNetSample.GetMode();
+        inputAspectRatioFitter.aspectMode = DDRNetSample.GetMode();
+        outputAspectRatioFitter.aspectRatio = 1;
+        inputAspectRatioFitter.aspectRatio = (float) input.width / input.height;
 
         input.Dispose();
-        // output.Dispose();
+        // input2.Dispose();
+        // input3.Dispose();
+        // meanT.Dispose();
+        // stdT.Dispose();
 
         working = false;
     }
 
-    // 1. Select box with highest confidence
-    // 2. Find IoU with all other boxes - if IoU is greater than some threshold, e.g. 0.45, remove box
-    // 3. Select box with next-highest confidence and repeat
-    void NMS(List<Box> boxes, float iouThreshold)
+    private RenderTexture GetResultTexture(float[] data)
     {
-        boxes.Sort(CompareBoxes); // Sort in descending order of confidence
+        labelBuffer.SetData(data);
+        compute.SetBuffer(labelToTexKernel, "LabelBuffer", labelBuffer);
+        compute.SetBuffer(labelToTexKernel, "ColorTable", colorTableBuffer);
+        compute.SetTexture(labelToTexKernel, "Result", labelTex);
+        compute.Dispatch(labelToTexKernel, resizeOptions.width / 8, resizeOptions.height / 8, 1);
 
-        for (int i = 0; i < boxes.Count - 1; i++) {
-            for (int j = i + 1; j < boxes.Count; j++) {
-                if (IoU(boxes[i], boxes[j]) > iouThreshold) {
-                    boxes.RemoveAt(j);
-                    j--;
-                }   
-            }
-        }
-    }
-
-    float IoU(Box box1, Box box2)
-    {
-        Vector4 b1 = box1.bbox;
-        Vector4 b2 = box2.bbox;
-        float x1 = Math.Max(b1[0], b2[0]);
-        float y1 = Math.Max(b1[1], b2[1]);
-        float x2 = Math.Min(b1[2], b2[2]);
-        float y2 = Math.Min(b1[3], b2[3]);
-
-        if (x2 > x1 && y2 > y1) {
-            float intersection = (x2 - x1) * (y2 - y1);
-            float union = box1.area + box2.area - intersection;
-            return intersection / union;
-        }
-        return 0;
-    }
-
-    // Returns values such that sorted list is in descending orderr.
-    int CompareBoxes(Box x, Box y)
-    {
-        if (x.score > y.score)
-            return -1;
-        else if (y.score > x.score)
-            return 1;
-        return 0;
-    }
-
-    void OnDisable()
-    {
-        worker.Dispose();
-    }
-
-    // Returns [x1, y1, x2, y2]
-    Vector4 YOLOtoBbox(float x, float y, float w, float h)
-    {
-        return new Vector4(x-w/2, y-h/2, x+w/2, y+h/2);
+        return labelTex;
     }
 }

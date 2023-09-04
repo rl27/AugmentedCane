@@ -62,8 +62,8 @@ public class DDRNetSample : MonoBehaviour
         inputAspectRatioFitter = inputViewParent.GetComponent<AspectRatioFitter>();
 
         #if UNITY_EDITOR
-            testing = true;
-            testPNG = LoadPNG("Assets/test4.png");
+            testing = false;
+            testPNG = LoadPNG("Assets/MP_SEL_SUR_000108.png");
         #endif
     }
 
@@ -85,7 +85,7 @@ public class DDRNetSample : MonoBehaviour
         working = false;
     }
 
-    private static Texture LoadPNG(string filePath) {
+    public static Texture LoadPNG(string filePath) {
 
         Texture2D tex = null;
         byte[] fileData;
@@ -124,7 +124,7 @@ public class DDRNetSample : MonoBehaviour
         return true;
     }
 
-    private static AspectRatioFitter.AspectMode GetMode() => Screen.orientation switch
+    public static AspectRatioFitter.AspectMode GetMode() => Screen.orientation switch
     {
         ScreenOrientation.Portrait => AspectRatioFitter.AspectMode.WidthControlsHeight,
         ScreenOrientation.LandscapeLeft => AspectRatioFitter.AspectMode.HeightControlsWidth,
