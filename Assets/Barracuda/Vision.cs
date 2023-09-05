@@ -95,7 +95,7 @@ public class Vision : MonoBehaviour
 
         #if UNITY_EDITOR
             testing = true;
-            testPNG = (Texture2D) DDRNetSample.LoadPNG("Assets/TestImages/MP_SEL_SUR_000108.png");
+            testPNG = (Texture2D) DDRNetSample.LoadPNG("Assets/TestImages/MP_SEL_SUR_000004.png");
         #endif
 
         // Init compute shader resources
@@ -169,7 +169,7 @@ public class Vision : MonoBehaviour
 
         var enumerator = worker.StartManualSchedule(input);
         int step = 0;
-        int stepsPerFrame = 80;
+        int stepsPerFrame = 8;
         while (enumerator.MoveNext()) {
             if (++step % stepsPerFrame == 0) yield return null;
         }
