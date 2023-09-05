@@ -17,7 +17,7 @@ void Init (uint2 tid : SV_DispatchThreadID)
 [numthreads(8,8,1)]
 void LabelToTex (uint2 tid : SV_DispatchThreadID)
 {
-    uint gid = tid.x * Width + (Height - 1 - tid.y);
+    uint gid = tid.x * Height + (Width - 1 - tid.y);
     int cls = LabelBuffer[gid];
     float4 c = ColorTable[cls];
     Result[tid] = c;

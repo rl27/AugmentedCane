@@ -40,8 +40,6 @@ public class Vision : MonoBehaviour
     private RenderTexture labelTex;
     private int labelToTexKernel;
 
-    // private IOps ops;
-
     public static readonly Color32[] COLOR_TABLE = new Color32[]
     {
         new Color32(0, 0, 0, 255),
@@ -73,11 +71,6 @@ public class Vision : MonoBehaviour
         model = ModelLoader.Load(modelAsset);
         // See worker types here: https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/Worker.html
         worker = WorkerFactory.CreateWorker(WorkerFactory.Type.ComputePrecompiled, model);
-
-        // ops = new BurstCPUOps();
-
-        // Tensor input = new Tensor(1, 640, 480, 3);
-        // worker.Execute(input);
 
         outputAspectRatioFitter = outputViewParent.GetComponent<AspectRatioFitter>();
         inputAspectRatioFitter = inputViewParent.GetComponent<AspectRatioFitter>();
@@ -155,42 +148,30 @@ public class Vision : MonoBehaviour
         working = true;
 
         // https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/TensorHandling.html
-        // Tensor input = new Tensor(1, 480, 480, 3);
-        // Tensor input = new Tensor(tex);
         Texture2D resizedTex = ResizeTexture(tex);
-        Tensor input = new Tensor(resizedTex); // BHWC: 1, 480, 480, 3
+        Tensor input = new Tensor(resizedTex); // BHWC: 1, H, W, 3
 
-        // float[] mean = new float[] {0.5f, 0.5f, 0.5f};
-        // float[] std = new float[] {0.5f, 0.5f, 0.5f};
-        // Tensor meanT = new Tensor(1, 3, mean);
-        // Tensor stdT = new Tensor(1, 3, std);
-        // Tensor input2 = ops.Sub(new Tensor[]{input, meanT});
-        // Tensor input3 = ops.Div(new Tensor[]{input2, stdT});
-
+        // worker.Execute(input);
         var enumerator = worker.StartManualSchedule(input);
         int step = 0;
-        int stepsPerFrame = 8;
+        int stepsPerFrame = 80;
         while (enumerator.MoveNext()) {
             if (++step % stepsPerFrame == 0) yield return null;
         }
-        Tensor output = worker.PeekOutput(); // BHCW: 1, 1, 480, 480
+        Tensor output = worker.PeekOutput(); // BHWC: 1, 1, W, H
         // Debug.Log(output.shape);
 
         inputView.texture = resizedTex;
         outputView.texture = GetResultTexture(output.ToReadOnlyArray());
 
-        outputView.rectTransform.sizeDelta = new Vector2(480, 480);
-        inputView.rectTransform.sizeDelta = new Vector2(480, 480);
+        outputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
+        inputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
         outputAspectRatioFitter.aspectMode = DDRNetSample.GetMode();
         inputAspectRatioFitter.aspectMode = DDRNetSample.GetMode();
-        outputAspectRatioFitter.aspectRatio = 1;
-        inputAspectRatioFitter.aspectRatio = (float) input.width / input.height;
+        outputAspectRatioFitter.aspectRatio = (float) resizeOptions.width / resizeOptions.height;
+        inputAspectRatioFitter.aspectRatio = (float) resizeOptions.width / resizeOptions.height;
 
         input.Dispose();
-        // input2.Dispose();
-        // input3.Dispose();
-        // meanT.Dispose();
-        // stdT.Dispose();
 
         working = false;
     }
