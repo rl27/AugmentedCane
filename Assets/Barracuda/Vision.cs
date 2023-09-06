@@ -154,7 +154,7 @@ public class Vision : MonoBehaviour
         // worker.Execute(input);
         var enumerator = worker.StartManualSchedule(input);
         int step = 0;
-        int stepsPerFrame = 80;
+        int stepsPerFrame = 60;
         while (enumerator.MoveNext()) {
             if (++step % stepsPerFrame == 0) yield return null;
         }
