@@ -44,36 +44,38 @@ public class Vision : MonoBehaviour
     {
         new Color32(0, 0, 0, 255),
         new Color32(0, 0, 255, 255),
-        new Color32(217, 217, 217, 255),
-        new Color32(198, 89, 17, 255),
-        new Color32(128, 128, 128, 255),
-        new Color32(255, 230, 153, 255),
-        new Color32(55, 86, 35, 255),
-        new Color32(110, 168, 70, 255),
+        new Color32(0, 0, 255, 255),
+        new Color32(0, 0, 255, 255),
+        new Color32(0, 0, 255, 255),
+        new Color32(0, 0, 255, 255),
+        new Color32(0, 0, 255, 255),
+        new Color32(0, 0, 255, 255),
         new Color32(255, 255, 0, 255),
-        new Color32(128, 96, 0, 255),
+        new Color32(255, 255, 0, 255),
         new Color32(255, 128, 255, 255),
         new Color32(255, 0, 255, 255),
-        new Color32(230, 170, 255, 255),
-        new Color32(208, 88, 255, 255),
-        new Color32(138, 60, 200, 255),
-        new Color32(88, 38, 128, 255),
+        new Color32(255, 128, 255, 255),
+        new Color32(255, 0, 255, 255),
+        new Color32(255, 128, 255, 255),
+        new Color32(255, 128, 255, 255),
         new Color32(255, 155, 155, 255),
-        new Color32(255, 192, 0, 255),
         new Color32(255, 0, 0, 255),
-        new Color32(0, 255, 0, 255),
-        new Color32(255, 128, 0, 255),
-        new Color32(105, 105, 255, 255)
+        new Color32(255, 0, 0, 255),
+        new Color32(255, 0, 0, 255),
+        new Color32(255, 0, 0, 255),
+        new Color32(255, 0, 0, 255)
     };
 
     void Start()
     {
+        #if UNITY_EDITOR
+            testing = true;
+            testPNG = (Texture2D) DDRNetSample.LoadPNG("Assets/TestImages/MP_SEL_SUR_000004.png");
+        #endif
+
         model = ModelLoader.Load(modelAsset);
         // See worker types here: https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/Worker.html
         worker = WorkerFactory.CreateWorker(WorkerFactory.Type.ComputePrecompiled, model);
-
-        outputAspectRatioFitter = outputViewParent.GetComponent<AspectRatioFitter>();
-        inputAspectRatioFitter = inputViewParent.GetComponent<AspectRatioFitter>();
 
         resizer = new TextureResizer();
         resizeOptions = new TextureResizer.ResizeOptions()
@@ -86,10 +88,13 @@ public class Vision : MonoBehaviour
             height = 480,
         };
 
-        #if UNITY_EDITOR
-            testing = true;
-            testPNG = (Texture2D) DDRNetSample.LoadPNG("Assets/TestImages/MP_SEL_SUR_000004.png");
-        #endif
+        outputAspectRatioFitter = outputViewParent.GetComponent<AspectRatioFitter>();
+        inputAspectRatioFitter = inputViewParent.GetComponent<AspectRatioFitter>();
+        outputAspectRatioFitter.aspectRatio = (float) resizeOptions.width / resizeOptions.height;
+        inputAspectRatioFitter.aspectRatio = (float) resizeOptions.width / resizeOptions.height;
+
+        outputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
+        inputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
 
         // Init compute shader resources
         labelTex = new RenderTexture(resizeOptions.width, resizeOptions.height, 0, RenderTextureFormat.ARGB32);
@@ -154,7 +159,7 @@ public class Vision : MonoBehaviour
         // worker.Execute(input);
         var enumerator = worker.StartManualSchedule(input);
         int step = 0;
-        int stepsPerFrame = 60;
+        int stepsPerFrame = 40;
         while (enumerator.MoveNext()) {
             if (++step % stepsPerFrame == 0) yield return null;
         }
@@ -164,14 +169,11 @@ public class Vision : MonoBehaviour
         inputView.texture = resizedTex;
         outputView.texture = GetResultTexture(output.ToReadOnlyArray());
 
-        outputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
-        inputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
         outputAspectRatioFitter.aspectMode = DDRNetSample.GetMode();
         inputAspectRatioFitter.aspectMode = DDRNetSample.GetMode();
-        outputAspectRatioFitter.aspectRatio = (float) resizeOptions.width / resizeOptions.height;
-        inputAspectRatioFitter.aspectRatio = (float) resizeOptions.width / resizeOptions.height;
 
         input.Dispose();
+        output.Dispose();
 
         working = false;
     }
