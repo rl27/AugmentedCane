@@ -40,37 +40,51 @@ public class Vision : MonoBehaviour
     private RenderTexture labelTex;
     private int labelToTexKernel;
 
+    // public static readonly Color32[] COLOR_TABLE = new Color32[]
+    // {
+    //     new Color32(0, 0, 0, 255),
+    //     new Color32(0, 0, 255, 255),
+    //     new Color32(0, 0, 255, 255),
+    //     new Color32(0, 0, 255, 255),
+    //     new Color32(0, 0, 255, 255),
+    //     new Color32(0, 0, 255, 255),
+    //     new Color32(0, 0, 255, 255),
+    //     new Color32(0, 0, 255, 255),
+    //     new Color32(255, 255, 0, 255),
+    //     new Color32(255, 255, 0, 255),
+    //     new Color32(255, 128, 255, 255),
+    //     new Color32(255, 0, 255, 255),
+    //     new Color32(255, 128, 255, 255),
+    //     new Color32(255, 0, 255, 255),
+    //     new Color32(255, 128, 255, 255),
+    //     new Color32(255, 128, 255, 255),
+    //     new Color32(255, 155, 155, 255),
+    //     new Color32(255, 0, 0, 255),
+    //     new Color32(255, 0, 0, 255),
+    //     new Color32(255, 0, 0, 255),
+    //     new Color32(255, 0, 0, 255),
+    //     new Color32(255, 0, 0, 255)
+    // };
+
     public static readonly Color32[] COLOR_TABLE = new Color32[]
     {
-        new Color32(0, 0, 0, 255),
-        new Color32(0, 0, 255, 255),
-        new Color32(0, 0, 255, 255),
-        new Color32(0, 0, 255, 255),
-        new Color32(0, 0, 255, 255),
-        new Color32(0, 0, 255, 255),
-        new Color32(0, 0, 255, 255),
-        new Color32(0, 0, 255, 255),
-        new Color32(255, 255, 0, 255),
-        new Color32(255, 255, 0, 255),
-        new Color32(255, 128, 255, 255),
-        new Color32(255, 0, 255, 255),
-        new Color32(255, 128, 255, 255),
-        new Color32(255, 0, 255, 255),
-        new Color32(255, 128, 255, 255),
-        new Color32(255, 128, 255, 255),
-        new Color32(255, 155, 155, 255),
-        new Color32(255, 0, 0, 255),
-        new Color32(255, 0, 0, 255),
-        new Color32(255, 0, 0, 255),
-        new Color32(255, 0, 0, 255),
-        new Color32(255, 0, 0, 255)
+        new Color32(0, 0, 0, 255), // background
+        new Color32(0, 0, 255, 255), // road
+        new Color32(255, 255, 0, 255), // curb
+        new Color32(200, 200, 0, 255), // curb cut
+        new Color32(0, 255, 0, 255), // sidewalk
+        new Color32(255, 0, 255, 255), // plain crosswalk
+        new Color32(255, 0, 255, 255), // zebra crosswalk
+        new Color32(255, 0, 0, 255), // grating
+        new Color32(255, 0, 0, 255), // manhole
+        new Color32(128, 96, 0, 255) // rail track
     };
 
     void Start()
     {
         #if UNITY_EDITOR
             testing = true;
-            testPNG = (Texture2D) DDRNetSample.LoadPNG("Assets/TestImages/MP_SEL_SUR_000004.png");
+            testPNG = (Texture2D) DDRNetSample.LoadPNG("Assets/TestImages/test1.png");
         #endif
 
         model = ModelLoader.Load(modelAsset);
