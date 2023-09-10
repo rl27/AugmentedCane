@@ -202,4 +202,9 @@ public class Vision : MonoBehaviour
 
         return labelTex;
     }
+
+    void OnDisable()
+    {
+        worker.Dispose();
+    }
 }
