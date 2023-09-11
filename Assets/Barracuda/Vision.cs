@@ -107,9 +107,6 @@ public class Vision : MonoBehaviour
         outputAspectRatioFitter.aspectRatio = (float) resizeOptions.width / resizeOptions.height;
         inputAspectRatioFitter.aspectRatio = (float) resizeOptions.width / resizeOptions.height;
 
-        outputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
-        inputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
-
         // Init compute shader resources
         labelTex = new RenderTexture(resizeOptions.width, resizeOptions.height, 0, RenderTextureFormat.ARGB32);
         labelTex.enableRandomWrite = true;
@@ -173,10 +170,13 @@ public class Vision : MonoBehaviour
         // worker.Execute(input);
         var enumerator = worker.StartManualSchedule(input);
         int step = 0;
-        int stepsPerFrame = 40;
+        int stepsPerFrame = 50;
         float fps = 1.0f / Time.smoothDeltaTime;
         if (fps > 31f && fps < 61f)
             stepsPerFrame = (int) (stepsPerFrame * 30f / fps);
+        else if (fps >= 61f)
+            stepsPerFrame = stepsPerFrame / 2;
+
         while (enumerator.MoveNext()) {
             if (++step % stepsPerFrame == 0) yield return null;
         }
@@ -188,6 +188,8 @@ public class Vision : MonoBehaviour
 
         outputAspectRatioFitter.aspectMode = DDRNetSample.GetMode();
         inputAspectRatioFitter.aspectMode = DDRNetSample.GetMode();
+        outputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
+        inputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
 
         input.Dispose();
         output.Dispose();
