@@ -39,14 +39,15 @@ public class DDRNetSample : MonoBehaviour
         if (!Application.isEditor)
         {
             options.accelerator = DDRNet.Accelerator.NNAPI;
-            string cacheDir = Application.persistentDataPath;
-            string modelToken = "model-token";
-            var interpreterOptions = new InterpreterOptions();
+
             var nnapiOptions = NNAPIDelegate.DefaultOptions;
             nnapiOptions.AllowFp16 = true;
-            nnapiOptions.CacheDir = cacheDir;
-            nnapiOptions.ModelToken = modelToken;
+            nnapiOptions.CacheDir = Application.persistentDataPath;
+            nnapiOptions.ModelToken = "model-token";
+
+            var interpreterOptions = new InterpreterOptions();
             interpreterOptions.AddDelegate(new NNAPIDelegate(nnapiOptions));
+
             model = new DDRNet(options, interpreterOptions);
         }
         else
