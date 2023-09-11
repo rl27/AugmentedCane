@@ -83,7 +83,7 @@ public class Vision : MonoBehaviour
     void Start()
     {
         #if UNITY_EDITOR
-            testing = false;
+            testing = true;
             testPNG = (Texture2D) DDRNetSample.LoadPNG("Assets/TestImages/test3.png");
         #endif
 
@@ -174,6 +174,9 @@ public class Vision : MonoBehaviour
         var enumerator = worker.StartManualSchedule(input);
         int step = 0;
         int stepsPerFrame = 40;
+        float fps = 1.0f / Time.smoothDeltaTime;
+        if (fps > 31f)
+            stepsPerFrame = (int) (stepsPerFrame * fps / 30f);
         while (enumerator.MoveNext()) {
             if (++step % stepsPerFrame == 0) yield return null;
         }
