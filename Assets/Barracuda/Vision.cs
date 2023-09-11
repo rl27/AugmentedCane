@@ -176,7 +176,7 @@ public class Vision : MonoBehaviour
         int stepsPerFrame = 40;
         float fps = 1.0f / Time.smoothDeltaTime;
         if (fps > 31f)
-            stepsPerFrame = (int) (stepsPerFrame * fps / 30f);
+            stepsPerFrame = (int) (stepsPerFrame * 30f / fps);
         while (enumerator.MoveNext()) {
             if (++step % stepsPerFrame == 0) yield return null;
         }
