@@ -62,7 +62,7 @@ public class DDRNetSample : MonoBehaviour
         inputAspectRatioFitter = inputViewParent.GetComponent<AspectRatioFitter>();
 
         #if UNITY_EDITOR
-            testing = false;
+            testing = DepthImage.tflite;
             testPNG = LoadPNG("Assets/TestImages/test3.png");
         #endif
     }

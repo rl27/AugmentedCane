@@ -83,7 +83,7 @@ public class Vision : MonoBehaviour
     void Start()
     {
         #if UNITY_EDITOR
-            testing = true;
+            testing = !DepthImage.tflite;
             testPNG = (Texture2D) DDRNetSample.LoadPNG("Assets/TestImages/test3.png");
         #endif
 
@@ -173,7 +173,7 @@ public class Vision : MonoBehaviour
         // worker.Execute(input);
         var enumerator = worker.StartManualSchedule(input);
         int step = 0;
-        int stepsPerFrame = 40;
+        int stepsPerFrame = 20;
         float fps = 1.0f / Time.smoothDeltaTime;
         if (fps > 31f)
             stepsPerFrame = (int) (stepsPerFrame * 30f / fps);

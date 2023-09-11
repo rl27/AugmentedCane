@@ -1994,10 +1994,10 @@ MonoBehaviour:
   outputViewParent: {fileID: 2000448425}
   inputViewParent: {fileID: 630529194}
   options:
-    modelPath: mnv3_mapillary.tflite
+    modelPath: mnv3_mapillary_sim_noargmax.tflite
     aspectMode: 2
     accelerator: 2
-    compute: {fileID: 7200000, guid: 717e310547765364bae09794f6539e3d, type: 3}
+    compute: {fileID: 7200000, guid: 99c28d7e9090c1e419ab27fe51ab35c0, type: 3}
 --- !u!1 &1210721349
 GameObject:
   m_ObjectHideFlags: 0

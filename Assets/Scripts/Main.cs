@@ -85,7 +85,6 @@ public class Main : MonoBehaviour
         }
 
         m_StringBuilder.Clear();
-        Debug.Log((int)(1.0f / Time.smoothDeltaTime));
         m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}");
 
         if (depthActive)

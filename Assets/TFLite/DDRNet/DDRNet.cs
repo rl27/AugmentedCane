@@ -33,7 +33,7 @@ public class DDRNet : BaseImagePredictor<float>
 
     private float[,,] inputs;
     private float[,,] inputs2;
-    private int[,] outputs0;
+    private float[,,] outputs0;
 
     private ComputeShader compute;
     private ComputeBuffer labelBuffer;
@@ -61,13 +61,13 @@ public class DDRNet : BaseImagePredictor<float>
         resizeOptions.height = 480;
         resizeOptions.width = 480;
         inputs2 = new float[3, 480, 480];
-        outputs0 = new int[480, 480];
+        outputs0 = new float[10, 480, 480];
 
         // Init compute shader resources
         labelTex = new RenderTexture(resizeOptions.width, resizeOptions.height, 0, RenderTextureFormat.ARGB32);
         labelTex.enableRandomWrite = true;
         labelTex.Create();
-        labelBuffer = new ComputeBuffer(3 * 480 * 480, sizeof(int));
+        labelBuffer = new ComputeBuffer(10 * 480 * 480, sizeof(int));
         colorTableBuffer = new ComputeBuffer(COLOR_TABLE.Length, sizeof(float) * 4);
 
         compute = options.compute;
