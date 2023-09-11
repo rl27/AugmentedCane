@@ -173,9 +173,9 @@ public class Vision : MonoBehaviour
         // worker.Execute(input);
         var enumerator = worker.StartManualSchedule(input);
         int step = 0;
-        int stepsPerFrame = 20;
+        int stepsPerFrame = 40;
         float fps = 1.0f / Time.smoothDeltaTime;
-        if (fps > 31f)
+        if (fps > 31f && fps < 61f)
             stepsPerFrame = (int) (stepsPerFrame * 30f / fps);
         while (enumerator.MoveNext()) {
             if (++step % stepsPerFrame == 0) yield return null;

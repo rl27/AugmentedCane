@@ -106,7 +106,7 @@ public class DepthImage : MonoBehaviour
     private bool imagesUpdating = false;
 
     // Add delay between updates to data for better performance.
-    private float delay = 0.0333f;
+    private float delay = 0.05f;
 
     // Converts local coordinates to world coordinates.
     private Matrix4x4 localToWorldTransform = Matrix4x4.identity;
@@ -117,7 +117,7 @@ public class DepthImage : MonoBehaviour
     public static Vector3 rotation;
 
     // These variables are for naive obstacle avoidance.
-    float distanceToObstacle = 1.5f; // Distance in meters at which to alert for obstacles
+    float distanceToObstacle = 2.0f; // Distance in meters at which to alert for obstacles
     int collisionWindowWidth = 11; // Num. pixels left/right of the middle to check for obstacles
     uint totalCount = 0; // Total number of depth images received
     static int numFrames = 30;
@@ -132,7 +132,7 @@ public class DepthImage : MonoBehaviour
 
     // Perform vision tasks on camera image
     bool visionActive = true;
-    public static bool tflite = true;
+    public static bool tflite = false;
 
     void Awake()
     {
