@@ -121,12 +121,12 @@ public class DDRNet : BaseImagePredictor<float>
         for (int i = 0; i < pixels.Length; i++) {
             int y = height - i / width;
             int x = i % width;
-            inputs2[0, y, x] = (pixels[i].r / scale - 0.4217f) / 0.2646f;
-            inputs2[1, y, x] = (pixels[i].g / scale - 0.4606f) / 0.2754f;
-            inputs2[2, y, x] = (pixels[i].b / scale - 0.4720f) / 0.3035f;
-            // inputs2[0, y, x] = (pixels[i].r / scale);
-            // inputs2[1, y, x] = (pixels[i].g / scale);
-            // inputs2[2, y, x] = (pixels[i].b / scale);
+            // inputs2[0, y, x] = (pixels[i].r / scale - 0.4217f) / 0.2646f;
+            // inputs2[1, y, x] = (pixels[i].g / scale - 0.4606f) / 0.2754f;
+            // inputs2[2, y, x] = (pixels[i].b / scale - 0.4720f) / 0.3035f;
+            inputs2[0, y, x] = (pixels[i].r / scale);
+            inputs2[1, y, x] = (pixels[i].g / scale);
+            inputs2[2, y, x] = (pixels[i].b / scale);
         }
 
         interpreter.SetInputTensorData(0, inputs2);

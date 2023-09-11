@@ -63,7 +63,7 @@ public class DDRNetSample : MonoBehaviour
 
         #if UNITY_EDITOR
             testing = true;
-            testPNG = LoadPNG("Assets/TestImages/test2.png");
+            testPNG = LoadPNG("Assets/TestImages/test3.png");
         #endif
     }
 
