@@ -83,8 +83,8 @@ public class Vision : MonoBehaviour
     void Start()
     {
         #if UNITY_EDITOR
-            testing = true;
-            testPNG = (Texture2D) DDRNetSample.LoadPNG("Assets/TestImages/test1.png");
+            testing = false;
+            testPNG = (Texture2D) DDRNetSample.LoadPNG("Assets/TestImages/test2.png");
         #endif
 
         model = ModelLoader.Load(modelAsset);

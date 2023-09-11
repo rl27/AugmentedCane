@@ -132,7 +132,7 @@ public class DepthImage : MonoBehaviour
 
     // Perform vision tasks on camera image
     bool visionActive = true;
-    bool tflite = false;
+    bool tflite = true;
 
     void Awake()
     {

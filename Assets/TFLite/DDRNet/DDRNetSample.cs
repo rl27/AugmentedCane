@@ -62,8 +62,8 @@ public class DDRNetSample : MonoBehaviour
         inputAspectRatioFitter = inputViewParent.GetComponent<AspectRatioFitter>();
 
         #if UNITY_EDITOR
-            testing = false;
-            testPNG = LoadPNG("Assets/TestImages/MP_SEL_SUR_000004.png");
+            testing = true;
+            testPNG = LoadPNG("Assets/TestImages/test2.png");
         #endif
     }
 

@@ -17,106 +17,23 @@ public class DDRNet : BaseImagePredictor<float>
         public ComputeShader compute = null;
     }
 
-    // public static readonly Color32[] COLOR_TABLE = new Color32[]
-    // {
-    //     new Color32(165, 42, 42, 255),
-    //     new Color32(0, 192, 0, 255),
-    //     new Color32(196, 196, 196, 255),
-    //     new Color32(190, 153, 153, 255),
-    //     new Color32(180, 165, 180, 255),
-    //     new Color32(90, 120, 150, 255),
-    //     new Color32(102, 102, 156, 255),
-    //     new Color32(128, 64, 255, 255),
-    //     new Color32(140, 140, 200, 255),
-    //     new Color32(170, 170, 170, 255),
-    //     new Color32(250, 170, 160, 255),
-    //     new Color32(96, 96, 96, 255),
-    //     new Color32(230, 150, 140, 255),
-    //     new Color32(128, 64, 128, 255),
-    //     new Color32(110, 110, 110, 255),
-    //     new Color32(244, 35, 232, 255),
-    //     new Color32(150, 100, 100, 255),
-    //     new Color32(70, 70, 70, 255),
-    //     new Color32(150, 120, 90, 255),
-    //     new Color32(220, 20, 60, 255),
-    //     new Color32(255, 0, 0, 255),
-    //     new Color32(255, 0, 100, 255),
-    //     new Color32(255, 0, 200, 255),
-    //     new Color32(200, 128, 128, 255),
-    //     new Color32(255, 255, 255, 255),
-    //     new Color32(64, 170, 64, 255),
-    //     new Color32(230, 160, 50, 255),
-    //     new Color32(70, 130, 180, 255),
-    //     new Color32(190, 255, 255, 255),
-    //     new Color32(152, 251, 152, 255),
-    //     new Color32(107, 142, 35, 255),
-    //     new Color32(0, 170, 30, 255),
-    //     new Color32(255, 255, 128, 255),
-    //     new Color32(250, 0, 30, 255),
-    //     new Color32(100, 140, 180, 255),
-    //     new Color32(220, 220, 220, 255),
-    //     new Color32(220, 128, 128, 255),
-    //     new Color32(222, 40, 40, 255),
-    //     new Color32(100, 170, 30, 255),
-    //     new Color32(40, 40, 40, 255),
-    //     new Color32(33, 33, 33, 255),
-    //     new Color32(100, 128, 160, 255),
-    //     new Color32(142, 0, 0, 255),
-    //     new Color32(70, 100, 150, 255),
-    //     new Color32(210, 170, 100, 255),
-    //     new Color32(153, 153, 153, 255),
-    //     new Color32(128, 128, 128, 255),
-    //     new Color32(0, 0, 80, 255),
-    //     new Color32(250, 170, 30, 255),
-    //     new Color32(192, 192, 192, 255),
-    //     new Color32(220, 220, 0, 255),
-    //     new Color32(140, 140, 20, 255),
-    //     new Color32(119, 11, 32, 255),
-    //     new Color32(150, 0, 255, 255),
-    //     new Color32(0, 60, 100, 255),
-    //     new Color32(0, 0, 142, 255),
-    //     new Color32(0, 0, 90, 255),
-    //     new Color32(0, 0, 230, 255),
-    //     new Color32(0, 80, 100, 255),
-    //     new Color32(128, 64, 64, 255),
-    //     new Color32(0, 0, 110, 255),
-    //     new Color32(0, 0, 70, 255),
-    //     new Color32(0, 0, 192, 255),
-    //     new Color32(32, 32, 32, 255),
-    //     new Color32(120, 10, 10, 255),
-    //     new Color32(0, 0, 0, 255)
-    // };
-
     public static readonly Color32[] COLOR_TABLE = new Color32[]
     {
-        new Color32(0, 0, 0, 255),
-        new Color32(0, 0, 255, 255),
-        new Color32(217, 217, 217, 255),
-        new Color32(198, 89, 17, 255),
-        new Color32(128, 128, 128, 255),
-        new Color32(255, 230, 153, 255),
-        new Color32(55, 86, 35, 255),
-        new Color32(110, 168, 70, 255),
-        new Color32(255, 255, 0, 255),
-        new Color32(128, 96, 0, 255),
-        new Color32(255, 128, 255, 255),
-        new Color32(255, 0, 255, 255),
-        new Color32(230, 170, 255, 255),
-        new Color32(208, 88, 255, 255),
-        new Color32(138, 60, 200, 255),
-        new Color32(88, 38, 128, 255),
-        new Color32(255, 155, 155, 255),
-        new Color32(255, 192, 0, 255),
-        new Color32(255, 0, 0, 255),
-        new Color32(0, 255, 0, 255),
-        new Color32(255, 128, 0, 255),
-        new Color32(105, 105, 255, 255)
+        new Color32(0, 0, 0, 255), // background
+        new Color32(0, 0, 255, 255), // road
+        new Color32(255, 255, 0, 255), // curb
+        new Color32(200, 200, 0, 255), // curb cut
+        new Color32(0, 255, 0, 255), // sidewalk
+        new Color32(255, 0, 255, 255), // plain crosswalk
+        new Color32(255, 0, 255, 255), // zebra crosswalk
+        new Color32(255, 0, 0, 255), // grating
+        new Color32(255, 0, 0, 255), // manhole
+        new Color32(128, 96, 0, 255) // rail track
     };
 
     private float[,,] inputs;
     private float[,,] inputs2;
-    // private long[,] outputs0;
-    private long[,] outputs0;
+    private int[,] outputs0;
 
     private ComputeShader compute;
     private ComputeBuffer labelBuffer;
@@ -141,18 +58,16 @@ public class DDRNet : BaseImagePredictor<float>
         resizeOptions.rotationDegree = 90f;
 
         var oShape0 = interpreter.GetOutputTensorInfo(0).shape; // 1, 1, height, width
-        resizeOptions.height = oShape0[2];
-        resizeOptions.width = oShape0[3];
-        // inputs = new float[oShape0[2], oShape0[3], 3];
-        inputs2 = new float[3, oShape0[2], oShape0[3]];
-        outputs0 = new long[oShape0[2], oShape0[3]];
-        // outputs0 = new float[22, oShape0[2], oShape0[3]];
+        resizeOptions.height = 480;
+        resizeOptions.width = 480;
+        inputs2 = new float[3, 480, 480];
+        outputs0 = new int[480, 480];
 
         // Init compute shader resources
         labelTex = new RenderTexture(resizeOptions.width, resizeOptions.height, 0, RenderTextureFormat.ARGB32);
         labelTex.enableRandomWrite = true;
         labelTex.Create();
-        labelBuffer = new ComputeBuffer(oShape0[1] * oShape0[2] * oShape0[3], sizeof(long));
+        labelBuffer = new ComputeBuffer(3 * 480 * 480, sizeof(int));
         colorTableBuffer = new ComputeBuffer(COLOR_TABLE.Length, sizeof(float) * 4);
 
         compute = options.compute;
@@ -206,10 +121,12 @@ public class DDRNet : BaseImagePredictor<float>
         for (int i = 0; i < pixels.Length; i++) {
             int y = height - i / width;
             int x = i % width;
-            // subtract (0.485, 0.456, 0.406), divide by (0.229, 0.224, 0.225)
-            inputs2[0, y, x] = (pixels[i].r / scale - 0.485f) / 0.229f;
-            inputs2[1, y, x] = (pixels[i].g / scale - 0.456f) / 0.224f;
-            inputs2[2, y, x] = (pixels[i].b / scale - 0.406f) / 0.225f;
+            inputs2[0, y, x] = (pixels[i].r / scale - 0.4217f) / 0.2646f;
+            inputs2[1, y, x] = (pixels[i].g / scale - 0.4606f) / 0.2754f;
+            inputs2[2, y, x] = (pixels[i].b / scale - 0.4720f) / 0.3035f;
+            // inputs2[0, y, x] = (pixels[i].r / scale);
+            // inputs2[1, y, x] = (pixels[i].g / scale);
+            // inputs2[2, y, x] = (pixels[i].b / scale);
         }
 
         interpreter.SetInputTensorData(0, inputs2);
@@ -245,37 +162,6 @@ public class DDRNet : BaseImagePredictor<float>
         compute.Dispatch(labelToTexKernel, resizeOptions.width / 8, resizeOptions.height / 8, 1);
 
         return labelTex;
-    }
-
-    // private Texture2D OutputsToTex()
-    // {
-    //     int h = outputs0.GetLength(0);
-    //     int w = outputs0.GetLength(1);
-    //     Texture2D tex = new Texture2D(w, h);
-    //     for (int i = 0; i < w; i++) {
-    //         for (int j = 0; j < h; j++) {
-    //             tex.SetPixel(i, h - j - 1, COLOR_TABLE[outputs0[j, i]]);
-    //         }
-    //     }
-    //     tex.Apply();
-    //     return tex;
-    // }
-
-    // private static Texture2D ArrToTex(float[,,] arr)
-    // {
-    //     Texture2D tex = new Texture2D(arr.GetLength(0), arr.GetLength(1));
-    //     for (int i = 0; i < arr.GetLength(0); i++) {
-    //         for (int j = 0; j < arr.GetLength(1); j++) {
-    //             tex.SetPixel(i, j, new Color(arr[i, j, 0], arr[i, j, 1], arr[i, j, 2]));
-    //         }
-    //     }
-    //     tex.Apply();
-    //     return tex;
-    // }
-
-    private static Color32 ToColor(uint c)
-    {
-        return Color32Extension.FromHex(c);
     }
 }
 }
