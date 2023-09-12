@@ -74,6 +74,9 @@ public class DepthImage : MonoBehaviour
 
     [SerializeField]
     GameObject VisionHandler;
+    [SerializeField]
+    GameObject TFLiteHandler;
+
     Vision vision;
     SsdSample ssd;
     YOLOSample yolo;
@@ -153,23 +156,27 @@ public class DepthImage : MonoBehaviour
 
         audioPlayer = AudioHandler.GetComponent<AudioPlayer>();
 
-        vision = VisionHandler.GetComponent<Vision>();
-        ssd = VisionHandler.GetComponent<SsdSample>();
-        yolo = VisionHandler.GetComponent<YOLOSample>();
-        ddrnet = VisionHandler.GetComponent<DDRNetSample>();
-
         if (!visionActive) {
             yolo.frameContainer.enabled = false;
             vision.outputView.enabled = false;
             vision.inputView.enabled = false;
             VisionHandler.SetActive(false);
         }
+        else {
+            if (tflite) {
+            ssd = TFLiteHandler.GetComponent<SsdSample>();
+            yolo = TFLiteHandler.GetComponent<YOLOSample>();
+            ddrnet = TFLiteHandler.GetComponent<DDRNetSample>();
+            VisionHandler.SetActive(false);
+            }
+            else {
+                vision = VisionHandler.GetComponent<Vision>();
+                TFLiteHandler.SetActive(false);
+            }   
+        }
 
         // Set depth image material
         m_RawImage.material = m_DepthMaterial;
-
-        // Lock orientation to portrait
-        // Screen.orientation = ScreenOrientation.Portrait;
 
         // Disable the displayed images if necessary
         if (!showCameraImage) {

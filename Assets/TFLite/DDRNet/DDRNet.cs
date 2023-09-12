@@ -33,7 +33,7 @@ public class DDRNet : BaseImagePredictor<float>
 
     private float[,,] inputs;
     private float[,,] inputs2;
-    private float[,,] outputs0;
+    private int[,] outputs0;
 
     private ComputeShader compute;
     private ComputeBuffer labelBuffer;
@@ -57,17 +57,18 @@ public class DDRNet : BaseImagePredictor<float>
         resizeOptions.aspectMode = options.aspectMode;
         resizeOptions.rotationDegree = 90f;
 
-        var oShape0 = interpreter.GetOutputTensorInfo(0).shape; // 1, 1, height, width
-        resizeOptions.height = 480;
-        resizeOptions.width = 480;
-        inputs2 = new float[3, 480, 480];
-        outputs0 = new float[10, 480, 480];
+        var oShape = interpreter.GetOutputTensorInfo(0).shape; // 1, height, width
+        int end = oShape.Length - 1;
+        resizeOptions.height = oShape[end-1];
+        resizeOptions.width = oShape[end];
+        inputs2 = new float[3, oShape[end-1], oShape[end]];
+        outputs0 = new int[oShape[end-1], oShape[end]];
 
         // Init compute shader resources
         labelTex = new RenderTexture(resizeOptions.width, resizeOptions.height, 0, RenderTextureFormat.ARGB32);
         labelTex.enableRandomWrite = true;
         labelTex.Create();
-        labelBuffer = new ComputeBuffer(10 * 480 * 480, sizeof(int));
+        labelBuffer = new ComputeBuffer(oShape[end-2] * oShape[end-1] * oShape[end], sizeof(int));
         colorTableBuffer = new ComputeBuffer(COLOR_TABLE.Length, sizeof(float) * 4);
 
         compute = options.compute;

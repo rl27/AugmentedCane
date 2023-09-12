@@ -164,7 +164,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 11
+  m_RootOrder: 12
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &3028141
 MonoBehaviour:
@@ -458,7 +458,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 8
+  m_RootOrder: 9
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &237722657
 GameObject:
@@ -550,7 +550,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 9
+  m_RootOrder: 10
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &245436665
 MonoBehaviour:
@@ -639,7 +639,100 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 10
+  m_RootOrder: 11
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &317589866
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 317589870}
+  - component: {fileID: 317589869}
+  - component: {fileID: 317589868}
+  - component: {fileID: 317589867}
+  m_Layer: 0
+  m_Name: TFLiteHandler
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &317589867
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 317589866}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bc526584907bea4e8e385bf19f703e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  outputView: {fileID: 2000448427}
+  inputView: {fileID: 630529197}
+  outputViewParent: {fileID: 2000448425}
+  inputViewParent: {fileID: 630529194}
+  options:
+    modelPath: mnv3_mapillary.tflite
+    aspectMode: 2
+    accelerator: 2
+    compute: {fileID: 7200000, guid: 717e310547765364bae09794f6539e3d, type: 3}
+--- !u!114 &317589868
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 317589866}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d589e9cf51cc4a246b5123470884107d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  options:
+    modelPath: yolov8n_320_320_float16.tflite
+    aspectMode: 2
+    accelerator: 2
+  frameContainer: {fileID: 237722658}
+  framePrefab: {fileID: 3820330068002586715, guid: 6e1b6b8d66fdfdd45abed5b58c2cee75, type: 3}
+  labelMap: {fileID: 4900000, guid: 368961115ffa335468095bd4739ea7c6, type: 3}
+--- !u!114 &317589869
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 317589866}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7fb4138b830554fb3998a569eb701fb7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  options:
+    modelPath: coco_ssd_mobilenet_quant.tflite
+    aspectMode: 2
+    accelerator: 2
+  frameContainer: {fileID: 237722658}
+  framePrefab: {fileID: 3820330068002586715, guid: 6e1b6b8d66fdfdd45abed5b58c2cee75, type: 3}
+  labelMap: {fileID: 4900000, guid: bae4ee124cc4849e589f4cd1aa62e7db, type: 3}
+--- !u!4 &317589870
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 317589866}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 513.38043, y: 236.22272, z: -0.021850586}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &338575855
 GameObject:
@@ -1821,6 +1914,7 @@ MonoBehaviour:
   m_DepthMaterial: {fileID: 2100000, guid: 3518299564ad40c488f2036459c24a33, type: 2}
   AudioHandler: {fileID: 1450406541}
   VisionHandler: {fileID: 1168124737}
+  TFLiteHandler: {fileID: 317589866}
 --- !u!4 &975916387
 Transform:
   m_ObjectHideFlags: 0
@@ -1884,7 +1978,7 @@ Transform:
   m_Children:
   - {fileID: 538039732}
   m_Father: {fileID: 0}
-  m_RootOrder: 13
+  m_RootOrder: 14
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1168124737
 GameObject:
@@ -1896,9 +1990,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1168124738}
   - component: {fileID: 1168124739}
-  - component: {fileID: 1168124740}
-  - component: {fileID: 1168124741}
-  - component: {fileID: 1168124744}
   m_Layer: 0
   m_Name: VisionHandler
   m_TagString: Untagged
@@ -1939,65 +2030,6 @@ MonoBehaviour:
   inputViewParent: {fileID: 630529194}
   modelAsset: {fileID: 5022602860645237092, guid: a415cdce2141b2840b01c6dbab74923f, type: 3}
   compute: {fileID: 7200000, guid: f07148396908444429733077acb4ee0c, type: 3}
---- !u!114 &1168124740
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1168124737}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7fb4138b830554fb3998a569eb701fb7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  options:
-    modelPath: coco_ssd_mobilenet_quant.tflite
-    aspectMode: 2
-    accelerator: 2
-  frameContainer: {fileID: 237722658}
-  framePrefab: {fileID: 3820330068002586715, guid: 6e1b6b8d66fdfdd45abed5b58c2cee75, type: 3}
-  labelMap: {fileID: 4900000, guid: bae4ee124cc4849e589f4cd1aa62e7db, type: 3}
---- !u!114 &1168124741
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1168124737}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d589e9cf51cc4a246b5123470884107d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  options:
-    modelPath: yolov8n_320_320_float16.tflite
-    aspectMode: 2
-    accelerator: 2
-  frameContainer: {fileID: 237722658}
-  framePrefab: {fileID: 3820330068002586715, guid: 6e1b6b8d66fdfdd45abed5b58c2cee75, type: 3}
-  labelMap: {fileID: 4900000, guid: 368961115ffa335468095bd4739ea7c6, type: 3}
---- !u!114 &1168124744
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1168124737}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3bc526584907bea4e8e385bf19f703e4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  outputView: {fileID: 2000448427}
-  inputView: {fileID: 630529197}
-  outputViewParent: {fileID: 2000448425}
-  inputViewParent: {fileID: 630529194}
-  options:
-    modelPath: mnv3_mapillary_sim_noargmax.tflite
-    aspectMode: 2
-    accelerator: 2
-    compute: {fileID: 7200000, guid: 99c28d7e9090c1e419ab27fe51ab35c0, type: 3}
 --- !u!1 &1210721349
 GameObject:
   m_ObjectHideFlags: 0
@@ -2030,7 +2062,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 7
+  m_RootOrder: 8
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1210721351
 MonoBehaviour:
@@ -2200,7 +2232,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 6
+  m_RootOrder: 7
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1321048070
 GameObject:
@@ -2321,7 +2353,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 14
+  m_RootOrder: 15
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1450406541
 GameObject:
@@ -3020,7 +3052,7 @@ RectTransform:
   - {fileID: 2095174494}
   - {fileID: 1734993733}
   m_Father: {fileID: 0}
-  m_RootOrder: 12
+  m_RootOrder: 13
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}

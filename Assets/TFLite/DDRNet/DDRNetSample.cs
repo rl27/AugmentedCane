@@ -114,14 +114,14 @@ public class DDRNetSample : MonoBehaviour
         inputView.texture = input;
         outputView.texture = output;
 
-        outputView.rectTransform.sizeDelta = new Vector2(480, 480);
-        inputView.rectTransform.sizeDelta = new Vector2(480, 480);
+        outputView.rectTransform.sizeDelta = new Vector2(output.width, output.height);
+        inputView.rectTransform.sizeDelta = new Vector2(input.width, input.height);
         outputAspectRatioFitter.aspectMode = GetMode();
         inputAspectRatioFitter.aspectMode = GetMode();
         outputAspectRatioFitter.aspectRatio = (float) output.width / output.height;
         inputAspectRatioFitter.aspectRatio = (float) input.width / input.height;
 
-        // Debug.Log("success");
+        // Debug.unityLogger.Log("mytag", "success");
         return true;
     }
 
