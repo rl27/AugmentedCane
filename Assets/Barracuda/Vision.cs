@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Linq;
 using UnityEngine;
@@ -40,31 +41,8 @@ public class Vision : MonoBehaviour
     private RenderTexture labelTex;
     private int labelToTexKernel;
 
-    // public static readonly Color32[] COLOR_TABLE = new Color32[]
-    // {
-    //     new Color32(0, 0, 0, 255),
-    //     new Color32(0, 0, 255, 255),
-    //     new Color32(0, 0, 255, 255),
-    //     new Color32(0, 0, 255, 255),
-    //     new Color32(0, 0, 255, 255),
-    //     new Color32(0, 0, 255, 255),
-    //     new Color32(0, 0, 255, 255),
-    //     new Color32(0, 0, 255, 255),
-    //     new Color32(255, 255, 0, 255),
-    //     new Color32(255, 255, 0, 255),
-    //     new Color32(255, 128, 255, 255),
-    //     new Color32(255, 0, 255, 255),
-    //     new Color32(255, 128, 255, 255),
-    //     new Color32(255, 0, 255, 255),
-    //     new Color32(255, 128, 255, 255),
-    //     new Color32(255, 128, 255, 255),
-    //     new Color32(255, 155, 155, 255),
-    //     new Color32(255, 0, 0, 255),
-    //     new Color32(255, 0, 0, 255),
-    //     new Color32(255, 0, 0, 255),
-    //     new Color32(255, 0, 0, 255),
-    //     new Color32(255, 0, 0, 255)
-    // };
+    private int W = 480;
+    private int H = 480;
 
     public static readonly Color32[] COLOR_TABLE = new Color32[]
     {
@@ -98,8 +76,8 @@ public class Vision : MonoBehaviour
             rotationDegree = 90,
             mirrorHorizontal = false,
             mirrorVertical = false,
-            width = 480,
-            height = 480,
+            width = W,
+            height = H,
         };
 
         outputAspectRatioFitter = outputViewParent.GetComponent<AspectRatioFitter>();
@@ -170,31 +148,167 @@ public class Vision : MonoBehaviour
         // worker.Execute(input);
         var enumerator = worker.StartManualSchedule(input);
         int step = 0;
-        int stepsPerFrame = 50;
-        float fps = 1.0f / Time.smoothDeltaTime;
-        if (fps > 31f && fps < 61f)
-            stepsPerFrame = (int) (stepsPerFrame * 30f / fps);
-        else if (fps >= 61f)
-            stepsPerFrame = stepsPerFrame / 2;
-
+        int stepsPerFrame = 55; // FPS should be capped at 30; total num of steps for MNV3 is 221
         while (enumerator.MoveNext()) {
             if (++step % stepsPerFrame == 0) yield return null;
         }
-        Tensor output = worker.PeekOutput(); // BHWC: 1, 1, W, H
-        // Debug.Log(output.shape);
 
+        // (0, 0, 0  , 0  ) = top left
+        // (0, 0, 0  , H-1) = bottom left
+        // (0, 0, W-1, 0  ) = top right
+        // (0, 0, W-1, H-1) = bottom right
+        Tensor output = worker.PeekOutput(); // Debug.Log(output.shape); // BHWC: 1, 1, W, H
+
+        ProcessOutput(output);
+
+        SetTextures(resizedTex, GetResultTexture(output.ToReadOnlyArray()));
+        
+        input.Dispose();
+        output.Dispose();
+
+        working = false;
+    }
+
+    public static float direction; // Absolute direction based on current heading & segmentation outputs
+    private const float scale = 0.6f; // Scale the direction down since the camera can't actually see from -90 to +90
+    public static DateTime lastValidDirection; // To be used by other scripts to determine whether to use vision direction
+    public static float validDuration = 2.0f;
+    public static float maxDisparity = 45;
+
+    private DateTime lastWalkableTime; // Time at which user was last on a walkable surface
+    private float nonWalkableTime = 0.8f; // Time to wait before deciding that user is not on walkable surface
+
+    private const int numRaycasts = 19;
+    private float radWidth = Mathf.PI / (numRaycasts - 1);
+    private bool isWalkable = false;
+
+    public static float relativeDir;
+
+    private void ProcessOutput(Tensor output)
+    {
+        int curCls = (int) output[0, 0, W/2, H-1];
+        if (curCls >= 4 && curCls <= 6) { // Sidewalk, crosswalk
+            lastWalkableTime = DateTime.Now;
+            isWalkable = true;
+
+            // Raycast to find highest walkable point
+            float x = -1, y = -1;
+            float bestDirection = 0;
+            for (int i = 0; i < numRaycasts; i++) {
+                (float a, float b) = PerformRaycast(ref output, i * radWidth);
+                if (b > y) {
+                    (x, y) = (a, b);
+                    bestDirection = i * radWidth * Mathf.Rad2Deg - 90;
+                }
+            }
+            // Set orientation
+            if (x != -1) {
+                direction = ((bestDirection * scale) + SensorData.heading + 360) % 360;
+                relativeDir = Mathf.Round(bestDirection * scale);
+                lastValidDirection = DateTime.Now;
+            }
+
+            PlayAudio(curCls);
+        }
+        else if (curCls != 7 && curCls != 8) { // Ignore grating & manhole as these can be on either sidewalk, crosswalk, or road
+            if ((DateTime.Now - lastWalkableTime).TotalSeconds > nonWalkableTime) {
+                isWalkable = false;
+
+                // Raycast to find nearest sidewalk/crosswalk
+                float x = 0, y = 0;
+                float bestDirection = 0;
+                float shortestDistance = Single.PositiveInfinity;
+                for (int i = 0; i < numRaycasts; i++) {
+                    (float a, float b) = PerformRaycast(ref output, i * radWidth);
+                    if (b == -1)
+                        continue;
+                    float sqdist = a*a + b*b;
+                    if (sqdist < shortestDistance)
+                        shortestDistance = sqdist;
+                        (x, y) = (a, b);
+                        bestDirection = i * radWidth * Mathf.Rad2Deg - 90;
+                    }
+                // Set orientation
+                if (shortestDistance != Single.PositiveInfinity) {
+                    direction = ((bestDirection * scale) + SensorData.heading + 360) % 360;
+                    relativeDir = Mathf.Round(bestDirection * scale);
+                    lastValidDirection = DateTime.Now;
+                }
+
+                if (curCls == 1)
+                    PlayAudio(curCls);
+            }
+        }
+    }
+
+    // Returns coordinates of raycast relative to middle of bottom of image
+    // Grating & manhole are "wildcards" and can count as either road or sidewalk/crosswalk
+    // Returns (0, -1) if no suitable point is found
+    private (float, float) PerformRaycast(ref Tensor output, float radFromLeft)
+    {
+        bool valid = isWalkable;
+        float x = W/2, y = H-1;
+        float dx = -Mathf.Cos(radFromLeft);
+        float dy = Mathf.Sin(radFromLeft);
+        while (x >= 0 && y >= 0 && x < W && y < H) {
+            int cls = (int) output[0, 0, (int) x, (int) y];
+            if (isWalkable && (cls < 4 || cls > 8)) // Cast from walkable, reached non-walkable
+                break;
+            else if (!isWalkable && cls >= 4 && cls <= 6) { // Cast from non-walkable, reached walkable
+                valid = true;
+                break;
+            }
+            x += dx;
+            y -= dy;
+        }
+        if (valid)
+            return (x-W/2, H-1-y);
+        return (0, -1); // This only occurs if we start from non-walkable and no raycasts hit a walkable
+    }
+
+    private int lastClass = 0;
+    private DateTime lastClassChange; // Time at which user was last informed of a class change
+    private float classChangeInterval = 1.0f; // Time to wait after playing audio before doing it again
+
+    // Conditionally plays audio to inform user of class change
+    // Only changes lastClass if it successfully plays audio
+    public static string logging = "None";
+    private void PlayAudio(int cls)
+    {
+        if (lastClass != cls && (DateTime.Now - lastClassChange).TotalSeconds > classChangeInterval) {
+            switch (cls)
+            {
+                case 1: // Road
+                    lastClass = cls;
+                    lastClassChange = DateTime.Now;
+                    logging = "Road";
+                    break;
+                case 4: // Sidewalk
+                    lastClass = cls;
+                    lastClassChange = DateTime.Now;
+                    logging = "Sidewalk";
+                    break;
+                case 5: // Crosswalk
+                case 6:
+                    lastClass = cls;
+                    lastClassChange = DateTime.Now;
+                    logging = "Crosswalk";
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    private void SetTextures(Texture2D resizedTex, RenderTexture outputTex)
+    {
         inputView.texture = resizedTex;
-        outputView.texture = GetResultTexture(output.ToReadOnlyArray());
+        outputView.texture = outputTex;
 
         outputAspectRatioFitter.aspectMode = DDRNetSample.GetMode();
         inputAspectRatioFitter.aspectMode = DDRNetSample.GetMode();
         outputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
         inputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
-
-        input.Dispose();
-        output.Dispose();
-
-        working = false;
     }
 
     private RenderTexture GetResultTexture(float[] data)
@@ -215,7 +329,7 @@ public class Vision : MonoBehaviour
 
         if (labelTex != null) {
             labelTex.Release();
-            Object.Destroy(labelTex);
+            UnityEngine.Object.Destroy(labelTex);
         }
         labelBuffer?.Release();
         colorTableBuffer?.Release();

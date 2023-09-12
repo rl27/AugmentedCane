@@ -42,7 +42,7 @@ public class Navigation : MonoBehaviour
     private double farRadius = 0.00020;
     private double farLineDist = 0.00020;
 
-    private bool initialized = false; // Tracks whether RequestWaypoints has been called & completed
+    public static bool initialized = false; // Tracks whether RequestWaypoints has been called & completed
 
     private DateTime lastOriented; // Time at which orientation was last given
     private float orientationUpdateInterval = 12.0f; // Minimum interval at which to give orientation
@@ -215,12 +215,20 @@ public class Navigation : MonoBehaviour
         double dist = GPSData.degreeToMeter * Dist(loc, allPoints[targetWaypoint]);
         info = String.Format("WP {0}, {1}°, {2} m", targetWaypoint, Math.Round(ori), Math.Round(dist, 2));
 
+        if ((DateTime.Now - Vision.lastValidDirection).TotalSeconds < Vision.validDuration) {
+            double visionDiff = (Vision.direction - ori + 360) % 360;
+            if (visionDiff > 180)
+                visionDiff -= 360;
+            if (Math.Abs(visionDiff) < Vision.maxDisparity)
+                ori = Vision.direction;
+            info += String.Format(", {0}°, {1}", Math.Round(Vision.direction), Math.Abs(visionDiff) < Vision.maxDisparity);
+        }
+
         // Play orientation audio
         if (DepthImage.direction == DepthImage.Direction.None && !audioSource.isPlaying) {
             double headingDiff = (ori - SensorData.heading + 360) % 360;
             if (headingDiff > 180) // Move range to [-pi, pi]
                 headingDiff -= 360;
-
             float rad = (float) headingDiff * Mathf.Deg2Rad;
             float sin = Mathf.Sin(rad);
             double absDiff = Math.Abs(headingDiff);

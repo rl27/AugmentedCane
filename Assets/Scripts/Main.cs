@@ -88,16 +88,18 @@ public class Main : MonoBehaviour
         }
 
         m_StringBuilder.Clear();
-        m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}");
+        m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}\n");
 
-        if (depthActive)
-            m_StringBuilder.AppendLine($"{depth.m_StringBuilder.ToString()}");
+        m_StringBuilder.AppendLine($"{Vision.relativeDir}, {Vision.logging}\n");
+
+        if (GPSActive) {
+            // m_StringBuilder.AppendLine($"{gps.GPSstring()}");
+            m_StringBuilder.AppendLine($"{Navigation.info}\n");
+        }
         if (IMUActive)
             m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
-        if (GPSActive) {
-            m_StringBuilder.AppendLine($"{gps.GPSstring()}");
-            m_StringBuilder.AppendLine($"{Navigation.info}");
-        }
+        if (depthActive)
+            m_StringBuilder.AppendLine($"{depth.m_StringBuilder.ToString()}");
         if (pcActive)
             m_StringBuilder.AppendLine($"{pc.info}");
         if (planeActive)
