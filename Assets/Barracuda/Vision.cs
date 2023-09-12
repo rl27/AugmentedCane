@@ -210,6 +210,14 @@ public class Vision : MonoBehaviour
 
     void OnDisable()
     {
-        worker.Dispose();
+        worker?.Dispose();
+        resizer?.Dispose();
+
+        if (labelTex != null) {
+            labelTex.Release();
+            Object.Destroy(labelTex);
+        }
+        labelBuffer?.Release();
+        colorTableBuffer?.Release();
     }
 }
