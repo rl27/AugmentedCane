@@ -171,8 +171,9 @@ public class Navigation : MonoBehaviour
     // Call this to get instructions from the latest user location
     public void OnLocationUpdate(Point loc)
     {
-        if (!initialized)
+        if (!initialized) {
             return;
+        }
 
         (int bestWaypoint, bool closeToWaypoint) = FindBestWaypoint(loc);
         // Recalculate route if too far from any point

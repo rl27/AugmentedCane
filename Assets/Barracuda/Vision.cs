@@ -176,33 +176,31 @@ public class Vision : MonoBehaviour
         working = false;
     }
 
+    public static DateTime lastValidDirection; // To be used by other scripts to determine whether to use vision direction
+    public static float validDuration = 1.5f;
+    public static float maxDisparity = 45;
+    public static float relativeDir; // Just for logging
+
     public static float direction; // Absolute direction based on current heading & segmentation outputs
     private const float scale = 0.6f; // Scale the direction down since the camera can't actually see from -90 to +90
-    public static DateTime lastValidDirection; // To be used by other scripts to determine whether to use vision direction
-    public static float validDuration = 2.0f;
-    public static float maxDisparity = 45;
 
-    private DateTime lastWalkableTime; // Time at which user was last on a walkable surface
+    private DateTime lastWalkableTime; // Last time at which user was on a walkable surface
     private float nonWalkableTime = 0.8f; // Time to wait before deciding that user is not on walkable surface
 
-    private const int numRaycasts = 19;
+    private static int numRaycasts = 30;
     private float radWidth = Mathf.PI / (numRaycasts - 1);
-    private bool isWalkable = false;
-
-    public static float relativeDir;
 
     private void ProcessOutput(Tensor output)
     {
         int curCls = (int) output[0, 0, W/2, H-1];
         if (curCls >= 4 && curCls <= 6) { // Sidewalk, crosswalk
             lastWalkableTime = DateTime.Now;
-            isWalkable = true;
 
             // Raycast to find highest walkable point
             float x = -1, y = -1;
             float bestDirection = 0;
             for (int i = 0; i < numRaycasts; i++) {
-                (float a, float b) = PerformRaycast(ref output, i * radWidth);
+                (float a, float b) = PerformRaycast(ref output, i * radWidth, true);
                 if (b > y) {
                     (x, y) = (a, b);
                     bestDirection = i * radWidth * Mathf.Rad2Deg - 90;
@@ -219,14 +217,12 @@ public class Vision : MonoBehaviour
         }
         else if (curCls != 7 && curCls != 8) { // Ignore grating & manhole as these can be on either sidewalk, crosswalk, or road
             if ((DateTime.Now - lastWalkableTime).TotalSeconds > nonWalkableTime) {
-                isWalkable = false;
-
                 // Raycast to find nearest sidewalk/crosswalk
                 float x = 0, y = 0;
                 float bestDirection = 0;
                 float shortestDistance = Single.PositiveInfinity;
                 for (int i = 0; i < numRaycasts; i++) {
-                    (float a, float b) = PerformRaycast(ref output, i * radWidth);
+                    (float a, float b) = PerformRaycast(ref output, i * radWidth, false);
                     if (b == -1)
                         continue;
                     float sqdist = a*a + b*b;
@@ -242,8 +238,7 @@ public class Vision : MonoBehaviour
                     lastValidDirection = DateTime.Now;
                 }
 
-                if (curCls == 1)
-                    PlayAudio(curCls);
+                PlayAudio(curCls);
             }
         }
     }
@@ -251,17 +246,17 @@ public class Vision : MonoBehaviour
     // Returns coordinates of raycast relative to middle of bottom of image
     // Grating & manhole are "wildcards" and can count as either road or sidewalk/crosswalk
     // Returns (0, -1) if no suitable point is found
-    private (float, float) PerformRaycast(ref Tensor output, float radFromLeft)
+    private (float, float) PerformRaycast(ref Tensor output, float radFromLeft, bool onWalkable)
     {
-        bool valid = isWalkable;
+        bool valid = onWalkable;
         float x = W/2, y = H-1;
         float dx = -Mathf.Cos(radFromLeft);
         float dy = Mathf.Sin(radFromLeft);
         while (x >= 0 && y >= 0 && x < W && y < H) {
             int cls = (int) output[0, 0, (int) x, (int) y];
-            if (isWalkable && (cls < 4 || cls > 8)) // Cast from walkable, reached non-walkable
+            if (onWalkable && (cls < 4 || cls > 8)) // Cast from walkable, reached non-walkable
                 break;
-            else if (!isWalkable && cls >= 4 && cls <= 6) { // Cast from non-walkable, reached walkable
+            else if (!onWalkable && cls >= 4 && cls <= 6) { // Cast from non-walkable, reached walkable
                 valid = true;
                 break;
             }
@@ -275,7 +270,7 @@ public class Vision : MonoBehaviour
 
     private int lastClass = 0;
     private DateTime lastClassChange; // Time at which user was last informed of a class change
-    private float classChangeInterval = 1.0f; // Time to wait after playing audio before doing it again
+    private float classChangeInterval = 1.25f; // Time to wait after playing audio before doing it again; should be longer than any of the audio files
 
     // Conditionally plays audio to inform user of class change
     // Only changes lastClass if it successfully plays audio
@@ -303,6 +298,9 @@ public class Vision : MonoBehaviour
                     lastClassChange = DateTime.Now;
                     audioSource.PlayOneShot(crosswalk, 2);
                     logging = "Crosswalk";
+                    break;
+                case 0: // Background
+                    logging = "Unknown";
                     break;
                 default:
                     break;

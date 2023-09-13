@@ -27,8 +27,6 @@ public class TTS : MonoBehaviour
 
     private Queue<AudioWithTime> audioToPlay = new Queue<AudioWithTime>();
 
-    private DateTime lastNonDepth;
-
     void Start()
     {
         audioSource = GetComponent<AudioSource>();

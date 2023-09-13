@@ -90,7 +90,7 @@ public class Main : MonoBehaviour
         m_StringBuilder.Clear();
         m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}\n");
 
-        m_StringBuilder.AppendLine($"{Vision.relativeDir}, {Vision.logging}\n");
+        m_StringBuilder.AppendLine($"{Vision.relativeDir}°, {Vision.logging}\n");
 
         if (GPSActive) {
             // m_StringBuilder.AppendLine($"{gps.GPSstring()}");
