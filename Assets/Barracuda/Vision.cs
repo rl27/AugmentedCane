@@ -178,7 +178,7 @@ public class Vision : MonoBehaviour
 
     public static DateTime lastValidDirection; // To be used by other scripts to determine whether to use vision direction
     public static float validDuration = 1.5f;
-    public static float maxDisparity = 40;
+    public static float maxDisparity = 75; // Max degree difference from GPS waypoint direction
     public static float relativeDir; // Just for logging
 
     public static float direction; // Absolute direction based on current heading & segmentation outputs
@@ -271,7 +271,7 @@ public class Vision : MonoBehaviour
 
     private int lastClass = 0;
     private DateTime lastClassChange; // Time at which user was last informed of a class change
-    private float classChangeInterval = 1.25f; // Time to wait after playing audio before doing it again; should be longer than any of the audio files
+    private float classChangeInterval = 3.0f; // Time to wait after playing audio before doing it again; should be longer than any of the audio files
 
     // Conditionally plays audio to inform user of class change
     // Only changes lastClass if it successfully plays audio
@@ -284,20 +284,20 @@ public class Vision : MonoBehaviour
                 case 1: // Road
                     lastClass = cls;
                     lastClassChange = DateTime.Now;
-                    audioSource.PlayOneShot(road, 2);
+                    audioSource.PlayOneShot(road, 1.5);
                     logging = "Road";
                     break;
                 case 4: // Sidewalk
                     lastClass = cls;
                     lastClassChange = DateTime.Now;
-                    audioSource.PlayOneShot(sidewalk, 2);
+                    audioSource.PlayOneShot(sidewalk, 1.5);
                     logging = "Sidewalk";
                     break;
                 case 5: // Crosswalk
                 case 6:
                     lastClass = cls;
                     lastClassChange = DateTime.Now;
-                    audioSource.PlayOneShot(crosswalk, 2);
+                    audioSource.PlayOneShot(crosswalk, 1.5);
                     logging = "Crosswalk";
                     break;
                 case 0: // Background
