@@ -44,6 +44,11 @@ public class Vision : MonoBehaviour
     private int W = 480;
     private int H = 480;
 
+    AudioSource audioSource;
+    public AudioClip sidewalk;
+    public AudioClip crosswalk;
+    public AudioClip road;
+
     public static readonly Color32[] COLOR_TABLE = new Color32[]
     {
         new Color32(0, 0, 0, 255), // background
@@ -79,6 +84,8 @@ public class Vision : MonoBehaviour
             width = W,
             height = H,
         };
+
+        audioSource = GetComponent<AudioSource>();
 
         outputAspectRatioFitter = outputViewParent.GetComponent<AspectRatioFitter>();
         inputAspectRatioFitter = inputViewParent.GetComponent<AspectRatioFitter>();
@@ -281,17 +288,20 @@ public class Vision : MonoBehaviour
                 case 1: // Road
                     lastClass = cls;
                     lastClassChange = DateTime.Now;
+                    audioSource.PlayOneShot(road, 2);
                     logging = "Road";
                     break;
                 case 4: // Sidewalk
                     lastClass = cls;
                     lastClassChange = DateTime.Now;
+                    audioSource.PlayOneShot(sidewalk, 2);
                     logging = "Sidewalk";
                     break;
                 case 5: // Crosswalk
                 case 6:
                     lastClass = cls;
                     lastClassChange = DateTime.Now;
+                    audioSource.PlayOneShot(crosswalk, 2);
                     logging = "Crosswalk";
                     break;
                 default:
