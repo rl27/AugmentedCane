@@ -179,8 +179,8 @@ public class Vision : MonoBehaviour
     public static DateTime lastValidDirection; // To be used by other scripts to determine whether to use vision direction
     public static float validDuration = 1.5f;
     public static float maxDisparity = 75; // Max degree difference from GPS waypoint direction
-    public static float relativeDir; // Just for logging
 
+    public static float relativeDir; // Relative direction
     public static float direction; // Absolute direction based on current heading & segmentation outputs
     private const float scale = 0.65f; // Scale the direction down since the camera can't actually see from -90 to +90
     private float _velocity = 0.0f;
@@ -284,20 +284,20 @@ public class Vision : MonoBehaviour
                 case 1: // Road
                     lastClass = cls;
                     lastClassChange = DateTime.Now;
-                    audioSource.PlayOneShot(road, 1.5);
+                    audioSource.PlayOneShot(road, 1.5f);
                     logging = "Road";
                     break;
                 case 4: // Sidewalk
                     lastClass = cls;
                     lastClassChange = DateTime.Now;
-                    audioSource.PlayOneShot(sidewalk, 1.5);
+                    audioSource.PlayOneShot(sidewalk, 1.5f);
                     logging = "Sidewalk";
                     break;
                 case 5: // Crosswalk
                 case 6:
                     lastClass = cls;
                     lastClassChange = DateTime.Now;
-                    audioSource.PlayOneShot(crosswalk, 1.5);
+                    audioSource.PlayOneShot(crosswalk, 1.5f);
                     logging = "Crosswalk";
                     break;
                 case 0: // Background

@@ -173,7 +173,7 @@ public class Navigation : MonoBehaviour
     {
         if (!initialized) {
             if ((DateTime.Now - Vision.lastValidDirection).TotalSeconds < Vision.validDuration)
-                PlayOrientationAudio(Vision.direction);
+                PlayOrientationAudio(Vision.relativeDir, true);
             return;
         }
 
@@ -218,18 +218,21 @@ public class Navigation : MonoBehaviour
         double dist = GPSData.degreeToMeter * Dist(loc, allPoints[targetWaypoint]);
         info = String.Format("WP {0}, {1}°, {2} m", targetWaypoint, Math.Round(ori), Math.Round(dist, 2));
 
-        // Use segmentation direction if close enough to waypoint direction
+        bool useRelative = false;
+
+        // Use segmentation direction if info is not too old & it's close enough to waypoint direction
         if ((DateTime.Now - Vision.lastValidDirection).TotalSeconds < Vision.validDuration) {
             double visionDiff = (Vision.direction - ori + 360) % 360;
-            if (visionDiff > 180)
-                visionDiff -= 360;
-            if (Math.Abs(visionDiff) < Vision.maxDisparity)
+            if (visionDiff > 180) visionDiff -= 360;
+            if (Math.Abs(visionDiff) < Vision.maxDisparity) {
                 ori = Vision.direction;
-            info += String.Format(", {0}°, {1}", Math.Round(Vision.direction), Math.Abs(visionDiff) < Vision.maxDisparity);
+                useRelative = true;
+            }
+            info += String.Format(", {0}°, {1}", Math.Round(Vision.direction), useRelative);
         }
 
         // Play orientation audio
-        PlayOrientationAudio(ori);
+        PlayOrientationAudio(useRelative ? Vision.relativeDir : ori, useRelative);
 
         // TTS orientation info
         if ((DateTime.Now - lastOriented).TotalSeconds > orientationUpdateInterval) {
@@ -240,12 +243,15 @@ public class Navigation : MonoBehaviour
         }
     }
 
-    private void PlayOrientationAudio(double dir)
+    // relative tells us whether dir is a relative heading or an absolute heading
+    private void PlayOrientationAudio(double dir, bool relative)
     {
         if (DepthImage.direction == DepthImage.Direction.None && !audioSource.isPlaying) {
-            double relHeading = (dir - SensorData.heading + 360) % 360;
-            if (relHeading > 180) // Move range to [-pi, pi]
-                relHeading -= 360;
+            double relHeading = dir;
+            if (!relative) {
+                relHeading = (dir - SensorData.heading + 360) % 360;
+                if (relHeading > 180) relHeading -= 360; // Move range to [-pi, pi]
+            }
             float rad = (float) relHeading * Mathf.Deg2Rad;
             float sin = Mathf.Sin(rad);
             double absDiff = Math.Abs(relHeading);
