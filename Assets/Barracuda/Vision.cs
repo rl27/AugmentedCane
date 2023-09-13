@@ -178,16 +178,17 @@ public class Vision : MonoBehaviour
 
     public static DateTime lastValidDirection; // To be used by other scripts to determine whether to use vision direction
     public static float validDuration = 1.5f;
-    public static float maxDisparity = 45;
+    public static float maxDisparity = 40;
     public static float relativeDir; // Just for logging
 
     public static float direction; // Absolute direction based on current heading & segmentation outputs
-    private const float scale = 0.6f; // Scale the direction down since the camera can't actually see from -90 to +90
+    private const float scale = 0.65f; // Scale the direction down since the camera can't actually see from -90 to +90
+    private float _velocity = 0.0f;
 
     private DateTime lastWalkableTime; // Last time at which user was on a walkable surface
     private float nonWalkableTime = 0.8f; // Time to wait before deciding that user is not on walkable surface
 
-    private static int numRaycasts = 30;
+    private static int numRaycasts = 31;
     private float radWidth = Mathf.PI / (numRaycasts - 1);
 
     private void ProcessOutput(Tensor output)
@@ -208,8 +209,8 @@ public class Vision : MonoBehaviour
             }
             // Set orientation
             if (x != -1) {
-                direction = ((bestDirection * scale) + SensorData.heading + 360) % 360;
-                relativeDir = Mathf.Round(bestDirection * scale);
+                relativeDir = Mathf.SmoothDampAngle(relativeDir, bestDirection * scale, ref _velocity, 0.06f);
+                direction = (relativeDir + SensorData.heading + 360) % 360;
                 lastValidDirection = DateTime.Now;
             }
 
@@ -233,8 +234,8 @@ public class Vision : MonoBehaviour
                     }
                 // Set orientation
                 if (shortestDistance != Single.PositiveInfinity) {
-                    direction = ((bestDirection * scale) + SensorData.heading + 360) % 360;
-                    relativeDir = Mathf.Round(bestDirection * scale);
+                    relativeDir = Mathf.SmoothDampAngle(relativeDir, bestDirection * scale, ref _velocity, 0.06f);
+                    direction = (relativeDir + SensorData.heading + 360) % 360;
                     lastValidDirection = DateTime.Now;
                 }
 

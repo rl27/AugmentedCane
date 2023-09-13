@@ -97,8 +97,8 @@ public class Navigation : MonoBehaviour
 
     void Update()
     {
-        if (!initialized)
-            return;
+        // if (!initialized)
+        //     return;
         if (testing) {
             // Testing - get navigation information based on user location
             Point userLoc = new Point(42.36346856360623, -71.12569653098912);
@@ -172,6 +172,8 @@ public class Navigation : MonoBehaviour
     public void OnLocationUpdate(Point loc)
     {
         if (!initialized) {
+            if ((DateTime.Now - Vision.lastValidDirection).TotalSeconds < Vision.validDuration)
+                PlayOrientationAudio(Vision.direction);
             return;
         }
 
@@ -212,10 +214,11 @@ public class Navigation : MonoBehaviour
 
         // Calculate orientation & distance to next waypoint
         int targetWaypoint = curWaypoint + 1;
-        double ori = Orientation(loc, allPoints[targetWaypoint]);
+        double ori = Orientation(loc, allPoints[targetWaypoint]); // Absolute direction towards waypoint
         double dist = GPSData.degreeToMeter * Dist(loc, allPoints[targetWaypoint]);
         info = String.Format("WP {0}, {1}°, {2} m", targetWaypoint, Math.Round(ori), Math.Round(dist, 2));
 
+        // Use segmentation direction if close enough to waypoint direction
         if ((DateTime.Now - Vision.lastValidDirection).TotalSeconds < Vision.validDuration) {
             double visionDiff = (Vision.direction - ori + 360) % 360;
             if (visionDiff > 180)
@@ -226,13 +229,26 @@ public class Navigation : MonoBehaviour
         }
 
         // Play orientation audio
+        PlayOrientationAudio(ori);
+
+        // TTS orientation info
+        if ((DateTime.Now - lastOriented).TotalSeconds > orientationUpdateInterval) {
+            string facingCardinal = CardinalOrientation(SensorData.heading);
+            string targetCardinal = CardinalOrientation(ori);
+            tts.RequestTTS(String.Format("Facing {0}, head {1} for {2} meters", facingCardinal, targetCardinal, Math.Round(dist)));
+            lastOriented = DateTime.Now;
+        }
+    }
+
+    private void PlayOrientationAudio(double dir)
+    {
         if (DepthImage.direction == DepthImage.Direction.None && !audioSource.isPlaying) {
-            double headingDiff = (ori - SensorData.heading + 360) % 360;
-            if (headingDiff > 180) // Move range to [-pi, pi]
-                headingDiff -= 360;
-            float rad = (float) headingDiff * Mathf.Deg2Rad;
+            double relHeading = (dir - SensorData.heading + 360) % 360;
+            if (relHeading > 180) // Move range to [-pi, pi]
+                relHeading -= 360;
+            float rad = (float) relHeading * Mathf.Deg2Rad;
             float sin = Mathf.Sin(rad);
-            double absDiff = Math.Abs(headingDiff);
+            double absDiff = Math.Abs(relHeading);
             AudioSourceObject.transform.position = DepthImage.position + new Vector3(sin, 0, 0);
             audioSource.pitch = (float) (1 - (1 - minPitch) * (absDiff / offAxisAngle)); // Range: [minPitch, 1]
             if (absDiff < onAxisAngle)
@@ -243,14 +259,6 @@ public class Navigation : MonoBehaviour
                 audioSource.pitch = 1;
                 audioSource.PlayOneShot(behind, 2.5f);
             }
-        }
-
-        // TTS orientation info
-        if ((DateTime.Now - lastOriented).TotalSeconds > orientationUpdateInterval) {
-            string facingCardinal = CardinalOrientation(SensorData.heading);
-            string targetCardinal = CardinalOrientation(ori);
-            tts.RequestTTS(String.Format("Facing {0}, head {1} for {2} meters", facingCardinal, targetCardinal, Math.Round(dist)));
-            lastOriented = DateTime.Now;
         }
     }
 
