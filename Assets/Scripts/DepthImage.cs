@@ -120,7 +120,7 @@ public class DepthImage : MonoBehaviour
     public static Vector3 rotation;
 
     // These variables are for naive obstacle avoidance.
-    float distanceToObstacle = 2.0f; // Distance in meters at which to alert for obstacles
+    float distanceToObstacle = 1.5f; // Distance in meters at which to alert for obstacles
     int collisionWindowWidth = 11; // Num. pixels left/right of the middle to check for obstacles
     uint totalCount = 0; // Total number of depth images received
     static int numFrames = 30;
