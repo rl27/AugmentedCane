@@ -48,7 +48,7 @@ public class TTS : MonoBehaviour
         }
     }
 
-    // Get TTS audio and queue it up to be played
+    // Get TTS audio, convert it (string -> bytes -> MP3 -> AudioClip) and queue it up to be played
     public void RequestTTS(string text)
     {
         StartCoroutine(WebClient.SendTTSRequest(text,
@@ -59,6 +59,12 @@ public class TTS : MonoBehaviour
                 StartCoroutine(LoadAudio());
             })
         );
+    }
+
+    // Queue up audio clip
+    public void EnqueueTTS(AudioClip audioClip)
+    {
+        audioToPlay.Enqueue(new AudioWithTime(audioClip));
     }
 
     // Load local audio file to queue

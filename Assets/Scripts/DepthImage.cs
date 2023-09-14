@@ -119,7 +119,8 @@ public class DepthImage : MonoBehaviour
     public static Vector3 position;
     public static Vector3 rotation;
 
-    // These variables are for naive obstacle avoidance.
+    // These variables are for obstacle avoidance.
+    private bool doObstacleAvoidance = false;
     float distanceToObstacle = 1.5f; // Distance in meters at which to alert for obstacles
     int collisionWindowWidth = 11; // Num. pixels left/right of the middle to check for obstacles
     uint totalCount = 0; // Total number of depth images received
@@ -270,6 +271,8 @@ public class DepthImage : MonoBehaviour
         // m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
         // m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
 
+        if (!doObstacleAvoidance) return;
+
         // UPDATE DEPTH AVERAGES
         totalCount += 1;
         UpdateDepthAverages();
@@ -389,6 +392,11 @@ public class DepthImage : MonoBehaviour
             m_DepthInfo.text = text;
         else
             Debug.Log(text);
+    }
+
+    public void toggleObstacleAvoidance()
+    {
+        doObstacleAvoidance = !doObstacleAvoidance;
     }
 
     private void UpdateRawImage(RawImage rawImage, XRCpuImage cpuImage, TextureFormat format, bool isDepth)

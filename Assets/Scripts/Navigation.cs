@@ -252,10 +252,13 @@ public class Navigation : MonoBehaviour
                 relHeading = (dir - SensorData.heading + 360) % 360;
                 if (relHeading > 180) relHeading -= 360; // Move range to [-pi, pi]
             }
+
             float rad = (float) relHeading * Mathf.Deg2Rad;
-            float sin = Mathf.Sin(rad);
+            float mag = Mathf.Sin(rad);
+            float localRot = -DepthImage.rotation.y * Mathf.Deg2Rad;
+            AudioSourceObject.transform.position = DepthImage.position + new Vector3(Mathf.Cos(localRot) * mag, Mathf.Sin(localRot) * mag, 0);
+
             double absDiff = Math.Abs(relHeading);
-            AudioSourceObject.transform.position = DepthImage.position + new Vector3(sin, 0, 0);
             audioSource.pitch = (float) (1 - (1 - minPitch) * (absDiff / offAxisAngle)); // Range: [minPitch, 1]
             if (absDiff < onAxisAngle)
                 audioSource.PlayOneShot(onAxis, 2.5f);

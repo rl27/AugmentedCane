@@ -10,6 +10,10 @@ using TensorFlowLite;
 public class Vision : MonoBehaviour
 {
     [SerializeField]
+    GameObject TTSHandler;
+    TTS tts;
+
+    [SerializeField]
     public RawImage outputView = null;
 
     [SerializeField]
@@ -44,7 +48,6 @@ public class Vision : MonoBehaviour
     private int W = 480;
     private int H = 480;
 
-    AudioSource audioSource;
     public AudioClip sidewalk;
     public AudioClip crosswalk;
     public AudioClip road;
@@ -70,6 +73,8 @@ public class Vision : MonoBehaviour
             testPNG = (Texture2D) DDRNetSample.LoadPNG("Assets/TestImages/test3.png");
         #endif
 
+        tts = TTSHandler.GetComponent<TTS>();
+
         model = ModelLoader.Load(modelAsset);
         // See worker types here: https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/Worker.html
         worker = WorkerFactory.CreateWorker(WorkerFactory.Type.ComputePrecompiled, model);
@@ -84,8 +89,6 @@ public class Vision : MonoBehaviour
             width = W,
             height = H,
         };
-
-        audioSource = GetComponent<AudioSource>();
 
         outputAspectRatioFitter = outputViewParent.GetComponent<AspectRatioFitter>();
         inputAspectRatioFitter = inputViewParent.GetComponent<AspectRatioFitter>();
@@ -193,7 +196,10 @@ public class Vision : MonoBehaviour
 
     private void ProcessOutput(Tensor output)
     {
+        if (!doSidewalkDirection) return;
+
         int curCls = (int) output[0, 0, W/2, H-1];
+
         if (curCls >= 4 && curCls <= 6) { // Sidewalk, crosswalk
             lastWalkableTime = DateTime.Now;
 
@@ -201,7 +207,7 @@ public class Vision : MonoBehaviour
             float x = -1, y = -1;
             float bestDirection = 0;
             for (int i = 0; i < numRaycasts; i++) {
-                (float a, float b) = PerformRaycast(ref output, i * radWidth, true);
+                (float a, float b) = PerformRaycast(W/2, H-1, ref output, i * radWidth, true);
                 if (b > y) {
                     (x, y) = (a, b);
                     bestDirection = i * radWidth * Mathf.Rad2Deg - 90;
@@ -218,39 +224,29 @@ public class Vision : MonoBehaviour
         }
         else if (curCls != 7 && curCls != 8) { // Ignore grating & manhole as these can be on either sidewalk, crosswalk, or road
             if ((DateTime.Now - lastWalkableTime).TotalSeconds > nonWalkableTime) {
-                // Raycast to find nearest sidewalk/crosswalk
-                float x = 0, y = 0;
-                float bestDirection = 0;
-                float shortestDistance = Single.PositiveInfinity;
-                for (int i = 0; i < numRaycasts; i++) {
-                    (float a, float b) = PerformRaycast(ref output, i * radWidth, false);
-                    if (b == -1)
-                        continue;
-                    float sqdist = a*a + b*b;
-                    if (sqdist < shortestDistance)
-                        shortestDistance = sqdist;
-                        (x, y) = (a, b);
-                        bestDirection = i * radWidth * Mathf.Rad2Deg - 90;
-                    }
-                // Set orientation
-                if (shortestDistance != Single.PositiveInfinity) {
-                    relativeDir = Mathf.SmoothDampAngle(relativeDir, bestDirection * scale, ref _velocity, 0.06f);
-                    direction = (relativeDir + SensorData.heading + 360) % 360;
-                    lastValidDirection = DateTime.Now;
-                }
+                // No longer performing raycasts to find closest sidewalk as the results don't seem useful
 
                 PlayAudio(curCls);
             }
         }
     }
 
+    private bool doSidewalkDirection = false;
+    public void ToggleSidewalkDirection()
+    {
+        doSidewalkDirection = !doSidewalkDirection;
+        relativeDir = 0;
+        direction = 0;
+        lastClass = -1;
+        logging = "None";
+    }
+
     // Returns coordinates of raycast relative to middle of bottom of image
     // Grating & manhole are "wildcards" and can count as either road or sidewalk/crosswalk
     // Returns (0, -1) if no suitable point is found
-    private (float, float) PerformRaycast(ref Tensor output, float radFromLeft, bool onWalkable)
+    private (float, float) PerformRaycast(float x, float y, ref Tensor output, float radFromLeft, bool onWalkable)
     {
         bool valid = onWalkable;
-        float x = W/2, y = H-1;
         float dx = -Mathf.Cos(radFromLeft);
         float dy = Mathf.Sin(radFromLeft);
         while (x >= 0 && y >= 0 && x < W && y < H) {
@@ -271,7 +267,7 @@ public class Vision : MonoBehaviour
 
     private int lastClass = 0;
     private DateTime lastClassChange; // Time at which user was last informed of a class change
-    private float classChangeInterval = 3.0f; // Time to wait after playing audio before doing it again; should be longer than any of the audio files
+    private float classChangeInterval = 4.0f; // Time to wait after playing audio before doing it again; should be longer than any of the audio files
 
     // Conditionally plays audio to inform user of class change
     // Only changes lastClass if it successfully plays audio
@@ -284,20 +280,20 @@ public class Vision : MonoBehaviour
                 case 1: // Road
                     lastClass = cls;
                     lastClassChange = DateTime.Now;
-                    audioSource.PlayOneShot(road, 1.5f);
+                    tts.EnqueueTTS(road);
                     logging = "Road";
                     break;
                 case 4: // Sidewalk
                     lastClass = cls;
                     lastClassChange = DateTime.Now;
-                    audioSource.PlayOneShot(sidewalk, 1.5f);
+                    tts.EnqueueTTS(sidewalk);
                     logging = "Sidewalk";
                     break;
                 case 5: // Crosswalk
                 case 6:
                     lastClass = cls;
                     lastClassChange = DateTime.Now;
-                    audioSource.PlayOneShot(crosswalk, 1.5f);
+                    tts.EnqueueTTS(crosswalk);
                     logging = "Crosswalk";
                     break;
                 case 0: // Background
