@@ -186,7 +186,12 @@ public class Vision : MonoBehaviour
     public static float relativeDir; // Relative direction
     public static float direction; // Absolute direction based on current heading & segmentation outputs
     private const float scale = 0.65f; // Scale the direction down since the camera can't actually see from -90 to +90
-    private float _velocity = 0.0f;
+    
+    // Moving avg of relative direction
+    private float[] weights = new float[]{0.5f, 0.25f, 0.15f, 0.1f};
+    private const int numValues = 4;
+    private float[] values = new float[numValues];
+    private int avgIndex = 0;
 
     private DateTime lastWalkableTime; // Last time at which user was on a walkable surface
     private float nonWalkableTime = 0.8f; // Time to wait before deciding that user is not on walkable surface
@@ -215,7 +220,15 @@ public class Vision : MonoBehaviour
             }
             // Set orientation
             if (x != -1) {
-                relativeDir = Mathf.SmoothDampAngle(relativeDir, bestDirection * scale, ref _velocity, 0.06f);
+                // float _velocity = 0;
+                // relativeDir = Mathf.SmoothDampAngle(relativeDir, bestDirection * scale, ref _velocity, 0.06f);
+
+                values[avgIndex] = bestDirection * scale;
+                relativeDir = 0;
+                for (int i = 0; i < numValues; i++)
+                    relativeDir += values[(avgIndex - i + numValues) % numValues] * weights[i];
+                avgIndex = (avgIndex + 1) % numValues;
+
                 direction = (relativeDir + SensorData.heading + 360) % 360;
                 lastValidDirection = DateTime.Now;
             }
