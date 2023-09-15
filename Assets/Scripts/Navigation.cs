@@ -194,10 +194,11 @@ public class Navigation : MonoBehaviour
 
         if (curWaypoint != bestWaypoint && (DateTime.Now - lastInstructed).TotalSeconds > instructionUpdateInterval) {
             if (closeToWaypoint || bestWaypoint > curWaypoint) {
-                audioSource.Stop();
-                AudioSourceObject.transform.position = DepthImage.position;
-                audioSource.pitch = 1;
-                audioSource.PlayOneShot(reachWaypoint, 1f);
+                // The lines below will play a sound for reaching a waypoint. I don't think it's very useful.
+                // audioSource.Stop();
+                // AudioSourceObject.transform.position = DepthImage.position;
+                // audioSource.pitch = 1;
+                // audioSource.PlayOneShot(reachWaypoint, 1f);
 
                 // Check if new waypoint corresponds with the starting position of a step, i.e. that it has an associated instruction
                 int stepIndex = stepStartIndices.IndexOf(bestWaypoint);

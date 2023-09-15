@@ -235,6 +235,7 @@ public class Vision : MonoBehaviour
     public void ToggleSidewalkDirection()
     {
         doSidewalkDirection = !doSidewalkDirection;
+        lastValidDirection = DateTime.MinValue;
         relativeDir = 0;
         direction = 0;
         lastClass = -1;
