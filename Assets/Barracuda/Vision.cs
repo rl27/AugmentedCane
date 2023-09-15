@@ -268,7 +268,7 @@ public class Vision : MonoBehaviour
 
     private int lastClass = 0;
     private DateTime lastClassChange; // Time at which user was last informed of a class change
-    private float classChangeInterval = 4.0f; // Time to wait after playing audio before doing it again; should be longer than any of the audio files
+    private float classChangeInterval = 3.0f; // Time to wait after playing audio before doing it again; should be longer than any of the audio files
 
     // Conditionally plays audio to inform user of class change
     // Only changes lastClass if it successfully plays audio
@@ -298,6 +298,7 @@ public class Vision : MonoBehaviour
                     logging = "Crosswalk";
                     break;
                 case 0: // Background
+                    lastClass = cls;
                     logging = "Unknown";
                     break;
                 default:
