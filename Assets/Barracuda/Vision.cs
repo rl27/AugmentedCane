@@ -144,6 +144,7 @@ public class Vision : MonoBehaviour
         return tex2D;
     }
 
+    Tensor input;
     // https://forum.unity.com/threads/asynchronous-inference-in-barracuda.1370181/
     public IEnumerator Detect(Texture tex)
     {
@@ -153,7 +154,7 @@ public class Vision : MonoBehaviour
 
         // https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/TensorHandling.html
         Texture2D resizedTex = ResizeTexture(tex);
-        Tensor input = new Tensor(resizedTex); // BHWC: 1, H, W, 3
+        input = new Tensor(resizedTex); // BHWC: 1, H, W, 3
 
         // worker.Execute(input);
         var enumerator = worker.StartManualSchedule(input);
@@ -174,7 +175,7 @@ public class Vision : MonoBehaviour
         SetTextures(resizedTex, GetResultTexture(output.ToReadOnlyArray()));
         
         input.Dispose();
-        output.Dispose();
+        // output.Dispose();
 
         working = false;
     }
@@ -344,6 +345,7 @@ public class Vision : MonoBehaviour
 
     void OnDisable()
     {
+        input.Dispose();
         worker?.Dispose();
         resizer?.Dispose();
 
