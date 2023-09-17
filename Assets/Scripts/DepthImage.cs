@@ -86,7 +86,7 @@ public class DepthImage : MonoBehaviour
     [NonSerialized]
     public static byte[] depthArray = new byte[0];
     [NonSerialized]
-    public int depthWidth = 0;
+    public int depthWidth = 0; // (width, height) = (160, 90) on OnePlus 11; (256, 192) on iPhone 12 Pro
     [NonSerialized]
     public int depthHeight = 0;
     int depthStride = 4; // Should be either 2 or 4
@@ -117,8 +117,10 @@ public class DepthImage : MonoBehaviour
     private bool doObstacleAvoidance = true;
     float distanceToObstacle = 1.5f; // Distance in meters at which to alert for obstacles
     int collisionWindowWidth = 11; // Num. pixels left/right of the middle to check for obstacles
+    int confidenceThreshold = 1;
+    int confidenceMax = 255;
     uint totalCount = 0; // Total number of depth images received
-    static int numFrames = 30;
+    const int numFrames = 15;
     float[] leftAverage = new float[numFrames];
     float[] rightAverage = new float[numFrames];
     Vector2 leftStats;
@@ -148,6 +150,14 @@ public class DepthImage : MonoBehaviour
             LogDepth("No camera");
             return;
         }
+
+        #if UNITY_ANDROID
+            confidenceThreshold = 32;
+            confidenceMax = 255;
+        #elif UNITY_IOS
+            confidenceThreshold = 2;
+            confidenceMax = 2;
+        #endif
 
         audioPlayer = AudioHandler.GetComponent<AudioPlayer>();
 
@@ -270,6 +280,10 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
         m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
 
+        // Check for obstacles
+        float[] closeTotals = AccumulateClosePoints();
+
+
         // UPDATE DEPTH AVERAGES
         totalCount += 1;
         UpdateDepthAverages();
@@ -283,14 +297,12 @@ public class DepthImage : MonoBehaviour
                     if (leftTotal > rightTotal) {
                         direction = Direction.Left;
                         m_StringBuilder.AppendLine("Dir: Left");
-                        AudioHandler.transform.position = position + new Vector3(-1, 0, 0);
-                        audioPlayer.PlayCollision();
+                        PlayCollision(-1);
                     }
                     else if (leftTotal < rightTotal) {
                         direction = Direction.Right;
                         m_StringBuilder.AppendLine("Dir: Right");
-                        AudioHandler.transform.position = position + new Vector3(1, 0, 0);
-                        audioPlayer.PlayCollision();
+                        PlayCollision(1);
                     }
                     else {
                         direction = Direction.Unknown;
@@ -346,6 +358,14 @@ public class DepthImage : MonoBehaviour
                 }
             }
         }
+    }
+
+    // mag = -1 for left, mag = 1 for right
+    private void PlayCollision(int mag)
+    {
+        float localRot = -rotation.y * Mathf.Deg2Rad;
+        AudioHandler.transform.position = position + new Vector3(mag * Mathf.Cos(localRot), mag * Mathf.Sin(localRot), 0);
+        audioPlayer.PlayCollision();
     }
 
     private void UpdateCameraImage()
@@ -558,6 +578,15 @@ public class DepthImage : MonoBehaviour
         _ => -90
     };
 
+    private static bool IsPortrait() => Screen.orientation switch
+    {
+        ScreenOrientation.Portrait => true,
+        ScreenOrientation.LandscapeLeft => false,
+        ScreenOrientation.PortraitUpsideDown => true,
+        ScreenOrientation.LandscapeRight => false,
+        _ => true
+    };
+
     // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/Common/Scripts/MotionStereoDepthDataSource.cs#L219
     private void UpdateCameraParams()
     {
@@ -582,16 +611,10 @@ public class DepthImage : MonoBehaviour
     // Sums depth values over the given coordinates. Returns sum and count of pixels with high enough confidence.
     private Vector2 GetDepthSum(int xmin, int xmax, int ymin, int ymax)
     {
-        Debug.Assert(xmin >= 0 && ymin >= 0 && xmax < depthWidth && ymax < depthHeight);
+        Debug.Assert(xmin >= 0 && ymin >= 0 && xmax <= depthWidth && ymax <= depthHeight);
 
         float sum = 0;
         int count = 0;
-        int confidenceThreshold = 40;
-        #if UNITY_ANDROID
-            confidenceThreshold = 40;
-        #elif UNITY_IOS
-            confidenceThreshold = 2;
-        #endif
         for (int y = ymin; y < ymax; y++) {
             for (int x = xmin; x < xmax; x++) {
                 if (GetConfidence(x, y) < confidenceThreshold)
@@ -605,25 +628,19 @@ public class DepthImage : MonoBehaviour
 
     private void UpdateDepthAverages()
     {
-        switch (Screen.orientation)
-        {
-            case ScreenOrientation.LandscapeRight:
-            case ScreenOrientation.LandscapeLeft:
-                midStats = GetDepthSum(depthWidth/2 - collisionWindowWidth, depthWidth/2 + (collisionWindowWidth + 1), 0, depthHeight);
-                leftStats = GetDepthSum(0, depthWidth/2, 0, depthHeight);
-                rightStats = GetDepthSum(depthWidth/2, depthWidth, 0, depthHeight);
-                if (Screen.orientation == ScreenOrientation.LandscapeRight)
-                    (leftStats, rightStats) = (rightStats, leftStats);
-                break;
-            case ScreenOrientation.Portrait:
-            case ScreenOrientation.PortraitUpsideDown:
-            default:
-                midStats = GetDepthSum(0, depthWidth, depthHeight/2 - 7, depthHeight/2 + 8);
-                leftStats = GetDepthSum(0, depthWidth, depthHeight/2, depthHeight);
-                rightStats = GetDepthSum(0, depthWidth, 0, depthHeight/2);
-                if (Screen.orientation == ScreenOrientation.PortraitUpsideDown)
-                    (leftStats, rightStats) = (rightStats, leftStats);
-                break;
+        if (IsPortrait()) {
+            midStats = GetDepthSum(0, depthWidth, depthHeight/2 - 7, depthHeight/2 + 8);
+            leftStats = GetDepthSum(0, depthWidth, depthHeight/2, depthHeight);
+            rightStats = GetDepthSum(0, depthWidth, 0, depthHeight/2);
+            if (Screen.orientation == ScreenOrientation.PortraitUpsideDown)
+                (leftStats, rightStats) = (rightStats, leftStats);
+        }
+        else {
+            midStats = GetDepthSum(depthWidth/2 - collisionWindowWidth, depthWidth/2 + (collisionWindowWidth + 1), 0, depthHeight);
+            leftStats = GetDepthSum(0, depthWidth/2, 0, depthHeight);
+            rightStats = GetDepthSum(depthWidth/2, depthWidth, 0, depthHeight);
+            if (Screen.orientation == ScreenOrientation.LandscapeRight)
+                (leftStats, rightStats) = (rightStats, leftStats);
         }
         int curIndex = (int) totalCount % numFrames;
         if (leftStats.y > 100 && rightStats.y > 100) {
@@ -634,5 +651,23 @@ public class DepthImage : MonoBehaviour
             leftAverage[curIndex] = 0;
             rightAverage[curIndex] = 0;
         }
+    }
+
+    // This function returns a 1D array representing a horizontal row of pixels.
+    // Each point in the 2D depth array that is (1) high enough confidence and (2) within a certain distance
+    // will give 1 vote towards the corresponding value in the 1D array.
+    private float[] AccumulateClosePoints()
+    {
+        bool portrait = IsPortrait();
+        float[] output = new float[portrait ? depthHeight : depthWidth];
+        for (int y = 0; y < depthHeight; y++) {
+            for (int x = 0; x < depthWidth; x++) {
+                float dist = GetDepth(x, y);
+                if (dist > distanceToObstacle)
+                    continue;
+                output[portrait ? y : x] += dist * GetConfidence(x, y) / confidenceMax;
+            }
+        }
+        return output;
     }
 }
