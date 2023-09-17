@@ -4,7 +4,7 @@ Shader "Unlit/DepthGradient"
     {
         _MainTex ("Main Texture", 2D) = "black" {}
         _MinDistance ("Min Distance", Float) = 0.0
-        _MaxDistance ("Max Distance", Float) = 5.0
+        _MaxDistance ("Max Distance", Float) = 4.0
     }
     // URP SubShader
     SubShader

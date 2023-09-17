@@ -377,12 +377,12 @@ public class DepthImage : MonoBehaviour
             }
         }
 
-        double timeSpent = (DateTime.Now - startTime).TotalSeconds;
-        double newDelay = delay - timeSpent;
+        // double timeSpent = (DateTime.Now - startTime).TotalSeconds;
+        // double newDelay = delay - timeSpent;
 
-        // Wait for a bit before trying to update again
-        if (newDelay > 0)
-            yield return new WaitForSeconds((float) newDelay);
+        // // Wait for a bit before trying to update again
+        // if (newDelay > 0)
+        //     yield return new WaitForSeconds((float) newDelay);
         
         imagesUpdating = false;
     }
