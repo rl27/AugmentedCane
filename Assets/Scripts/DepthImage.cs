@@ -369,7 +369,8 @@ public class DepthImage : MonoBehaviour
                         ddrnet.DoInvoke(m_RawCameraImage.texture);
                     }
                     else {
-                        StartCoroutine(vision.Detect(m_RawCameraImage.texture));
+                        if (Vision.doSidewalkDirection)
+                            StartCoroutine(vision.Detect(m_RawCameraImage.texture));
                     }
                 }
             }

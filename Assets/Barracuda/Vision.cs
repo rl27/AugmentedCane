@@ -245,7 +245,7 @@ public class Vision : MonoBehaviour
         }
     }
 
-    private bool doSidewalkDirection = false;
+    public static bool doSidewalkDirection = false;
     public void ToggleSidewalkDirection()
     {
         doSidewalkDirection = !doSidewalkDirection;
