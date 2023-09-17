@@ -105,12 +105,6 @@ public class DepthImage : MonoBehaviour
     // True if everything is fine and Update() should be called. False if something went wrong.
     private bool shouldProceed = false;
 
-    // True when UpdateImages is in progress, false otherwise.
-    private bool imagesUpdating = false;
-
-    // Add delay between updates to data for better performance.
-    private float delay = 0.05f;
-
     // Converts local coordinates to world coordinates.
     private Matrix4x4 localToWorldTransform = Matrix4x4.identity;
     private Matrix4x4 screenRotation = Matrix4x4.Rotate(Quaternion.identity);
@@ -232,15 +226,15 @@ public class DepthImage : MonoBehaviour
 
         // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
         // Screen orientation does not change coordinate locations on the screen.
-        m_StringBuilder.AppendLine("DEPTH:");
-        m_StringBuilder.AppendLine($"(0.01,0.01): {GetDepth(new Vector2(0.01f, 0.01f))}");
-        m_StringBuilder.AppendLine($"(0.50,0.50): {GetDepth(new Vector2(0.5f, 0.5f))}");
-        m_StringBuilder.AppendLine($"(0.99,0.99): {GetDepth(new Vector2(0.99f, 0.99f))}");
+        // m_StringBuilder.AppendLine("DEPTH:");
+        // m_StringBuilder.AppendLine($"(0.01,0.01): {GetDepth(new Vector2(0.01f, 0.01f))}");
+        // m_StringBuilder.AppendLine($"(0.50,0.50): {GetDepth(new Vector2(0.5f, 0.5f))}");
+        // m_StringBuilder.AppendLine($"(0.99,0.99): {GetDepth(new Vector2(0.99f, 0.99f))}");
 
-        m_StringBuilder.AppendLine("CONFIDENCE:");
-        m_StringBuilder.AppendLine($"(0.01,0.01): {GetConfidence(new Vector2(0.01f, 0.01f))}");
-        m_StringBuilder.AppendLine($"(0.5,0.5): {GetConfidence(new Vector2(0.5f, 0.5f))}");
-        m_StringBuilder.AppendLine($"(0.99,0.99): {GetConfidence(new Vector2(0.99f, 0.99f))}");
+        // m_StringBuilder.AppendLine("CONFIDENCE:");
+        // m_StringBuilder.AppendLine($"(0.01,0.01): {GetConfidence(new Vector2(0.01f, 0.01f))}");
+        // m_StringBuilder.AppendLine($"(0.50,0.50): {GetConfidence(new Vector2(0.5f, 0.5f))}");
+        // m_StringBuilder.AppendLine($"(0.99,0.99): {GetConfidence(new Vector2(0.99f, 0.99f))}");
 
         int numLow = 0;
         int numMed = 0;
@@ -465,7 +459,7 @@ public class DepthImage : MonoBehaviour
     public float GetDepth(Vector2 uv)
     {
         if (depthArray.Length == 0)
-            return -1f;
+            return float.PositiveInfinity;
         
         int x = (int)(uv.x * (depthWidth - 1));
         int y = (int)(uv.y * (depthHeight - 1));
