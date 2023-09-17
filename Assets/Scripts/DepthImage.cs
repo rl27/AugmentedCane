@@ -220,10 +220,12 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"Camera position: {position}");
         m_StringBuilder.AppendLine($"Camera rotation: {rotation.y}");
 
+        if (Vision.doSidewalkDirection)
+            UpdateCameraImage();
 
         if (!doObstacleAvoidance) return;
 
-        StartCoroutine(UpdateImages());
+        UpdateDepthImages();
 
         // m_StringBuilder.AppendLine($"Width: {depthWidth}");
         // m_StringBuilder.AppendLine($"Height: {depthHeight}");
@@ -310,16 +312,8 @@ public class DepthImage : MonoBehaviour
             m_StringBuilder.AppendLine("Obstacle: Unknown");
     }
 
-    IEnumerator UpdateImages()
+    private void UpdateDepthImages()
     {
-        DateTime startTime = DateTime.Now;
-
-        // Exit if already updating images
-        if (imagesUpdating)
-            yield break;
-
-        imagesUpdating = true;
-
         // Acquire a depth image and update the corresponding raw image.
         if (occlusionManager.TryAcquireEnvironmentDepthCpuImage(out XRCpuImage image)) {
             using (image) {
@@ -358,7 +352,10 @@ public class DepthImage : MonoBehaviour
                 }
             }
         }
+    }
 
+    private void UpdateCameraImage()
+    {
         // Acquire a camera image, update the corresponding raw image, and do CV
         if (visionActive) {
             if (m_CameraManager.TryAcquireLatestCpuImage(out XRCpuImage cameraImage)) {
@@ -370,21 +367,11 @@ public class DepthImage : MonoBehaviour
                         ddrnet.DoInvoke(m_RawCameraImage.texture);
                     }
                     else {
-                        if (Vision.doSidewalkDirection)
-                            StartCoroutine(vision.Detect(m_RawCameraImage.texture));
+                        StartCoroutine(vision.Detect(m_RawCameraImage.texture));
                     }
                 }
             }
         }
-
-        // double timeSpent = (DateTime.Now - startTime).TotalSeconds;
-        // double newDelay = delay - timeSpent;
-
-        // // Wait for a bit before trying to update again
-        // if (newDelay > 0)
-        //     yield return new WaitForSeconds((float) newDelay);
-        
-        imagesUpdating = false;
     }
 
     // Log the given text to the depth info text box.
