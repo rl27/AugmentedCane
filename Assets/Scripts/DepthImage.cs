@@ -120,7 +120,7 @@ public class DepthImage : MonoBehaviour
     public static Vector3 rotation;
 
     // These variables are for obstacle avoidance.
-    private bool doObstacleAvoidance = false;
+    private bool doObstacleAvoidance = true;
     float distanceToObstacle = 1.5f; // Distance in meters at which to alert for obstacles
     int collisionWindowWidth = 11; // Num. pixels left/right of the middle to check for obstacles
     uint totalCount = 0; // Total number of depth images received
@@ -209,8 +209,6 @@ public class DepthImage : MonoBehaviour
             // return;
         }
 
-        StartCoroutine(UpdateImages());
-
         position = camera.transform.position;
         rotation = camera.transform.rotation.eulerAngles;
 
@@ -222,56 +220,59 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"Camera position: {position}");
         m_StringBuilder.AppendLine($"Camera rotation: {rotation.y}");
 
+
+        if (!doObstacleAvoidance) return;
+
+        StartCoroutine(UpdateImages());
+
         // m_StringBuilder.AppendLine($"Width: {depthWidth}");
         // m_StringBuilder.AppendLine($"Height: {depthHeight}");
 
         // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
         // Screen orientation does not change coordinate locations on the screen.
-        // m_StringBuilder.AppendLine("DEPTH:");
-        // m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.1f, 0.1f))}");
-        // m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f))}");
-        // m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f))}");
+        m_StringBuilder.AppendLine("DEPTH:");
+        m_StringBuilder.AppendLine($"(0.01,0.01): {GetDepth(new Vector2(0.01f, 0.01f))}");
+        m_StringBuilder.AppendLine($"(0.50,0.50): {GetDepth(new Vector2(0.5f, 0.5f))}");
+        m_StringBuilder.AppendLine($"(0.99,0.99): {GetDepth(new Vector2(0.99f, 0.99f))}");
 
-        // m_StringBuilder.AppendLine("CONFIDENCE:");
-        // m_StringBuilder.AppendLine($"(0.1,0.1): {GetConfidence(new Vector2(0.1f, 0.1f))}");
-        // m_StringBuilder.AppendLine($"(0.5,0.5): {GetConfidence(new Vector2(0.5f, 0.5f))}");
-        // m_StringBuilder.AppendLine($"(0.9,0.9): {GetConfidence(new Vector2(0.9f, 0.9f))}");
+        m_StringBuilder.AppendLine("CONFIDENCE:");
+        m_StringBuilder.AppendLine($"(0.01,0.01): {GetConfidence(new Vector2(0.01f, 0.01f))}");
+        m_StringBuilder.AppendLine($"(0.5,0.5): {GetConfidence(new Vector2(0.5f, 0.5f))}");
+        m_StringBuilder.AppendLine($"(0.99,0.99): {GetConfidence(new Vector2(0.99f, 0.99f))}");
 
-        // int numLow = 0;
-        // int numMed = 0;
-        // int numHigh = 0;
-        // #if UNITY_ANDROID
-        //     for (int y = 0; y < depthHeight; y++) {
-        //         for (int x = 0; x < depthWidth; x++) {
-        //             int val = confidenceArray[(y * depthWidth) + x];
-        //             if (val < 40)
-        //                 numLow += 1;
-        //             else if (val < 255)
-        //                 numMed += 1;
-        //             else if (val == 255)
-        //                 numHigh += 1;
-        //         }
-        //     }
-        // #elif UNITY_IOS
-        //     for (int y = 0; y < depthHeight; y++) {
-        //         for (int x = 0; x < depthWidth; x++) {
-        //             int val = confidenceArray[(y * depthWidth) + x];
-        //             if (val == 0)
-        //                 numLow += 1;
-        //             else if (val == 1)
-        //                 numMed += 1;
-        //             else if (val == 2)
-        //                 numHigh += 1;
-        //         }
-        //     }
-        // #endif
-        // int numPixels = depthWidth * depthHeight;
-        // m_StringBuilder.AppendLine("CONFIDENCE PROPORTIONS:");
-        // m_StringBuilder.AppendLine($"Low: {(float) numLow / numPixels}");
-        // m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
-        // m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
-
-        if (!doObstacleAvoidance) return;
+        int numLow = 0;
+        int numMed = 0;
+        int numHigh = 0;
+        #if UNITY_ANDROID
+            for (int y = 0; y < depthHeight; y++) {
+                for (int x = 0; x < depthWidth; x++) {
+                    int val = confidenceArray[(y * depthWidth) + x];
+                    if (val < 40)
+                        numLow += 1;
+                    else if (val < 255)
+                        numMed += 1;
+                    else if (val == 255)
+                        numHigh += 1;
+                }
+            }
+        #elif UNITY_IOS
+            for (int y = 0; y < depthHeight; y++) {
+                for (int x = 0; x < depthWidth; x++) {
+                    int val = confidenceArray[(y * depthWidth) + x];
+                    if (val == 0)
+                        numLow += 1;
+                    else if (val == 1)
+                        numMed += 1;
+                    else if (val == 2)
+                        numHigh += 1;
+                }
+            }
+        #endif
+        int numPixels = depthWidth * depthHeight;
+        m_StringBuilder.AppendLine("CONFIDENCE PROPORTIONS:");
+        m_StringBuilder.AppendLine($"Low: {(float) numLow / numPixels}");
+        m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
+        m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
 
         // UPDATE DEPTH AVERAGES
         totalCount += 1;
@@ -488,12 +489,12 @@ public class DepthImage : MonoBehaviour
     public float GetDepth(int x, int y)
     {
         if (depthArray.Length == 0)
-            return -1f;
+            return float.PositiveInfinity;
 
-        if (x < 0 || x >= depthWidth || y < 0 || y >= depthHeight) {
-            Debug.Log("Invalid depth index");
-            return -99999f;
-        }
+        // if (x < 0 || x >= depthWidth || y < 0 || y >= depthHeight) {
+        //     Debug.Log("Invalid depth index");
+        //     return -99999f;
+        // }
 
         /*
         On an iPhone 12 Pro, the image data is in DepthFloat32 format, so we use ToSingle().
@@ -516,7 +517,7 @@ public class DepthImage : MonoBehaviour
             return Mathf.Sqrt(vertex_x*vertex_x + vertex_y*vertex_y + depthInMeters*depthInMeters);
         }
 
-        return float.NegativeInfinity;
+        return float.PositiveInfinity;
     }
 
     public float GetConfidence(Vector2 uv)
@@ -600,6 +601,8 @@ public class DepthImage : MonoBehaviour
     // Sums depth values over the given coordinates. Returns sum and count of pixels with high enough confidence.
     private Vector2 GetDepthSum(int xmin, int xmax, int ymin, int ymax)
     {
+        Debug.Assert(xmin >= 0 && ymin >= 0 && xmax < depthWidth && ymax < depthHeight);
+
         float sum = 0;
         int count = 0;
         int confidenceThreshold = 40;
