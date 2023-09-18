@@ -120,7 +120,7 @@ public class DepthImage : MonoBehaviour
     float collisionSumThreshold = 2f;
     int confidenceMax = 255;
 
-    public enum Direction { Left, Right, Unknown, None }
+    public enum Direction { Left, Right, None }
     public static Direction direction = Direction.None;
 
     // Perform vision tasks on camera image
@@ -287,6 +287,7 @@ public class DepthImage : MonoBehaviour
             }
         }
 
+        direction = Direction.None;
         if (hasObstacle) { // Search for longest gap
             m_StringBuilder.AppendLine("Obstacle: Yes");
             int start = 0, end = 0, temp = 0;
@@ -329,6 +330,7 @@ public class DepthImage : MonoBehaviour
             }
             if (Screen.orientation == ScreenOrientation.PortraitUpsideDown || Screen.orientation == ScreenOrientation.LandscapeLeft)
                 goLeft = !goLeft;
+            direction = goLeft ? Direction.Left : Direction.Right;
             m_StringBuilder.AppendLine(goLeft ? "Dir: Left" : "Dir: Right");
             PlayCollision(goLeft ? -1 : 1);
         }

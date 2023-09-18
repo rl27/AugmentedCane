@@ -90,10 +90,14 @@ public class Vision : MonoBehaviour
             height = H,
         };
 
+        toggle.onValueChanged.AddListener(delegate {ToggleSidewalkDirection();});
+
         outputAspectRatioFitter = outputViewParent.GetComponent<AspectRatioFitter>();
         inputAspectRatioFitter = inputViewParent.GetComponent<AspectRatioFitter>();
         outputAspectRatioFitter.aspectRatio = (float) resizeOptions.width / resizeOptions.height;
         inputAspectRatioFitter.aspectRatio = (float) resizeOptions.width / resizeOptions.height;
+        outputView.enabled = false;
+        inputView.enabled = false;
 
         // Init compute shader resources
         labelTex = new RenderTexture(resizeOptions.width, resizeOptions.height, 0, RenderTextureFormat.ARGB32);
@@ -245,15 +249,18 @@ public class Vision : MonoBehaviour
         }
     }
 
+    public Toggle toggle;
     public static bool doSidewalkDirection = false;
     public void ToggleSidewalkDirection()
     {
-        doSidewalkDirection = !doSidewalkDirection;
+        doSidewalkDirection = toggle.isOn;
         lastValidDirection = DateTime.MinValue;
         relativeDir = 0;
         direction = 0;
         lastClass = -1;
         logging = "None";
+        outputView.enabled = doSidewalkDirection;
+        inputView.enabled = doSidewalkDirection;
     }
 
     // Returns coordinates of raycast relative to middle of bottom of image
