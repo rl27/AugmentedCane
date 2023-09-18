@@ -223,6 +223,7 @@ public class DepthImage : MonoBehaviour
         if (Vision.doSidewalkDirection)
             UpdateCameraImage();
 
+        direction = Direction.None;
         if (!doObstacleAvoidance) return;
 
         UpdateDepthImages();
@@ -287,7 +288,6 @@ public class DepthImage : MonoBehaviour
             }
         }
 
-        direction = Direction.None;
         if (hasObstacle) { // Search for longest gap
             m_StringBuilder.AppendLine("Obstacle: Yes");
             int start = 0, end = 0, temp = 0;
