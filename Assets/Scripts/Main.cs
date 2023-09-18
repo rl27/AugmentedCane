@@ -52,6 +52,8 @@ public class Main : MonoBehaviour
 
     void Awake()
     {
+        Screen.sleepTimeout = SleepTimeout.NeverSleep; // Prevent phone from dimming/sleeping
+
         depth = DepthHandler.GetComponent<DepthImage>();
         sensors = SensorHandler.GetComponent<SensorData>();
         gps = GPSHandler.GetComponent<GPSData>();

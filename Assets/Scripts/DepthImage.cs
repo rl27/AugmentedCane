@@ -115,9 +115,9 @@ public class DepthImage : MonoBehaviour
 
     // These variables are for obstacle avoidance.
     private bool doObstacleAvoidance = true;
-    float distanceToObstacle = 1.5f; // Distance in meters at which to alert for obstacles
+    float distanceToObstacle = 2.0f; // Distance in meters at which to alert for obstacles
     int collisionWindowWidth = 15; // Num. pixels left/right of the middle to check for obstacles
-    float collisionSumThreshold = 3f;
+    float collisionSumThreshold = 2f;
     int confidenceMax = 255;
 
     public enum Direction { Left, Right, Unknown, None }
@@ -127,6 +127,7 @@ public class DepthImage : MonoBehaviour
     bool visionActive = true;
     public static bool tflite = false;
 
+    public Toggle toggle;
     void Awake()
     {
         if (m_OcclusionManager == null) {
@@ -404,9 +405,14 @@ public class DepthImage : MonoBehaviour
             Debug.Log(text);
     }
 
-    public void toggleObstacleAvoidance()
+    public void ToggleObstacleAvoidance()
     {
         doObstacleAvoidance = !doObstacleAvoidance;
+    }
+
+    public void ToggleSmoothing()
+    {
+        m_OcclusionManager.environmentDepthTemporalSmoothingRequested = toggle.isOn;
     }
 
     private void UpdateRawImage(RawImage rawImage, XRCpuImage cpuImage, TextureFormat format, bool isDepth)
