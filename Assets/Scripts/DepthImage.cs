@@ -116,16 +116,9 @@ public class DepthImage : MonoBehaviour
     // These variables are for obstacle avoidance.
     private bool doObstacleAvoidance = true;
     float distanceToObstacle = 1.5f; // Distance in meters at which to alert for obstacles
-    int collisionWindowWidth = 11; // Num. pixels left/right of the middle to check for obstacles
-    int confidenceThreshold = 1;
+    int collisionWindowWidth = 15; // Num. pixels left/right of the middle to check for obstacles
+    float collisionSumThreshold = 3f;
     int confidenceMax = 255;
-    uint totalCount = 0; // Total number of depth images received
-    const int numFrames = 15;
-    float[] leftAverage = new float[numFrames];
-    float[] rightAverage = new float[numFrames];
-    Vector2 leftStats;
-    Vector2 midStats;
-    Vector2 rightStats;
 
     public enum Direction { Left, Right, Unknown, None }
     public static Direction direction = Direction.None;
@@ -152,10 +145,8 @@ public class DepthImage : MonoBehaviour
         }
 
         #if UNITY_ANDROID
-            confidenceThreshold = 32;
             confidenceMax = 255;
         #elif UNITY_IOS
-            confidenceThreshold = 2;
             confidenceMax = 2;
         #endif
 
@@ -246,76 +237,92 @@ public class DepthImage : MonoBehaviour
         // m_StringBuilder.AppendLine($"(0.50,0.50): {GetConfidence(new Vector2(0.5f, 0.5f))}");
         // m_StringBuilder.AppendLine($"(0.99,0.99): {GetConfidence(new Vector2(0.99f, 0.99f))}");
 
-        int numLow = 0;
-        int numMed = 0;
-        int numHigh = 0;
-        #if UNITY_ANDROID
-            for (int y = 0; y < depthHeight; y++) {
-                for (int x = 0; x < depthWidth; x++) {
-                    int val = confidenceArray[(y * depthWidth) + x];
-                    if (val < 40)
-                        numLow += 1;
-                    else if (val < 255)
-                        numMed += 1;
-                    else if (val == 255)
-                        numHigh += 1;
-                }
-            }
-        #elif UNITY_IOS
-            for (int y = 0; y < depthHeight; y++) {
-                for (int x = 0; x < depthWidth; x++) {
-                    int val = confidenceArray[(y * depthWidth) + x];
-                    if (val == 0)
-                        numLow += 1;
-                    else if (val == 1)
-                        numMed += 1;
-                    else if (val == 2)
-                        numHigh += 1;
-                }
-            }
-        #endif
-        int numPixels = depthWidth * depthHeight;
-        m_StringBuilder.AppendLine("CONFIDENCE PROPORTIONS:");
-        m_StringBuilder.AppendLine($"Low: {(float) numLow / numPixels}");
-        m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
-        m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
+        // int numLow = 0;
+        // int numMed = 0;
+        // int numHigh = 0;
+        // #if UNITY_ANDROID
+        //     for (int y = 0; y < depthHeight; y++) {
+        //         for (int x = 0; x < depthWidth; x++) {
+        //             int val = confidenceArray[(y * depthWidth) + x];
+        //             if (val < 40)
+        //                 numLow += 1;
+        //             else if (val < 255)
+        //                 numMed += 1;
+        //             else if (val == 255)
+        //                 numHigh += 1;
+        //         }
+        //     }
+        // #elif UNITY_IOS
+        //     for (int y = 0; y < depthHeight; y++) {
+        //         for (int x = 0; x < depthWidth; x++) {
+        //             int val = confidenceArray[(y * depthWidth) + x];
+        //             if (val == 0)
+        //                 numLow += 1;
+        //             else if (val == 1)
+        //                 numMed += 1;
+        //             else if (val == 2)
+        //                 numHigh += 1;
+        //         }
+        //     }
+        // #endif
+        // int numPixels = depthWidth * depthHeight;
+        // m_StringBuilder.AppendLine("CONFIDENCE PROPORTIONS:");
+        // m_StringBuilder.AppendLine($"Low: {(float) numLow / numPixels}");
+        // m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
+        // m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
 
         // Check for obstacles
-        float[] closeTotals = AccumulateClosePoints();
+        float[] closeTotals = AccumulateClosePoints(); // In portrait mode, index 0 = right side, max index = left side
+        bool hasObstacle = false;
+        int len = closeTotals.Length;
+        for (int i = len/2 - collisionWindowWidth; i < len/2 + collisionWindowWidth + 1; i++) {
+            if (closeTotals[i] > collisionSumThreshold) {
+                hasObstacle = true;
+                break;
+            }
+        }
 
-
-        // UPDATE DEPTH AVERAGES
-        totalCount += 1;
-        UpdateDepthAverages();
-        direction = Direction.None;
-        if (midStats.y > 100) {
-            if (midStats.x / midStats.y < distanceToObstacle) {
-                m_StringBuilder.AppendLine("Obstacle: Yes");
-                if (totalCount >= numFrames) {
-                    float rightTotal = rightAverage.Sum();
-                    float leftTotal = leftAverage.Sum();
-                    if (leftTotal > rightTotal) {
-                        direction = Direction.Left;
-                        m_StringBuilder.AppendLine("Dir: Left");
-                        PlayCollision(-1);
+        if (hasObstacle) { // Search for longest gap
+            m_StringBuilder.AppendLine("Obstacle: Yes");
+            int start = 0, end = 0, temp = 0;
+            bool open = false;
+            for (int i = 0; i < len; i++) {
+                if (closeTotals[i] > collisionSumThreshold) { // No gap
+                    if (open) {
+                        if (end - start < i - temp) {
+                            start = temp;
+                            end = i;
+                        }
+                        open = false;
                     }
-                    else if (leftTotal < rightTotal) {
-                        direction = Direction.Right;
-                        m_StringBuilder.AppendLine("Dir: Right");
-                        PlayCollision(1);
-                    }
-                    else {
-                        direction = Direction.Unknown;
-                        m_StringBuilder.AppendLine("Dir: Unknown");
+                }
+                else { // Gap
+                    if (!open)  {
+                        temp = i;
+                        open = true;
                     }
                 }
             }
-            else {
-                m_StringBuilder.AppendLine("Obstacle: No");
+
+            bool goLeft;
+            // If longest gap is long enough, go towards that gap
+            // Sides/indices will be flipped depending on screen orientation
+            if (end - start > collisionWindowWidth) {
+                goLeft = (end-start)/2 > len/2;
             }
+            else { // Otherwise, take side with lowest sum. Lower sum = fewer close points
+                float leftSum = closeTotals.Skip(len/2).Sum();
+                float rightSum = closeTotals.Sum() - leftSum;
+                goLeft = leftSum < rightSum;
+            }
+            if (Screen.orientation == ScreenOrientation.PortraitUpsideDown || Screen.orientation == ScreenOrientation.LandscapeLeft)
+                goLeft = !goLeft;
+            m_StringBuilder.AppendLine(goLeft ? "Dir: Left" : "Dir: Right");
+            PlayCollision(goLeft ? -1 : 1);
         }
-        else
-            m_StringBuilder.AppendLine("Obstacle: Unknown");
+        else {
+            m_StringBuilder.AppendLine("Obstacle: No");
+        }
     }
 
     private void UpdateDepthImages()
@@ -608,51 +615,6 @@ public class DepthImage : MonoBehaviour
         return new Vector2(v1.x * v2.x, v1.y * v2.y);
     }
 
-    // Sums depth values over the given coordinates. Returns sum and count of pixels with high enough confidence.
-    private Vector2 GetDepthSum(int xmin, int xmax, int ymin, int ymax)
-    {
-        Debug.Assert(xmin >= 0 && ymin >= 0 && xmax <= depthWidth && ymax <= depthHeight);
-
-        float sum = 0;
-        int count = 0;
-        for (int y = ymin; y < ymax; y++) {
-            for (int x = xmin; x < xmax; x++) {
-                if (GetConfidence(x, y) < confidenceThreshold)
-                    continue;
-                sum += GetDepth(x, y);
-                count += 1;
-            }
-        }   
-        return new Vector2(sum, count);
-    }
-
-    private void UpdateDepthAverages()
-    {
-        if (IsPortrait()) {
-            midStats = GetDepthSum(0, depthWidth, depthHeight/2 - 7, depthHeight/2 + 8);
-            leftStats = GetDepthSum(0, depthWidth, depthHeight/2, depthHeight);
-            rightStats = GetDepthSum(0, depthWidth, 0, depthHeight/2);
-            if (Screen.orientation == ScreenOrientation.PortraitUpsideDown)
-                (leftStats, rightStats) = (rightStats, leftStats);
-        }
-        else {
-            midStats = GetDepthSum(depthWidth/2 - collisionWindowWidth, depthWidth/2 + (collisionWindowWidth + 1), 0, depthHeight);
-            leftStats = GetDepthSum(0, depthWidth/2, 0, depthHeight);
-            rightStats = GetDepthSum(depthWidth/2, depthWidth, 0, depthHeight);
-            if (Screen.orientation == ScreenOrientation.LandscapeRight)
-                (leftStats, rightStats) = (rightStats, leftStats);
-        }
-        int curIndex = (int) totalCount % numFrames;
-        if (leftStats.y > 100 && rightStats.y > 100) {
-            leftAverage[curIndex] = leftStats.x / leftStats.y;
-            rightAverage[curIndex] = rightStats.x / rightStats.y;
-        }
-        else {
-            leftAverage[curIndex] = 0;
-            rightAverage[curIndex] = 0;
-        }
-    }
-
     // This function returns a 1D array representing a horizontal row of pixels.
     // Each point in the 2D depth array that is (1) high enough confidence and (2) within a certain distance
     // will give 1 vote towards the corresponding value in the 1D array.
@@ -665,7 +627,7 @@ public class DepthImage : MonoBehaviour
                 float dist = GetDepth(x, y);
                 if (dist > distanceToObstacle)
                     continue;
-                output[portrait ? y : x] += dist * GetConfidence(x, y) / confidenceMax;
+                output[portrait ? y : x] += GetConfidence(x, y) / confidenceMax;
             }
         }
         return output;
