@@ -400,7 +400,11 @@ public class DepthImage : MonoBehaviour
                         ddrnet.DoInvoke(m_RawCameraImage.texture);
                     }
                     else {
-                        StartCoroutine(vision.Detect(m_RawCameraImage.texture));
+                        if (!Vision.working) {
+                            Vision.working = true;
+                            Texture2D tex = m_RawCameraImage.texture as Texture2D;
+                            StartCoroutine(vision.Detect(tex));
+                        }
                     }
                 }
             }

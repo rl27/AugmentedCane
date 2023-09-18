@@ -34,7 +34,7 @@ public class Vision : MonoBehaviour
     TextureResizer resizer;
     TextureResizer.ResizeOptions resizeOptions;
 
-    private bool working = false;
+    public static bool working = false;
 
     bool testing = false;
     Texture2D testPNG;
@@ -70,7 +70,7 @@ public class Vision : MonoBehaviour
     {
         #if UNITY_EDITOR
             testing = !DepthImage.tflite;
-            testPNG = (Texture2D) DDRNetSample.LoadPNG("Assets/TestImages/test3.png");
+            testPNG = (Texture2D) DDRNetSample.LoadPNG("Assets/TestImages/test4.png");
         #endif
 
         tts = TTSHandler.GetComponent<TTS>();
@@ -148,8 +148,8 @@ public class Vision : MonoBehaviour
     // https://forum.unity.com/threads/asynchronous-inference-in-barracuda.1370181/
     public IEnumerator Detect(Texture tex)
     {
-        if (working)
-            yield break;
+        // if (working)
+        //     yield break;
         working = true;
 
         // https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/TensorHandling.html

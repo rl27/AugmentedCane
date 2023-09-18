@@ -2795,7 +2795,7 @@ MonoBehaviour:
   inputView: {fileID: 630529197}
   outputViewParent: {fileID: 2000448425}
   inputViewParent: {fileID: 630529194}
-  modelAsset: {fileID: 5022602860645237092, guid: a415cdce2141b2840b01c6dbab74923f, type: 3}
+  modelAsset: {fileID: 5022602860645237092, guid: f02c02ccdd9888541834b5d5d560ba0a, type: 3}
   compute: {fileID: 7200000, guid: f07148396908444429733077acb4ee0c, type: 3}
   sidewalk: {fileID: 8300000, guid: 1d39abad520b48b4fa36806012d16920, type: 3}
   crosswalk: {fileID: 8300000, guid: 5cb35b1523c46544d9cf7a307749d22f, type: 3}
