@@ -145,6 +145,10 @@ public class DepthImage : MonoBehaviour
             return;
         }
 
+        #if UNITY_EDITOR
+            doObstacleAvoidance = false;
+        #endif
+
         #if UNITY_ANDROID
             confidenceMax = 255;
         #elif UNITY_IOS
@@ -228,15 +232,15 @@ public class DepthImage : MonoBehaviour
 
         // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
         // Screen orientation does not change coordinate locations on the screen.
-        // m_StringBuilder.AppendLine("DEPTH:");
-        // m_StringBuilder.AppendLine($"(0.01,0.01): {GetDepth(new Vector2(0.01f, 0.01f))}");
-        // m_StringBuilder.AppendLine($"(0.50,0.50): {GetDepth(new Vector2(0.5f, 0.5f))}");
-        // m_StringBuilder.AppendLine($"(0.99,0.99): {GetDepth(new Vector2(0.99f, 0.99f))}");
+        m_StringBuilder.AppendLine("DEPTH:");
+        m_StringBuilder.AppendLine($"(0.01,0.01): {GetDepth(new Vector2(0.01f, 0.01f))}");
+        m_StringBuilder.AppendLine($"(0.50,0.50): {GetDepth(new Vector2(0.5f, 0.5f))}");
+        m_StringBuilder.AppendLine($"(0.99,0.99): {GetDepth(new Vector2(0.99f, 0.99f))}");
 
-        // m_StringBuilder.AppendLine("CONFIDENCE:");
-        // m_StringBuilder.AppendLine($"(0.01,0.01): {GetConfidence(new Vector2(0.01f, 0.01f))}");
-        // m_StringBuilder.AppendLine($"(0.50,0.50): {GetConfidence(new Vector2(0.5f, 0.5f))}");
-        // m_StringBuilder.AppendLine($"(0.99,0.99): {GetConfidence(new Vector2(0.99f, 0.99f))}");
+        m_StringBuilder.AppendLine("CONFIDENCE:");
+        m_StringBuilder.AppendLine($"(0.01,0.01): {GetConfidence(new Vector2(0.01f, 0.01f))}");
+        m_StringBuilder.AppendLine($"(0.50,0.50): {GetConfidence(new Vector2(0.5f, 0.5f))}");
+        m_StringBuilder.AppendLine($"(0.99,0.99): {GetConfidence(new Vector2(0.99f, 0.99f))}");
 
         // int numLow = 0;
         // int numMed = 0;
@@ -311,10 +315,17 @@ public class DepthImage : MonoBehaviour
             if (end - start > collisionWindowWidth) {
                 goLeft = (end-start)/2 > len/2;
             }
-            else { // Otherwise, take side with lowest sum. Lower sum = fewer close points
-                float leftSum = closeTotals.Skip(len/2).Sum();
-                float rightSum = closeTotals.Sum() - leftSum;
-                goLeft = leftSum < rightSum;
+            else { // Otherwise, take side with higher avg distance
+                float leftAvg, rightAvg;
+                if (IsPortrait()) {
+                    leftAvg = GetDepthAvg(0, depthWidth, depthHeight/2, depthHeight);
+                    rightAvg = GetDepthAvg(0, depthWidth, 0, depthHeight/2);
+                }
+                else {
+                    leftAvg = GetDepthAvg(depthWidth/2, depthWidth, 0, depthHeight);
+                    rightAvg = GetDepthAvg(0, depthWidth/2, 0, depthHeight);
+                }
+                goLeft = leftAvg > rightAvg;
             }
             if (Screen.orientation == ScreenOrientation.PortraitUpsideDown || Screen.orientation == ScreenOrientation.LandscapeLeft)
                 goLeft = !goLeft;
@@ -492,7 +503,7 @@ public class DepthImage : MonoBehaviour
     public float GetDepth(Vector2 uv)
     {
         if (depthArray.Length == 0)
-            return float.PositiveInfinity;
+            return 99999f;
         
         int x = (int)(uv.x * (depthWidth - 1));
         int y = (int)(uv.y * (depthHeight - 1));
@@ -503,7 +514,7 @@ public class DepthImage : MonoBehaviour
     public float GetDepth(int x, int y)
     {
         if (depthArray.Length == 0)
-            return float.PositiveInfinity;
+            return 99999f;
 
         // if (x < 0 || x >= depthWidth || y < 0 || y >= depthHeight) {
         //     Debug.Log("Invalid depth index");
@@ -531,13 +542,13 @@ public class DepthImage : MonoBehaviour
             return Mathf.Sqrt(vertex_x*vertex_x + vertex_y*vertex_y + depthInMeters*depthInMeters);
         }
 
-        return float.PositiveInfinity;
+        return 99999f;
     }
 
     public float GetConfidence(Vector2 uv)
     {
         if (confidenceArray.Length == 0)
-            return -1f;
+            return 0;
         int x = (int)(uv.x * (depthWidth - 1));
         int y = (int)(uv.y * (depthHeight - 1));
         int index = (y * depthWidth) + x;
@@ -547,7 +558,7 @@ public class DepthImage : MonoBehaviour
     public float GetConfidence(int x, int y)
     {
         if (confidenceArray.Length == 0)
-            return -1f;
+            return 0;
         int index = (y * depthWidth) + x;
         return confidenceArray[confidenceStride * index];
     }
@@ -637,5 +648,22 @@ public class DepthImage : MonoBehaviour
             }
         }
         return output;
+    }
+
+    // Get average of confidence-weighted depth values over the given coordinates
+    private float GetDepthAvg(int xmin, int xmax, int ymin, int ymax)
+    {
+        float sum = 0;
+        float count = 0;
+        for (int y = ymin; y < ymax; y++) {
+            for (int x = xmin; x < xmax; x++) {
+                float confidence = GetConfidence(x, y);
+                if (confidence > 0) {
+                    sum += confidence * GetDepth(x, y);
+                    count += confidence;
+                }
+            }
+        }
+        return (count != 0) ? (sum / count) : 0;
     }
 }
