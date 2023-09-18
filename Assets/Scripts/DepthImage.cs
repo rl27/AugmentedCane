@@ -115,7 +115,7 @@ public class DepthImage : MonoBehaviour
 
     // These variables are for obstacle avoidance.
     private bool doObstacleAvoidance = true;
-    float distanceToObstacle = 2.0f; // Distance in meters at which to alert for obstacles
+    float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
     int collisionWindowWidth = 15; // Num. pixels left/right of the middle to check for obstacles
     float collisionSumThreshold = 2f;
     int confidenceMax = 255;
