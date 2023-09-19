@@ -172,12 +172,14 @@ public class Vision : MonoBehaviour
         Texture2D resizedTex = ResizeTexture(tex);
         input = new Tensor(resizedTex); // BHWC: 1, H, W, 3
 
+        await UniTask.NextFrame();
+
         // worker.Execute(input);
         var enumerator = worker.StartManualSchedule(input);
         int step = 0;
         int stepsPerFrame = 53; // FPS should be capped at 30; total num of steps for MNV3 is 221
         while (enumerator.MoveNext()) {
-            if (++step % stepsPerFrame == 0) await UniTask.Yield();
+            if (++step % stepsPerFrame == 0) await UniTask.NextFrame();
         }
 
         // (0, 0, 0  , 0  ) = top left
