@@ -1,9 +1,5 @@
-// using System.Collections.Generic;
 using System;
-using System.Linq;
-using System.Collections;
 using System.Text;
-using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
@@ -402,7 +398,7 @@ public class DepthImage : MonoBehaviour
                         ddrnet.DoInvoke(m_RawCameraImage.texture);
                     }
                     else {
-                        StartCoroutine(vision.Detect(m_RawCameraImage.texture));
+                        vision.Detect(m_RawCameraImage.texture);
                     }
                 }
             }
