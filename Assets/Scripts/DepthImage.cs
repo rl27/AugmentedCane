@@ -642,11 +642,15 @@ public class DepthImage : MonoBehaviour
     private float[] AccumulateClosePoints()
     {
         bool portrait = IsPortrait();
-        int height = depthHeight, width = depthWidth;
-        if (portrait) width = (int) 0.8 * width;
-        float[] output = new float[portrait ? height : width];
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
+        int widthStart = 0, widthEnd = depthWidth;
+        float cutoff = 0.2f;
+        if (Screen.orientation == ScreenOrientation.Portrait)
+            (widthStart, widthEnd) = (0, (int) (1-cutoff) * depthWidth);
+        else if (Screen.orientation == ScreenOrientation.PortraitUpsideDown)
+            (widthStart, widthEnd) = ((int) cutoff * depthWidth, depthWidth);
+        float[] output = new float[portrait ? depthHeight : depthWidth];
+        for (int y = 0; y < depthHeight; y++) {
+            for (int x = widthStart; x < widthEnd; x++) {
                 float dist = GetDepth(x, y);
                 if (dist > distanceToObstacle)
                     continue;
