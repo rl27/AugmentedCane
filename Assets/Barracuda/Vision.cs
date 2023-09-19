@@ -34,7 +34,7 @@ public class Vision : MonoBehaviour
     TextureResizer resizer;
     TextureResizer.ResizeOptions resizeOptions;
 
-    public static bool working = false;
+    private bool working = false;
 
     bool testing = false;
     Texture2D testPNG;
