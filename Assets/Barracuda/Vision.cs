@@ -152,8 +152,8 @@ public class Vision : MonoBehaviour
     // https://forum.unity.com/threads/asynchronous-inference-in-barracuda.1370181/
     public IEnumerator Detect(Texture tex)
     {
-        // if (working)
-        //     yield break;
+        if (working)
+            yield break;
         working = true;
 
         // https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/TensorHandling.html

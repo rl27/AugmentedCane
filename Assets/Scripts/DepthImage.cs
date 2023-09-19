@@ -402,11 +402,7 @@ public class DepthImage : MonoBehaviour
                         ddrnet.DoInvoke(m_RawCameraImage.texture);
                     }
                     else {
-                        if (!Vision.working) {
-                            Vision.working = true;
-                            Texture2D tex = m_RawCameraImage.texture as Texture2D;
-                            StartCoroutine(vision.Detect(tex));
-                        }
+                        StartCoroutine(vision.Detect(m_RawCameraImage.texture));
                     }
                 }
             }
@@ -542,10 +538,12 @@ public class DepthImage : MonoBehaviour
         else if (depthStride == 2) // DepthUInt16
             depthInMeters = BitConverter.ToUInt16(depthArray, depthStride * index) / 1000f;
 
-        if (depthInMeters > 0) { 
-            float vertex_x = (x - principalPoint.x) * depthInMeters / focalLength.x;
+        if (depthInMeters > 0) {
+            // Do not factor in focalLength and principalPoint if only measuring forward distance from camera
+            /*float vertex_x = (x - principalPoint.x) * depthInMeters / focalLength.x;
             float vertex_y = (y - principalPoint.y) * depthInMeters / focalLength.y;
-            return Mathf.Sqrt(vertex_x*vertex_x + vertex_y*vertex_y + depthInMeters*depthInMeters);
+            return Mathf.Sqrt(vertex_x*vertex_x + vertex_y*vertex_y + depthInMeters*depthInMeters);*/
+            return depthInMeters;
         }
 
         return 99999f;
@@ -644,9 +642,11 @@ public class DepthImage : MonoBehaviour
     private float[] AccumulateClosePoints()
     {
         bool portrait = IsPortrait();
-        float[] output = new float[portrait ? depthHeight : depthWidth];
-        for (int y = 0; y < depthHeight; y++) {
-            for (int x = 0; x < depthWidth; x++) {
+        int height = depthHeight, width = depthWidth;
+        if (portrait) width = (int) 0.8 * width;
+        float[] output = new float[portrait ? height : width];
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
                 float dist = GetDepth(x, y);
                 if (dist > distanceToObstacle)
                     continue;
