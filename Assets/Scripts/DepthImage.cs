@@ -288,23 +288,24 @@ public class DepthImage : MonoBehaviour
             m_StringBuilder.AppendLine("Obstacle: Yes");
             int start = 0, end = 0, temp = 0;
             bool open = false;
-            for (int i = 0; i < len; i++) {
+            for (int i = 0; i < len-1; i++) {
                 if (closeTotals[i] > collisionSumThreshold) { // No gap
-                    if (open) {
-                        if (end - start < i - temp) {
-                            start = temp;
-                            end = i;
-                        }
+                    if (open) { // End gap
+                        if (end - start < i - temp)
+                            (start, end) = (temp, i);
                         open = false;
                     }
                 }
                 else { // Gap
-                    if (!open)  {
+                    if (!open)  { // Start gap
                         temp = i;
                         open = true;
                     }
                 }
             }
+            // If there's an open gap at the last index, close it
+            if (open && end - start < len-1 - temp)
+                (start, end) = (temp, len-1);
 
             bool goLeft;
             // If longest gap is long enough, go towards that gap
@@ -639,7 +640,7 @@ public class DepthImage : MonoBehaviour
     {
         bool portrait = IsPortrait();
         int widthStart = 0, widthEnd = depthWidth;
-        float cutoff = 0.2f;
+        float cutoff = 0.25f;
         if (Screen.orientation == ScreenOrientation.Portrait)
             (widthStart, widthEnd) = (0, (int) ((1-cutoff) * depthWidth));
         else if (Screen.orientation == ScreenOrientation.PortraitUpsideDown)
