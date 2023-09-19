@@ -1,11 +1,10 @@
 using System;
+using System.Collections;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using Unity.Barracuda;
 using TensorFlowLite;
-using System.Threading;
-using Cysharp.Threading.Tasks;
 
 // https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/GettingStarted.html
 public class Vision : MonoBehaviour
@@ -34,6 +33,8 @@ public class Vision : MonoBehaviour
 
     TextureResizer resizer;
     TextureResizer.ResizeOptions resizeOptions;
+
+    private bool working = false;
 
     bool testing = false;
     Texture2D testPNG;
@@ -71,8 +72,6 @@ public class Vision : MonoBehaviour
             testing = !DepthImage.tflite;
             testPNG = (Texture2D) DDRNetSample.LoadPNG("Assets/TestImages/test4.png");
         #endif
-
-        cancellationToken = this.GetCancellationTokenOnDestroy();
 
         tts = TTSHandler.GetComponent<TTS>();
 
@@ -123,7 +122,7 @@ public class Vision : MonoBehaviour
     void Update()
     {
         if (testing)
-            Detect(testPNG);
+            StartCoroutine(Detect(testPNG));
     }
 
     private Texture2D ResizeTexture(Texture inputTex)
@@ -149,37 +148,24 @@ public class Vision : MonoBehaviour
         return tex2D;
     }
 
-    private UniTask<bool> task;
-    private CancellationToken cancellationToken;
-    private bool working = false;
-    public void Detect(Texture tex)
-    {
-        if (working)
-            return;
-        working = true;
-
-        if (task.Status.IsCompleted())
-            task = DoDetect(tex, cancellationToken);
-
-        working = false;
-    }
-
     Tensor input;
     // https://forum.unity.com/threads/asynchronous-inference-in-barracuda.1370181/
-    private async UniTask<bool> DoDetect(Texture tex, CancellationToken cancellationToken)
+    public IEnumerator Detect(Texture tex)
     {
+        if (working)
+            yield break;
+        working = true;
+
         // https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/TensorHandling.html
         Texture2D resizedTex = ResizeTexture(tex);
         input = new Tensor(resizedTex); // BHWC: 1, H, W, 3
-
-        await UniTask.NextFrame();
 
         // worker.Execute(input);
         var enumerator = worker.StartManualSchedule(input);
         int step = 0;
         int stepsPerFrame = 53; // FPS should be capped at 30; total num of steps for MNV3 is 221
         while (enumerator.MoveNext()) {
-            if (++step % stepsPerFrame == 0) await UniTask.NextFrame();
+            if (++step % stepsPerFrame == 0) yield return null;
         }
 
         // (0, 0, 0  , 0  ) = top left
@@ -195,7 +181,7 @@ public class Vision : MonoBehaviour
         input.Dispose();
         // output.Dispose();
 
-        return true;
+        working = false;
     }
 
     public static DateTime lastValidDirection; // To be used by other scripts to determine whether to use vision direction
