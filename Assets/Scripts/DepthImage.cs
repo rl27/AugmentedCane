@@ -311,7 +311,7 @@ public class DepthImage : MonoBehaviour
             // If longest gap is long enough, go towards that gap
             // Sides/indices will be flipped depending on screen orientation
             if (end - start > collisionWindowWidth) {
-                goLeft = (end-start)/2 > len/2;
+                goLeft = (start+end)/2 > len/2;
             }
             else { // Otherwise, take side with higher avg distance
                 float leftAvg, rightAvg;
