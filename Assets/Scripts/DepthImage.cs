@@ -229,49 +229,49 @@ public class DepthImage : MonoBehaviour
 
         // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
         // Screen orientation does not change coordinate locations on the screen.
-        m_StringBuilder.AppendLine("DEPTH:");
-        m_StringBuilder.AppendLine($"(0.01,0.01): {GetDepth(new Vector2(0.01f, 0.01f))}");
-        m_StringBuilder.AppendLine($"(0.50,0.50): {GetDepth(new Vector2(0.5f, 0.5f))}");
-        m_StringBuilder.AppendLine($"(0.99,0.99): {GetDepth(new Vector2(0.99f, 0.99f))}");
+        // m_StringBuilder.AppendLine("DEPTH:");
+        // m_StringBuilder.AppendLine($"(0.01,0.01): {GetDepth(new Vector2(0.01f, 0.01f))}");
+        // m_StringBuilder.AppendLine($"(0.50,0.50): {GetDepth(new Vector2(0.5f, 0.5f))}");
+        // m_StringBuilder.AppendLine($"(0.99,0.99): {GetDepth(new Vector2(0.99f, 0.99f))}");
 
-        m_StringBuilder.AppendLine("CONFIDENCE:");
-        m_StringBuilder.AppendLine($"(0.01,0.01): {GetConfidence(new Vector2(0.01f, 0.01f))}");
-        m_StringBuilder.AppendLine($"(0.50,0.50): {GetConfidence(new Vector2(0.5f, 0.5f))}");
-        m_StringBuilder.AppendLine($"(0.99,0.99): {GetConfidence(new Vector2(0.99f, 0.99f))}");
+        // m_StringBuilder.AppendLine("CONFIDENCE:");
+        // m_StringBuilder.AppendLine($"(0.01,0.01): {GetConfidence(new Vector2(0.01f, 0.01f))}");
+        // m_StringBuilder.AppendLine($"(0.50,0.50): {GetConfidence(new Vector2(0.5f, 0.5f))}");
+        // m_StringBuilder.AppendLine($"(0.99,0.99): {GetConfidence(new Vector2(0.99f, 0.99f))}");
 
-        // int numLow = 0;
-        // int numMed = 0;
-        // int numHigh = 0;
-        // #if UNITY_ANDROID
-        //     for (int y = 0; y < depthHeight; y++) {
-        //         for (int x = 0; x < depthWidth; x++) {
-        //             int val = confidenceArray[(y * depthWidth) + x];
-        //             if (val < 40)
-        //                 numLow += 1;
-        //             else if (val < 255)
-        //                 numMed += 1;
-        //             else if (val == 255)
-        //                 numHigh += 1;
-        //         }
-        //     }
-        // #elif UNITY_IOS
-        //     for (int y = 0; y < depthHeight; y++) {
-        //         for (int x = 0; x < depthWidth; x++) {
-        //             int val = confidenceArray[(y * depthWidth) + x];
-        //             if (val == 0)
-        //                 numLow += 1;
-        //             else if (val == 1)
-        //                 numMed += 1;
-        //             else if (val == 2)
-        //                 numHigh += 1;
-        //         }
-        //     }
-        // #endif
-        // int numPixels = depthWidth * depthHeight;
-        // m_StringBuilder.AppendLine("CONFIDENCE PROPORTIONS:");
-        // m_StringBuilder.AppendLine($"Low: {(float) numLow / numPixels}");
-        // m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
-        // m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
+        int numLow = 0;
+        int numMed = 0;
+        int numHigh = 0;
+        #if UNITY_ANDROID
+            for (int y = 0; y < depthHeight; y++) {
+                for (int x = 0; x < depthWidth; x++) {
+                    int val = confidenceArray[(y * depthWidth) + x];
+                    if (val < 40)
+                        numLow += 1;
+                    else if (val < 255)
+                        numMed += 1;
+                    else if (val == 255)
+                        numHigh += 1;
+                }
+            }
+        #elif UNITY_IOS
+            for (int y = 0; y < depthHeight; y++) {
+                for (int x = 0; x < depthWidth; x++) {
+                    int val = confidenceArray[(y * depthWidth) + x];
+                    if (val == 0)
+                        numLow += 1;
+                    else if (val == 1)
+                        numMed += 1;
+                    else if (val == 2)
+                        numHigh += 1;
+                }
+            }
+        #endif
+        int numPixels = depthWidth * depthHeight;
+        m_StringBuilder.AppendLine("CONFIDENCE PROPORTIONS:");
+        m_StringBuilder.AppendLine($"Low: {(float) numLow / numPixels}");
+        m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
+        m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
 
         // Check for obstacles
         float[] closeTotals = AccumulateClosePoints(); // In portrait mode, index 0 = right side, max index = left side
