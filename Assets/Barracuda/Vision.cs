@@ -4,7 +4,6 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using Unity.Barracuda;
-using TensorFlowLite;
 
 // https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/GettingStarted.html
 public class Vision : MonoBehaviour
@@ -34,7 +33,7 @@ public class Vision : MonoBehaviour
     TextureResizer resizer;
     TextureResizer.ResizeOptions resizeOptions;
 
-    private bool working = false;
+    public static bool working = false;
 
     bool testing = false;
     Texture2D testPNG;
@@ -69,8 +68,8 @@ public class Vision : MonoBehaviour
     void Start()
     {
         #if UNITY_EDITOR
-            testing = !DepthImage.tflite;
-            testPNG = (Texture2D) DDRNetSample.LoadPNG("Assets/TestImages/test4.png");
+            testing = true;
+            testPNG = Utils.LoadPNG("Assets/TestImages/test4.png");
         #endif
 
         tts = TTSHandler.GetComponent<TTS>();
@@ -82,7 +81,7 @@ public class Vision : MonoBehaviour
         resizer = new TextureResizer();
         resizeOptions = new TextureResizer.ResizeOptions()
         {
-            aspectMode = AspectMode.Fill,
+            aspectMode = TextureResizer.AspectMode.Fill,
             rotationDegree = 90,
             mirrorHorizontal = false,
             mirrorVertical = false,
@@ -333,8 +332,8 @@ public class Vision : MonoBehaviour
         inputView.texture = resizedTex;
         outputView.texture = outputTex;
 
-        outputAspectRatioFitter.aspectMode = DDRNetSample.GetMode();
-        inputAspectRatioFitter.aspectMode = DDRNetSample.GetMode();
+        outputAspectRatioFitter.aspectMode = Utils.GetMode();
+        inputAspectRatioFitter.aspectMode = Utils.GetMode();
         outputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
         inputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
     }

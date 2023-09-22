@@ -70,13 +70,7 @@ public class DepthImage : MonoBehaviour
 
     [SerializeField]
     GameObject VisionHandler;
-    [SerializeField]
-    GameObject TFLiteHandler;
-
     Vision vision;
-    SsdSample ssd;
-    YOLOSample yolo;
-    DDRNetSample ddrnet;
 
     // Depth array
     [NonSerialized]
@@ -119,10 +113,6 @@ public class DepthImage : MonoBehaviour
     public enum Direction { Left, Right, None }
     public static Direction direction = Direction.None;
 
-    // Perform vision tasks on camera image
-    bool visionActive = true;
-    public static bool tflite = false;
-
     public Toggle toggle;
     void Awake()
     {
@@ -152,25 +142,7 @@ public class DepthImage : MonoBehaviour
         #endif
 
         audioPlayer = AudioHandler.GetComponent<AudioPlayer>();
-
-        if (!visionActive) {
-            yolo.frameContainer.enabled = false;
-            vision.outputView.enabled = false;
-            vision.inputView.enabled = false;
-            VisionHandler.SetActive(false);
-        }
-        else {
-            if (tflite) {
-            ssd = TFLiteHandler.GetComponent<SsdSample>();
-            yolo = TFLiteHandler.GetComponent<YOLOSample>();
-            ddrnet = TFLiteHandler.GetComponent<DDRNetSample>();
-            VisionHandler.SetActive(false);
-            }
-            else {
-                vision = VisionHandler.GetComponent<Vision>();
-                TFLiteHandler.SetActive(false);
-            }   
-        }
+        vision = VisionHandler.GetComponent<Vision>();
 
         // Set depth image material
         m_RawImage.material = m_DepthMaterial;
@@ -389,18 +361,11 @@ public class DepthImage : MonoBehaviour
     private void UpdateCameraImage()
     {
         // Acquire a camera image, update the corresponding raw image, and do CV
-        if (visionActive) {
-            if (m_CameraManager.TryAcquireLatestCpuImage(out XRCpuImage cameraImage)) {
-                using (cameraImage) {
+        if (m_CameraManager.TryAcquireLatestCpuImage(out XRCpuImage cameraImage)) {
+            using (cameraImage) {
+                if (!Vision.working) {
                     UpdateRawImage(m_RawCameraImage, cameraImage, TextureFormat.RGB24, false);
-                    if (tflite) {
-                        // ssd.DoInvoke(m_RawCameraImage.texture);
-                        // yolo.DoInvoke(m_RawCameraImage.texture);
-                        ddrnet.DoInvoke(m_RawCameraImage.texture);
-                    }
-                    else {
-                        StartCoroutine(vision.Detect(m_RawCameraImage.texture));
-                    }
+                    StartCoroutine(vision.Detect(m_RawCameraImage.texture));
                 }
             }
         }
