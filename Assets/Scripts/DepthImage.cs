@@ -113,7 +113,7 @@ public class DepthImage : MonoBehaviour
     private bool doObstacleAvoidance = true;
     float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
     int collisionWindowWidth = 15; // Num. pixels left/right of the middle to check for obstacles
-    float collisionSumThreshold = 2f;
+    float collisionSumThreshold = 1.5f;
     int confidenceMax = 255;
 
     public enum Direction { Left, Right, None }
