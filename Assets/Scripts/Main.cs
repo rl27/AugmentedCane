@@ -3,6 +3,7 @@ using System.Text;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.XR.ARFoundation;
 
 public class Main : MonoBehaviour
 {
@@ -30,12 +31,11 @@ public class Main : MonoBehaviour
     GPSData gps;
 
     [SerializeField]
-    GameObject PointCloudHandler;
+    GameObject XR;
     PointCloud pc;
+    Plane plane;
 
     [SerializeField]
-    GameObject PlaneHandler;
-    Plane plane;
 
     bool depthActive = true;
     bool IMUActive = true;
@@ -57,14 +57,16 @@ public class Main : MonoBehaviour
         depth = DepthHandler.GetComponent<DepthImage>();
         sensors = SensorHandler.GetComponent<SensorData>();
         gps = GPSHandler.GetComponent<GPSData>();
-        pc = PointCloudHandler.GetComponent<PointCloud>();
-        plane = PlaneHandler.GetComponent<Plane>();
+        pc = XR.GetComponent<PointCloud>();
+        plane = XR.GetComponent<Plane>();
 
         DepthHandler.SetActive(depthActive);
         SensorHandler.SetActive(IMUActive);
         GPSHandler.SetActive(GPSActive);
-        PointCloudHandler.SetActive(pcActive);
-        PlaneHandler.SetActive(planeActive);
+        pc.enabled = pcActive;
+        XR.GetComponent<ARPointCloudManager>().enabled = pcActive;
+        plane.enabled = planeActive;
+        XR.GetComponent<ARPlaneManager>().enabled = planeActive;
     }
 
     public void LogButtonPress()
