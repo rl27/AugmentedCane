@@ -1,4 +1,5 @@
-﻿Shader "Vision/Resize"
+﻿// https://github.com/asus4/tf-lite-unity-sample/blob/master/Packages/com.github.asus4.tflite.common/Resources/Resize.shader
+Shader "Vision/Resize"
 {
     Properties
     {

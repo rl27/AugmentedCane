@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// https://github.com/asus4/tf-lite-unity-sample/blob/master/Packages/com.github.asus4.tflite.common/Runtime/DisposeUtil.cs
 public static class DisposeUtil
 {
     public static void TryDispose(RenderTexture tex)
