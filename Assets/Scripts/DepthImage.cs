@@ -186,6 +186,8 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"Camera rotation: {rotation.y}");
 
         // Using focalLength.x for both calculations here
+        // focalLength.y is not accurate
+        // Inspired by: https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/OrientedReticle/Scripts/OrientedReticle.cs#L240
         m_StringBuilder.AppendLine($"FOV: {2*Mathf.Atan(depthWidth/(2*focalLength.x))*Mathf.Rad2Deg}, {2*Mathf.Atan(depthHeight/(2*focalLength.x))*Mathf.Rad2Deg}");
 
         if (Vision.doSidewalkDirection)
