@@ -40,7 +40,7 @@ public class Main : MonoBehaviour
     bool depthActive = true;
     bool IMUActive = true;
     bool GPSActive = true;
-    bool pcActive = false;
+    bool pcActive = true;
     bool planeActive = false;
 
     List<double> gpsCoords = new List<double>();

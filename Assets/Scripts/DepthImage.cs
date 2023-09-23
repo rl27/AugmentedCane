@@ -104,10 +104,10 @@ public class DepthImage : MonoBehaviour
     public static Vector3 rotation;
 
     // These variables are for obstacle avoidance.
-    private bool doObstacleAvoidance = true;
-    float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
+    private bool doObstacleAvoidance = false;
+    public static float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
     int collisionWindowWidth = 15; // Num. pixels left/right of the middle to check for obstacles
-    float collisionSumThreshold = 1.5f;
+    float collisionSumThreshold = 0.25f;
     int confidenceMax = 255;
 
     public enum Direction { Left, Right, None }
@@ -130,10 +130,6 @@ public class DepthImage : MonoBehaviour
             LogDepth("No camera");
             return;
         }
-
-        #if UNITY_EDITOR
-            doObstacleAvoidance = false;
-        #endif
 
         #if UNITY_ANDROID
             confidenceMax = 255;
@@ -165,6 +161,7 @@ public class DepthImage : MonoBehaviour
         // Check if device supports environment depth.
         var descriptor = m_OcclusionManager.descriptor;
         if (descriptor != null && descriptor.environmentDepthImageSupported == Supported.Supported) {
+            doObstacleAvoidance = true;
             LogDepth("Environment depth is supported!");
         }
         else {
@@ -188,6 +185,9 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"Camera position: {position}");
         m_StringBuilder.AppendLine($"Camera rotation: {rotation.y}");
 
+        // Using focalLength.x for both calculations here
+        m_StringBuilder.AppendLine($"FOV: {2*Mathf.Atan(depthWidth/(2*focalLength.x))*Mathf.Rad2Deg}, {2*Mathf.Atan(depthHeight/(2*focalLength.x))*Mathf.Rad2Deg}");
+
         if (Vision.doSidewalkDirection)
             UpdateCameraImage();
 
@@ -202,14 +202,14 @@ public class DepthImage : MonoBehaviour
         // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
         // Screen orientation does not change coordinate locations on the screen.
         // m_StringBuilder.AppendLine("DEPTH:");
-        // m_StringBuilder.AppendLine($"(0.01,0.01): {GetDepth(new Vector2(0.01f, 0.01f))}");
-        // m_StringBuilder.AppendLine($"(0.50,0.50): {GetDepth(new Vector2(0.5f, 0.5f))}");
-        // m_StringBuilder.AppendLine($"(0.99,0.99): {GetDepth(new Vector2(0.99f, 0.99f))}");
+        // m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.1f, 0.1f))}");
+        // m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f))}");
+        // m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f))}");
 
         // m_StringBuilder.AppendLine("CONFIDENCE:");
-        // m_StringBuilder.AppendLine($"(0.01,0.01): {GetConfidence(new Vector2(0.01f, 0.01f))}");
-        // m_StringBuilder.AppendLine($"(0.50,0.50): {GetConfidence(new Vector2(0.5f, 0.5f))}");
-        // m_StringBuilder.AppendLine($"(0.99,0.99): {GetConfidence(new Vector2(0.99f, 0.99f))}");
+        // m_StringBuilder.AppendLine($"(0.1,0.1): {GetConfidence(new Vector2(0.1f, 0.1f))}");
+        // m_StringBuilder.AppendLine($"(0.5,0.5): {GetConfidence(new Vector2(0.5f, 0.5f))}");
+        // m_StringBuilder.AppendLine($"(0.9,0.9): {GetConfidence(new Vector2(0.9f, 0.9f))}");
 
         int numLow = 0;
         int numMed = 0;
@@ -245,7 +245,7 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
         m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
 
-        // Check for obstacles
+        // Check for obstacles using depth image
         float[] closeTotals = AccumulateClosePoints(); // In portrait mode, index 0 = right side, max index = left side
         bool hasObstacle = false;
         int len = closeTotals.Length;
@@ -254,6 +254,13 @@ public class DepthImage : MonoBehaviour
                 hasObstacle = true;
                 break;
             }
+        }
+
+        // Check if point cloud detects obstacle in front
+        if (PointCloudVisualizer.pointAhead) {
+            if (!hasObstacle)
+                m_StringBuilder.AppendLine("Using point");
+            hasObstacle = true;
         }
 
         if (hasObstacle) { // Search for longest gap
@@ -543,7 +550,9 @@ public class DepthImage : MonoBehaviour
         return vertex;
     }
 
-    // Transforms a vertex in local space to world space.
+    // Transforms a vertex in local space to world space
+    // NOTE: Is not quite the same as using camera.ScreenToWorldPoint.
+    // https://forum.unity.com/threads/how-to-get-point-cloud-in-arkit.967681/#post-6340404
     public Vector3 TransformLocalToWorld(Vector3 vertex)
     {
         return localToWorldTransform.MultiplyPoint(vertex);
@@ -588,8 +597,13 @@ public class DepthImage : MonoBehaviour
             intrinsicsScale.x = depthWidth / (float)cameraIntrinsics.resolution.x;
             intrinsicsScale.y = depthHeight / (float)cameraIntrinsics.resolution.y;
 
-            focalLength = MultiplyVector2(cameraIntrinsics.focalLength, intrinsicsScale);
-            principalPoint = MultiplyVector2(cameraIntrinsics.principalPoint, intrinsicsScale);
+            // intrinsicsScale: 0.25, 0.19
+            // cameraIntrinsics.resolution: 640, 480
+            // cameraIntrinsics.focalLength): 442.88, 443.52
+            // cameraIntrinsics.principalPoint: 321.24, 239.47
+
+            focalLength = MultiplyVector2(cameraIntrinsics.focalLength, intrinsicsScale); // On OnePlus 11: close to (110.32, 82.62), but should probably be (110,110)
+            principalPoint = MultiplyVector2(cameraIntrinsics.principalPoint, intrinsicsScale); // This is always close to (depthWidth/2, depthHeight/2)
         }
     }
 
