@@ -76,8 +76,8 @@ public class PointCloudVisualizer : MonoBehaviour
         points = new Dictionary<ulong, Vector3>();
         for (int i = 0; i < positions.Length; i++) {
             ulong id = identifiers[i];
-            if (!confidences.ContainsKey(id) || confidences[id] > 0.2)
-                points[id] = positions[i];
+            // if (!confidences.ContainsKey(id) || confidences[id] > 0.2)
+            points[id] = positions[i];
         }
 
         UpdateParticles(points, points.Count);
