@@ -254,7 +254,6 @@ public class DepthImage : MonoBehaviour
         int len = closeTotals.Length;
         for (int i = len/2 - collisionWindowWidth; i < len/2 + collisionWindowWidth + 1; i++) {
             if (closeTotals[i] > collisionSumThreshold) {
-                m_StringBuilder.AppendLine("Depth obstacle");
                 hasObstacle = true;
                 break;
             }
@@ -262,7 +261,8 @@ public class DepthImage : MonoBehaviour
 
         // Check if point cloud detects obstacle in front
         if (PointCloudVisualizer.pointAhead) {
-            m_StringBuilder.AppendLine("Point ahead");
+            if (!hasObstacle)
+                m_StringBuilder.AppendLine("Point reliance");
             hasObstacle = true;
         }
 
