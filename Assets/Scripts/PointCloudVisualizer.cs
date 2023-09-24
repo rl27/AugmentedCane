@@ -32,7 +32,7 @@ public class PointCloudVisualizer : MonoBehaviour
     Color32 failColor = Color.red;
     float startSize;
 
-    public static bool pointAhead = false;
+    public static int pointAhead = 0; // 0 = no obstacle; 1 = go left; 2 = go right
 
     void Awake()
     {
@@ -96,8 +96,12 @@ public class PointCloudVisualizer : MonoBehaviour
         float sin = Mathf.Sin(DepthImage.rotation.y * Mathf.Deg2Rad);
         float cos = Mathf.Cos(DepthImage.rotation.y * Mathf.Deg2Rad);
 
-        pointAhead = false;
+        pointAhead = 0;
         int index = 0;
+        float leftCount = 0;
+        float leftSum = 0;
+        float rightCount = 0;
+        float rightSum = 0;
         foreach (var kvp in pts) {
             Vector3 pos = kvp.Value;
             Vector3 translated = pos - userLoc;
@@ -108,7 +112,14 @@ public class PointCloudVisualizer : MonoBehaviour
                 float rZ = sin*translated.x + cos*translated.z;
                 // Distance & width check
                 if (rZ > 0 && rZ < DepthImage.distanceToObstacle && rX > -DepthImage.pointCollisionWidth && rX < DepthImage.pointCollisionWidth) {
-                    pointAhead = true;
+                    if (rX > 0) {
+                        rightCount += rZ;
+                        rightSum += 1;
+                    }
+                    else {
+                        leftCount += rZ;
+                        leftCount += 1;
+                    }
                     particles[index].startColor = failColor;
                 }
             }
@@ -117,6 +128,12 @@ public class PointCloudVisualizer : MonoBehaviour
             particles[index].position = pos;
             particles[index].remainingLifetime = 1f;
             index++;
+        }
+
+        if (leftCount != 0 || rightCount != 0) {
+            float leftAvg = (leftCount == 0) ? Single.PositiveInfinity : leftSum/leftCount;
+            float rightAvg = (rightCount == 0) ? Single.PositiveInfinity : rightSum/rightCount;
+            pointAhead = (leftAvg > rightAvg) ? 1 : 2;
         }
 
         // Remove any extra pre-existing particles

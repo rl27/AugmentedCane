@@ -250,7 +250,7 @@ public class DepthImage : MonoBehaviour
         // m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
 
         // Check for obstacles using depth image
-        float[] closeTotals = AccumulateClosePoints(); // In portrait mode, index 0 = right side, max index = left side
+        (float[] closeTotals, bool avgGoLeft) = AccumulateClosePoints(); // In portrait mode, index 0 = right side, max index = left side
         bool hasObstacle = false;
         int len = closeTotals.Length;
         for (int i = 0; i < closeTotals.Length; i++) {
@@ -259,14 +259,6 @@ public class DepthImage : MonoBehaviour
                 break;
             }
         }
-
-        // Check if point cloud detects obstacle in front
-        if (PointCloudVisualizer.pointAhead) {
-            if (!hasObstacle)
-                m_StringBuilder.AppendLine("Point reliance");
-            hasObstacle = true;
-        }
-
         if (hasObstacle) { // Search for longest gap
             m_StringBuilder.AppendLine("Obstacle: Yes");
             int start = 0, end = 0, temp = 0;
@@ -295,28 +287,25 @@ public class DepthImage : MonoBehaviour
             // Sides/indices will be flipped depending on screen orientation
             if (end - start > collisionWindowWidth) {
                 goLeft = (start+end)/2 > len/2;
+                if (Screen.orientation == ScreenOrientation.PortraitUpsideDown || Screen.orientation == ScreenOrientation.LandscapeLeft)
+                    goLeft = !goLeft;
             }
             else { // Otherwise, take side with higher avg distance
-                float leftAvg, rightAvg;
-                if (IsPortrait()) {
-                    leftAvg = GetDepthAvg(0, depthWidth, depthHeight/2, depthHeight);
-                    rightAvg = GetDepthAvg(0, depthWidth, 0, depthHeight/2);
-                }
-                else {
-                    leftAvg = GetDepthAvg(depthWidth/2, depthWidth, 0, depthHeight);
-                    rightAvg = GetDepthAvg(0, depthWidth/2, 0, depthHeight);
-                }
-                goLeft = leftAvg > rightAvg;
+                goLeft = avgGoLeft;
             }
-            if (Screen.orientation == ScreenOrientation.PortraitUpsideDown || Screen.orientation == ScreenOrientation.LandscapeLeft)
-                goLeft = !goLeft;
+            
             direction = goLeft ? Direction.Left : Direction.Right;
             m_StringBuilder.AppendLine(goLeft ? "Dir: Left" : "Dir: Right");
             PlayCollision(goLeft ? -1 : 1);
         }
-        else {
-            m_StringBuilder.AppendLine("Obstacle: No");
+        // If depth image detects no obstacle, check if point cloud detects obstacle
+        else if (PointCloudVisualizer.pointAhead != 0) {
+            m_StringBuilder.AppendLine("Point Obstacle: Yes");
+            bool goLeft = (PointCloudVisualizer.pointAhead == 1);
+            m_StringBuilder.AppendLine(goLeft ? "Dir: Left" : "Dir: Right");
+            PlayCollision(goLeft ? -1 : 1);
         }
+        else m_StringBuilder.AppendLine("Obstacle: No");
     }
 
     private void UpdateDepthImages()
@@ -623,7 +612,7 @@ public class DepthImage : MonoBehaviour
     // This function returns a 1D array representing a horizontal row of pixels.
     // Each point in the 2D depth array that is (1) high enough confidence and (2) within a certain distance
     // will give a weighted vote towards the corresponding value in the 1D array.
-    private float[] AccumulateClosePoints()
+    private (float[], bool) AccumulateClosePoints()
     {
         bool portrait = IsPortrait();
         float[] output = new float[portrait ? depthHeight : depthWidth];
@@ -631,43 +620,46 @@ public class DepthImage : MonoBehaviour
         float sin = Mathf.Sin(rotation.y * Mathf.Deg2Rad);
         float cos = Mathf.Cos(rotation.y * Mathf.Deg2Rad);
 
+        float leftSum = 0;
+        float leftCount = 0;
+        float rightSum = 0;
+        float rightCount = 0;
+
         for (int y = 0; y < depthHeight; y++) {
             for (int x = 0; x < depthWidth; x++) {
-                float dist = GetDepth(x, y);
-                if (dist > distanceToObstacle) continue;
                 float conf = GetConfidence(x, y);
                 if (conf == 0) continue;
 
+                float dist = GetDepth(x, y);
                 Vector3 pos = TransformLocalToWorld(ComputeVertex(x, y, dist));
                 Vector3 translated = pos - position;
                 if (translated.y > -pointCollisionDown && translated.y < pointCollisionUp) { // Height check
                     float rX = cos*translated.x - sin*translated.z;
-                    // float rZ = sin*translated.x + cos*translated.z;
+                    float rZ = sin*translated.x + cos*translated.z;
                     // Distance & width check
-                    if (rX > -DepthImage.pointCollisionWidth && rX < DepthImage.pointCollisionWidth) {
+                    if (rZ > 0 && rZ < distanceToObstacle && rX > -DepthImage.pointCollisionWidth && rX < DepthImage.pointCollisionWidth) {
                         output[portrait ? y : x] += conf / confidenceMax;
+                    }
+
+                    if (rX > 0) {
+                        rightCount += rZ;
+                        rightSum += 1;
+                    }
+                    else {
+                        leftCount += rZ;
+                        leftCount += 1;
                     }
                 }
             }
         }
 
-        return output;
-    }
-
-    // Get average of confidence-weighted depth values over the given coordinates
-    private float GetDepthAvg(int xmin, int xmax, int ymin, int ymax)
-    {
-        float sum = 0;
-        float count = 0;
-        for (int y = ymin; y < ymax; y++) {
-            for (int x = xmin; x < xmax; x++) {
-                float confidence = GetConfidence(x, y);
-                if (confidence > 0) {
-                    sum += confidence * GetDepth(x, y);
-                    count += confidence;
-                }
-            }
+        bool avgGoLeft = false;
+        if (leftCount != 0 || rightCount != 0) {
+            float leftAvg = (leftCount == 0) ? Single.PositiveInfinity : leftSum/leftCount;
+            float rightAvg = (rightCount == 0) ? Single.PositiveInfinity : rightSum/rightCount;
+            avgGoLeft = leftAvg > rightAvg;
         }
-        return (count != 0) ? (sum / count) : 0;
+
+        return (output, avgGoLeft);
     }
 }
