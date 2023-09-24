@@ -107,8 +107,12 @@ public class DepthImage : MonoBehaviour
     private bool doObstacleAvoidance = true;
     public static float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
     int collisionWindowWidth = 15; // Num. pixels left/right of the middle to check for obstacles
-    float collisionSumThreshold = 0.25f;
+    float collisionSumThreshold = 1.1f;
     int confidenceMax = 255;
+
+    public static float pointCollisionWidth = 0.3f; // Left & right distance (in meters) to check for point collision
+    public static float pointCollisionUp = 0.8f; // Up & down distance
+    public static float pointCollisionDown = 1.0f; // Up & down distance
 
     public enum Direction { Left, Right, None }
     public static Direction direction = Direction.None;
@@ -252,8 +256,9 @@ public class DepthImage : MonoBehaviour
         float[] closeTotals = AccumulateClosePoints(); // In portrait mode, index 0 = right side, max index = left side
         bool hasObstacle = false;
         int len = closeTotals.Length;
-        for (int i = len/2 - collisionWindowWidth; i < len/2 + collisionWindowWidth + 1; i++) {
-            if (closeTotals[i] > collisionSumThreshold) {
+        // for (int i = len/2 - collisionWindowWidth; i < len/2 + collisionWindowWidth + 1; i++) {
+        for (int i = 0; i < closeTotals.Length; i++) {
+            if (closeTotals[i] >= collisionSumThreshold) {
                 hasObstacle = true;
                 break;
             }
@@ -617,25 +622,35 @@ public class DepthImage : MonoBehaviour
 
     // This function returns a 1D array representing a horizontal row of pixels.
     // Each point in the 2D depth array that is (1) high enough confidence and (2) within a certain distance
-    // will give 1 vote towards the corresponding value in the 1D array.
+    // will give a weighted vote towards the corresponding value in the 1D array.
     private float[] AccumulateClosePoints()
     {
         bool portrait = IsPortrait();
-        int widthStart = 0, widthEnd = depthWidth;
-        float cutoff = 0.25f;
-        if (Screen.orientation == ScreenOrientation.Portrait)
-            (widthStart, widthEnd) = (0, (int) ((1-cutoff) * depthWidth));
-        else if (Screen.orientation == ScreenOrientation.PortraitUpsideDown)
-            (widthStart, widthEnd) = ((int) (cutoff * depthWidth), depthWidth);
         float[] output = new float[portrait ? depthHeight : depthWidth];
+
+        float sin = Mathf.Sin(rotation.y * Mathf.Deg2Rad);
+        float cos = Mathf.Cos(rotation.y * Mathf.Deg2Rad);
+
         for (int y = 0; y < depthHeight; y++) {
-            for (int x = widthStart; x < widthEnd; x++) {
+            for (int x = 0; x < depthWidth; x++) {
                 float dist = GetDepth(x, y);
-                if (dist > distanceToObstacle)
-                    continue;
-                output[portrait ? y : x] += GetConfidence(x, y) / confidenceMax;
+                if (dist > distanceToObstacle) continue;
+                float conf = GetConfidence(x, y);
+                if (conf == 0) continue;
+
+                Vector3 pos = TransformLocalToWorld(ComputeVertex(x, y, dist));
+                Vector3 translated = pos - position;
+                if (translated.y > -pointCollisionDown && translated.y < pointCollisionUp) { // Height check
+                    float rX = cos*translated.x - sin*translated.z;
+                    // float rZ = sin*translated.x + cos*translated.z;
+                    // Distance & width check
+                    if (rX > -DepthImage.pointCollisionWidth && rX < DepthImage.pointCollisionWidth) {
+                        output[portrait ? y : x] += conf / confidenceMax;
+                    }
+                }
             }
         }
+
         return output;
     }
 
