@@ -213,39 +213,39 @@ public class DepthImage : MonoBehaviour
         // m_StringBuilder.AppendLine($"(0.5,0.5): {GetConfidence(new Vector2(0.5f, 0.5f))}");
         // m_StringBuilder.AppendLine($"(0.9,0.9): {GetConfidence(new Vector2(0.9f, 0.9f))}");
 
-        int numLow = 0;
-        int numMed = 0;
-        int numHigh = 0;
-        #if UNITY_ANDROID
-            for (int y = 0; y < depthHeight; y++) {
-                for (int x = 0; x < depthWidth; x++) {
-                    int val = confidenceArray[(y * depthWidth) + x];
-                    if (val < 40)
-                        numLow += 1;
-                    else if (val < 255)
-                        numMed += 1;
-                    else if (val == 255)
-                        numHigh += 1;
-                }
-            }
-        #elif UNITY_IOS
-            for (int y = 0; y < depthHeight; y++) {
-                for (int x = 0; x < depthWidth; x++) {
-                    int val = confidenceArray[(y * depthWidth) + x];
-                    if (val == 0)
-                        numLow += 1;
-                    else if (val == 1)
-                        numMed += 1;
-                    else if (val == 2)
-                        numHigh += 1;
-                }
-            }
-        #endif
-        int numPixels = depthWidth * depthHeight;
-        m_StringBuilder.AppendLine("CONFIDENCE PROPORTIONS:");
-        m_StringBuilder.AppendLine($"Low: {(float) numLow / numPixels}");
-        m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
-        m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
+        // int numLow = 0;
+        // int numMed = 0;
+        // int numHigh = 0;
+        // #if UNITY_ANDROID
+        //     for (int y = 0; y < depthHeight; y++) {
+        //         for (int x = 0; x < depthWidth; x++) {
+        //             int val = confidenceArray[(y * depthWidth) + x];
+        //             if (val == 0)
+        //                 numLow += 1;
+        //             else if (val < 255)
+        //                 numMed += 1;
+        //             else if (val == 255)
+        //                 numHigh += 1;
+        //         }
+        //     }
+        // #elif UNITY_IOS
+        //     for (int y = 0; y < depthHeight; y++) {
+        //         for (int x = 0; x < depthWidth; x++) {
+        //             int val = confidenceArray[(y * depthWidth) + x];
+        //             if (val == 0)
+        //                 numLow += 1;
+        //             else if (val == 1)
+        //                 numMed += 1;
+        //             else if (val == 2)
+        //                 numHigh += 1;
+        //         }
+        //     }
+        // #endif
+        // int numPixels = depthWidth * depthHeight;
+        // m_StringBuilder.AppendLine("CONFIDENCE PROPORTIONS:");
+        // m_StringBuilder.AppendLine($"Low: {(float) numLow / numPixels}");
+        // m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
+        // m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
 
         // Check for obstacles using depth image
         float[] closeTotals = AccumulateClosePoints(); // In portrait mode, index 0 = right side, max index = left side
@@ -253,6 +253,7 @@ public class DepthImage : MonoBehaviour
         int len = closeTotals.Length;
         for (int i = len/2 - collisionWindowWidth; i < len/2 + collisionWindowWidth + 1; i++) {
             if (closeTotals[i] > collisionSumThreshold) {
+                m_StringBuilder.AppendLine("Depth image");
                 hasObstacle = true;
                 break;
             }
@@ -260,8 +261,7 @@ public class DepthImage : MonoBehaviour
 
         // Check if point cloud detects obstacle in front
         if (PointCloudVisualizer.pointAhead) {
-            if (!hasObstacle)
-                m_StringBuilder.AppendLine("Using point");
+            m_StringBuilder.AppendLine("Point ahead");
             hasObstacle = true;
         }
 
@@ -363,7 +363,7 @@ public class DepthImage : MonoBehaviour
     private void PlayCollision(int mag)
     {
         float localRot = -rotation.y * Mathf.Deg2Rad;
-        AudioHandler.transform.position = position + new Vector3(mag * Mathf.Cos(localRot), mag * Mathf.Sin(localRot), 0);
+        AudioHandler.transform.position = position + new Vector3(mag * Mathf.Cos(localRot), 0, mag * Mathf.Sin(localRot));
         audioPlayer.PlayCollision();
     }
 

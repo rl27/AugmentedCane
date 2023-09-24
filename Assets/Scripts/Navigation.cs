@@ -257,7 +257,7 @@ public class Navigation : MonoBehaviour
             float rad = (float) relHeading * Mathf.Deg2Rad;
             float mag = Mathf.Sin(rad);
             float localRot = -DepthImage.rotation.y * Mathf.Deg2Rad;
-            AudioSourceObject.transform.position = DepthImage.position + new Vector3(Mathf.Cos(localRot) * mag, Mathf.Sin(localRot) * mag, 0);
+            AudioSourceObject.transform.position = DepthImage.position + new Vector3(Mathf.Cos(localRot) * mag, 0, Mathf.Sin(localRot) * mag);
 
             double absDiff = Math.Abs(relHeading);
             audioSource.pitch = (float) (1 - (1 - minPitch) * (absDiff / offAxisAngle)); // Range: [minPitch, 1]

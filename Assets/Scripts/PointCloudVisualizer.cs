@@ -32,6 +32,9 @@ public class PointCloudVisualizer : MonoBehaviour
     Color32 failColor = Color.red;
     float startSize;
 
+    float pointCollisionWidth = 0.5f; // Left & right distance (in meters) to check for point collision
+    float pointCollisionHeight = 0.8f; // Up & down distance
+
     public static bool pointAhead = false;
 
     void Awake()
@@ -87,20 +90,29 @@ public class PointCloudVisualizer : MonoBehaviour
     // Set numParticles to positions.Length if only rendering points in the current frame.
     void UpdateParticles(IEnumerable<KeyValuePair<ulong, Vector3>> pts, int numParticles)
     {
-        pointAhead = false;
-
         // Create or resize particle array if necessary
         if (particles == null || (particles.Length < numParticles && particles.Length < maxPoints))
             particles = new ParticleSystem.Particle[(int) (1.5 * numParticles)]; // Create an array with extra space to reduce re-creations.
 
+        // For calculations
+        Vector3 userLoc = DepthImage.position;
+        float sin = Mathf.Sin(DepthImage.rotation.y * Mathf.Deg2Rad);
+        float cos = Mathf.Cos(DepthImage.rotation.y * Mathf.Deg2Rad);
+
+        pointAhead = false;
         int index = 0;
         foreach (var kvp in pts) {
             Vector3 pos = kvp.Value;
+            Vector3 translated = pos - userLoc;
 
             particles[index].startColor = startColor;
-            if (IsClose(pos)) {
-                particles[index].startColor = failColor;
-                // pointAhead = true;
+            if (translated.y > -pointCollisionHeight && translated.y < pointCollisionHeight) { // Height check
+                float rX = cos*translated.x - sin*translated.z;
+                float rZ = sin*translated.x + cos*translated.z;
+                if (rZ > 0 && rZ < DepthImage.distanceToObstacle && rX > -pointCollisionWidth && rX < pointCollisionWidth) {
+                    pointAhead = true;
+                    particles[index].startColor = failColor;
+                }
             }
 
             particles[index].startSize = startSize;
@@ -117,8 +129,8 @@ public class PointCloudVisualizer : MonoBehaviour
         prevNumParticles = numParticles;
     }
 
-    private bool IsClose(Vector3 a) {
-        Vector3 b = DepthImage.position;
-        return (a.x-b.x)*(a.x-b.x) + (a.z-b.z)*(a.z-b.z) <= DepthImage.distanceToObstacle*DepthImage.distanceToObstacle;
-    }
+    // private bool IsClose(Vector3 a) {
+    //     Vector3 b = DepthImage.position;
+    //     return (a.x-b.x)*(a.x-b.x) + (a.z-b.z)*(a.z-b.z) <= DepthImage.distanceToObstacle*DepthImage.distanceToObstacle;
+    // }
 }
