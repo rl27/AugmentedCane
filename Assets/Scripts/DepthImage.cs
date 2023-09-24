@@ -104,7 +104,7 @@ public class DepthImage : MonoBehaviour
     public static Vector3 rotation;
 
     // These variables are for obstacle avoidance.
-    private bool doObstacleAvoidance = false;
+    private bool doObstacleAvoidance = true;
     public static float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
     int collisionWindowWidth = 15; // Num. pixels left/right of the middle to check for obstacles
     float collisionSumThreshold = 0.25f;
@@ -161,12 +161,13 @@ public class DepthImage : MonoBehaviour
         // Check if device supports environment depth.
         var descriptor = m_OcclusionManager.descriptor;
         if (descriptor != null && descriptor.environmentDepthImageSupported == Supported.Supported) {
-            doObstacleAvoidance = true;
             LogDepth("Environment depth is supported!");
         }
         else {
-            if (descriptor == null || descriptor.environmentDepthImageSupported == Supported.Unsupported)
+            if (descriptor == null || descriptor.environmentDepthImageSupported == Supported.Unsupported) {
                 LogDepth("Environment depth is not supported on this device.");
+                doObstacleAvoidance = false;
+            }
             else if (descriptor.environmentDepthImageSupported == Supported.Unknown)
                 LogDepth("Determining environment depth support...");
             m_RawImage.texture = null;
@@ -253,7 +254,7 @@ public class DepthImage : MonoBehaviour
         int len = closeTotals.Length;
         for (int i = len/2 - collisionWindowWidth; i < len/2 + collisionWindowWidth + 1; i++) {
             if (closeTotals[i] > collisionSumThreshold) {
-                m_StringBuilder.AppendLine("Depth image");
+                m_StringBuilder.AppendLine("Depth obstacle");
                 hasObstacle = true;
                 break;
             }

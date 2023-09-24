@@ -33,7 +33,8 @@ public class PointCloudVisualizer : MonoBehaviour
     float startSize;
 
     float pointCollisionWidth = 0.5f; // Left & right distance (in meters) to check for point collision
-    float pointCollisionHeight = 0.8f; // Up & down distance
+    float pointCollisionUp = 0.8f; // Up & down distance
+    float pointCollisionDown = 1.0f; // Up & down distance
 
     public static bool pointAhead = false;
 
@@ -106,7 +107,7 @@ public class PointCloudVisualizer : MonoBehaviour
             Vector3 translated = pos - userLoc;
 
             particles[index].startColor = startColor;
-            if (translated.y > -pointCollisionHeight && translated.y < pointCollisionHeight) { // Height check
+            if (translated.y > -pointCollisionDown && translated.y < pointCollisionUp) { // Height check
                 float rX = cos*translated.x - sin*translated.z;
                 float rZ = sin*translated.x + cos*translated.z;
                 if (rZ > 0 && rZ < DepthImage.distanceToObstacle && rX > -pointCollisionWidth && rX < pointCollisionWidth) {
