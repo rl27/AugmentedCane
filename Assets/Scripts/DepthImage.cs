@@ -106,7 +106,7 @@ public class DepthImage : MonoBehaviour
     // These variables are for obstacle avoidance.
     private bool doObstacleAvoidance = true;
     public static float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
-    int collisionWindowWidth = 15; // Num. pixels left/right of the middle to check for obstacles
+    int collisionWindowWidth = 24; // Min. pixel gap to go through
     float collisionSumThreshold = 1.1f;
     int confidenceMax = 255;
 
@@ -256,7 +256,6 @@ public class DepthImage : MonoBehaviour
         float[] closeTotals = AccumulateClosePoints(); // In portrait mode, index 0 = right side, max index = left side
         bool hasObstacle = false;
         int len = closeTotals.Length;
-        // for (int i = len/2 - collisionWindowWidth; i < len/2 + collisionWindowWidth + 1; i++) {
         for (int i = 0; i < closeTotals.Length; i++) {
             if (closeTotals[i] >= collisionSumThreshold) {
                 hasObstacle = true;
