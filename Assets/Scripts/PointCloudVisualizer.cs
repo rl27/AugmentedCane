@@ -78,7 +78,7 @@ public class PointCloudVisualizer : MonoBehaviour
             ulong id = identifiers[i];
             // if (!confidences.ContainsKey(id) || confidences[id] > 0.2)
             // iPhone has a problem with generating points right on top of the camera, so we don't use points that are too close
-            if ((DepthImage.position - positions[i]).sqrMagnitude > 0.1f)
+            if ((DepthImage.position - positions[i]).sqrMagnitude > 0.15f)
                 points[id] = positions[i];
         }
 
@@ -104,7 +104,7 @@ public class PointCloudVisualizer : MonoBehaviour
         float leftSum = 0;
         float rightCount = 0;
         float rightSum = 0;
-        bool hasObstacle = false;
+        bool numPoints = 0;
         foreach (var kvp in pts) {
             Vector3 pos = kvp.Value;
             Vector3 translated = pos - userLoc;
@@ -115,7 +115,7 @@ public class PointCloudVisualizer : MonoBehaviour
                 float rZ = sin*translated.x + cos*translated.z;
                 // Distance & width check
                 if (rZ > 0 && rZ < DepthImage.distanceToObstacle && rX > -DepthImage.pointCollisionWidth && rX < DepthImage.pointCollisionWidth) {
-                    hasObstacle = true;
+                    numPoints += 1;
                     particles[index].startColor = failColor;
                 }
                 if (rX > 0) {
@@ -134,7 +134,7 @@ public class PointCloudVisualizer : MonoBehaviour
             index++;
         }
 
-        if (hasObstacle) {
+        if (numPoints >= 3) {
             float leftAvg = (leftCount == 0) ? Single.PositiveInfinity : leftSum/leftCount;
             float rightAvg = (rightCount == 0) ? Single.PositiveInfinity : rightSum/rightCount;
             pointAhead = (leftAvg > rightAvg) ? 1 : 2;
