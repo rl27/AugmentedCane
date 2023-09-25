@@ -104,7 +104,7 @@ public class PointCloudVisualizer : MonoBehaviour
         float leftSum = 0;
         float rightCount = 0;
         float rightSum = 0;
-        bool numPoints = 0;
+        int numPoints = 0;
         foreach (var kvp in pts) {
             Vector3 pos = kvp.Value;
             Vector3 translated = pos - userLoc;
