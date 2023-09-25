@@ -102,6 +102,7 @@ public class PointCloudVisualizer : MonoBehaviour
         float leftSum = 0;
         float rightCount = 0;
         float rightSum = 0;
+        bool hasObstacle = false;
         foreach (var kvp in pts) {
             Vector3 pos = kvp.Value;
             Vector3 translated = pos - userLoc;
@@ -112,15 +113,16 @@ public class PointCloudVisualizer : MonoBehaviour
                 float rZ = sin*translated.x + cos*translated.z;
                 // Distance & width check
                 if (rZ > 0 && rZ < DepthImage.distanceToObstacle && rX > -DepthImage.pointCollisionWidth && rX < DepthImage.pointCollisionWidth) {
-                    if (rX > 0) {
-                        rightSum += rZ;
-                        rightCount += 1;
-                    }
-                    else {
-                        leftSum += rZ;
-                        leftCount += 1;
-                    }
+                    hasObstacle = true;
                     particles[index].startColor = failColor;
+                }
+                if (rX > 0) {
+                    rightSum += rZ;
+                    rightCount += 1;
+                }
+                else {
+                    leftSum += rZ;
+                    leftCount += 1;
                 }
             }
 
@@ -130,7 +132,7 @@ public class PointCloudVisualizer : MonoBehaviour
             index++;
         }
 
-        if (leftCount != 0 || rightCount != 0) {
+        if (hasObstacle) {
             float leftAvg = (leftCount == 0) ? Single.PositiveInfinity : leftSum/leftCount;
             float rightAvg = (rightCount == 0) ? Single.PositiveInfinity : rightSum/rightCount;
             pointAhead = (leftAvg > rightAvg) ? 1 : 2;
