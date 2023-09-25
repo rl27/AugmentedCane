@@ -78,7 +78,7 @@ public class PointCloudVisualizer : MonoBehaviour
             ulong id = identifiers[i];
             // if (!confidences.ContainsKey(id) || confidences[id] > 0.2)
             // iPhone has a problem with generating points right on top of the camera, so we don't use points that are too close
-            if ((DepthImage.position - positions[i]).sqrMagnitude > 0.15f)
+            if ((DepthImage.position - positions[i]).sqrMagnitude > 0.12f)
                 points[id] = positions[i];
         }
 
@@ -134,7 +134,7 @@ public class PointCloudVisualizer : MonoBehaviour
             index++;
         }
 
-        if (numPoints >= 3) {
+        if (numPoints >= 2) {
             float leftAvg = (leftCount == 0) ? Single.PositiveInfinity : leftSum/leftCount;
             float rightAvg = (rightCount == 0) ? Single.PositiveInfinity : rightSum/rightCount;
             pointAhead = (leftAvg > rightAvg) ? 1 : 2;
