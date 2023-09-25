@@ -77,7 +77,9 @@ public class PointCloudVisualizer : MonoBehaviour
         for (int i = 0; i < positions.Length; i++) {
             ulong id = identifiers[i];
             // if (!confidences.ContainsKey(id) || confidences[id] > 0.2)
-            points[id] = positions[i];
+            // iPhone has a problem with generating points right on top of the camera, so we don't use points that are too close
+            if ((DepthImage.position - positions[i]).sqrMagnitude > 0.1f)
+                points[id] = positions[i];
         }
 
         UpdateParticles(points, points.Count);
@@ -112,8 +114,7 @@ public class PointCloudVisualizer : MonoBehaviour
                 float rX = cos*translated.x - sin*translated.z;
                 float rZ = sin*translated.x + cos*translated.z;
                 // Distance & width check
-                // iPhone has a problem with generating points right on top of the camera, so we don't use points that are too close
-                if (rZ > 0.2f && rZ < DepthImage.distanceToObstacle && rX > -DepthImage.pointCollisionWidth && rX < DepthImage.pointCollisionWidth) {
+                if (rZ > 0 && rZ < DepthImage.distanceToObstacle && rX > -DepthImage.pointCollisionWidth && rX < DepthImage.pointCollisionWidth) {
                     hasObstacle = true;
                     particles[index].startColor = failColor;
                 }
