@@ -112,7 +112,8 @@ public class PointCloudVisualizer : MonoBehaviour
                 float rX = cos*translated.x - sin*translated.z;
                 float rZ = sin*translated.x + cos*translated.z;
                 // Distance & width check
-                if (rZ > 0 && rZ < DepthImage.distanceToObstacle && rX > -DepthImage.pointCollisionWidth && rX < DepthImage.pointCollisionWidth) {
+                // iPhone has a problem with generating points right on top of the camera, so we don't use points that are too close
+                if (rZ > 0.2f && rZ < DepthImage.distanceToObstacle && rX > -DepthImage.pointCollisionWidth && rX < DepthImage.pointCollisionWidth) {
                     hasObstacle = true;
                     particles[index].startColor = failColor;
                 }

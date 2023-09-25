@@ -5,6 +5,8 @@ using UnityEngine.XR.ARFoundation;
 // Reference: https://github.com/Unity-Technologies/arfoundation-samples/tree/main/Assets/Scenes/PointClouds
 
 // TODO? Track added/removed point clouds using eventArgs. So far it seems there is always 1 point cloud added and 0 removed.
+// ARCore only produces one point cloud. https://github.com/needle-mirror/com.unity.xr.arcore/blob/master/Documentation~/arcore-point-clouds.md
+// ARKit only produces one point cloud. https://github.com/needle-mirror/com.unity.xr.arkit/blob/master/Documentation~/arkit-point-clouds.md
 
 [RequireComponent(typeof(ARPointCloudManager))]
 
