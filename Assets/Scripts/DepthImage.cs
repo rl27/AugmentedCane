@@ -253,14 +253,17 @@ public class DepthImage : MonoBehaviour
         (float[] closeTotals, bool avgGoLeft) = AccumulateClosePoints(); // In portrait mode, index 0 = right side, max index = left side
         bool hasObstacle = false;
         int len = closeTotals.Length;
-        for (int i = 0; i < closeTotals.Length; i++) {
+        for (int i = 0; i < len; i++) {
             if (closeTotals[i] >= collisionSumThreshold) {
                 hasObstacle = true;
                 break;
             }
         }
-        if (hasObstacle) { // Search for longest gap
+        // Obstacle detected in depth image
+        if (hasObstacle) {
             m_StringBuilder.AppendLine("Obstacle: Yes");
+
+            // Search for longest gap
             int start = 0, end = 0, temp = 0;
             bool open = false;
             for (int i = 0; i < len-1; i++) {
@@ -290,7 +293,7 @@ public class DepthImage : MonoBehaviour
                 if (Screen.orientation == ScreenOrientation.PortraitUpsideDown || Screen.orientation == ScreenOrientation.LandscapeLeft)
                     goLeft = !goLeft;
             }
-            else { // Otherwise, take side with higher avg distance
+            else { // Longest gap isn't long enough; take side with higher avg distance
                 goLeft = avgGoLeft;
             }
             
@@ -305,7 +308,7 @@ public class DepthImage : MonoBehaviour
             m_StringBuilder.AppendLine(goLeft ? "Dir: Left" : "Dir: Right");
             PlayCollision(goLeft ? -1 : 1);
         }
-        else m_StringBuilder.AppendLine("Obstacle: No");
+        // else m_StringBuilder.AppendLine("Obstacle: No");
     }
 
     private void UpdateDepthImages()
@@ -641,24 +644,22 @@ public class DepthImage : MonoBehaviour
                         output[portrait ? y : x] += conf / confidenceMax;
                     }
 
+                    // Weighted depth averages using points that pass the height check
                     if (rX > 0) {
-                        rightCount += rZ;
-                        rightSum += 1;
+                        rightSum += rZ * conf;
+                        rightCount += conf;
                     }
                     else {
-                        leftCount += rZ;
-                        leftCount += 1;
+                        leftSum += rZ * conf;
+                        leftCount += conf;
                     }
                 }
             }
         }
 
-        bool avgGoLeft = false;
-        if (leftCount != 0 || rightCount != 0) {
-            float leftAvg = (leftCount == 0) ? Single.PositiveInfinity : leftSum/leftCount;
-            float rightAvg = (rightCount == 0) ? Single.PositiveInfinity : rightSum/rightCount;
-            avgGoLeft = leftAvg > rightAvg;
-        }
+        float leftAvg = (leftCount == 0) ? Single.PositiveInfinity : leftSum/leftCount;
+        float rightAvg = (rightCount == 0) ? Single.PositiveInfinity : rightSum/rightCount;
+        bool avgGoLeft = leftAvg > rightAvg;
 
         return (output, avgGoLeft);
     }

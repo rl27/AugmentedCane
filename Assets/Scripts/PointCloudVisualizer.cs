@@ -66,11 +66,11 @@ public class PointCloudVisualizer : MonoBehaviour
         var identifiers = pointCloud.identifiers.Value;
 
         // ARKit does not provide point cloud confidence values. https://forum.unity.com/threads/getconfidence-method-for-arkit-pointcloud.614920
-        if (pointCloud.confidenceValues.HasValue) {
-            var conf = pointCloud.confidenceValues.Value;
-            for (int i = 0; i < positions.Length; i++)
-                confidences[identifiers[i]] = conf[i];
-        }
+        // if (pointCloud.confidenceValues.HasValue) {
+        //     var conf = pointCloud.confidenceValues.Value;
+        //     for (int i = 0; i < positions.Length; i++)
+        //         confidences[identifiers[i]] = conf[i];
+        // }
 
         // Create dictionary with points in current frame
         points = new Dictionary<ulong, Vector3>();
@@ -113,11 +113,11 @@ public class PointCloudVisualizer : MonoBehaviour
                 // Distance & width check
                 if (rZ > 0 && rZ < DepthImage.distanceToObstacle && rX > -DepthImage.pointCollisionWidth && rX < DepthImage.pointCollisionWidth) {
                     if (rX > 0) {
-                        rightCount += rZ;
-                        rightSum += 1;
+                        rightSum += rZ;
+                        rightCount += 1;
                     }
                     else {
-                        leftCount += rZ;
+                        leftSum += rZ;
                         leftCount += 1;
                     }
                     particles[index].startColor = failColor;
