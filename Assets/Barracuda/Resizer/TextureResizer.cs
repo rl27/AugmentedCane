@@ -8,6 +8,7 @@ public class TextureResizer : System.IDisposable
         None = 0, // Resizes the image without keeping the aspect ratio.
         Fit = 1, // Resizes the image to contain full area and padded black pixels.
         Fill = 2, // Trims the image to keep aspect ratio.
+        Bottom = 3, // Same as Fill, but takes bottom of image.
     }
 
     public struct ResizeOptions
@@ -101,7 +102,7 @@ public class TextureResizer : System.IDisposable
         return resizeTexture;
     }
 
-    public static Vector4 GetTextureST(float srcAspect, float dstAspect, AspectMode mode)
+    public static Vector4 GetTextureST(float srcAspect, float dstAspect, AspectMode mode, float rotationDegree)
     {
         switch (mode)
         {
@@ -129,6 +130,43 @@ public class TextureResizer : System.IDisposable
                     float s = srcAspect / dstAspect;
                     return new Vector4(1, s, 0, (1 - s) / 2);
                 }
+            case AspectMode.Bottom:
+                if (rotationDegree == 90) { // Portrait; Take bottom of image
+                    if (srcAspect > dstAspect)
+                    {
+                        float s = dstAspect / srcAspect;
+                        return new Vector4(s, 1, 0, 0);
+                    }
+                    else
+                    {
+                        float s = srcAspect / dstAspect;
+                        return new Vector4(1, s, 0, 1 - s);
+                    }
+                }
+                else if (rotationDegree == -90) { // Upside down portrait; Take top of image
+                    if (srcAspect > dstAspect)
+                    {
+                        float s = dstAspect / srcAspect;
+                        return new Vector4(s, 1, 1 - s, 0);
+                    }
+                    else
+                    {
+                        float s = srcAspect / dstAspect;
+                        return new Vector4(1, s, 0, 0);
+                    }
+                }
+                else { // Landscape; Do same thing as AspectMode.Fill by taking middle of image
+                    if (srcAspect > dstAspect)
+                    {
+                        float s = dstAspect / srcAspect;
+                        return new Vector4(s, 1, (1 - s) / 2, 0);
+                    }
+                    else
+                    {
+                        float s = srcAspect / dstAspect;
+                        return new Vector4(1, s, 0, (1 - s) / 2);
+                    }
+                }
         }
         throw new System.Exception("Unknown aspect mode");
     }
@@ -138,7 +176,7 @@ public class TextureResizer : System.IDisposable
         return GetTextureST(
             (float)sourceTex.width / sourceTex.height, // src
             (float)options.width / options.height, // dst
-            options.aspectMode);
+            options.aspectMode, options.rotationDegree);
     }
 
     private static readonly Matrix4x4 PUSH_MATRIX = Matrix4x4.Translate(new Vector3(0.5f, 0.5f, 0));
