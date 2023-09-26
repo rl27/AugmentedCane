@@ -15,7 +15,6 @@ public class PointCloudVisualizer : MonoBehaviour
 
     // Keep track of all points.
     public Dictionary<ulong, Vector3> points = new Dictionary<ulong, Vector3>();
-    const int maxPoints = 10000;
     public Dictionary<ulong, float> confidences = new Dictionary<ulong, float>();
 
     // ParticleSystem for rendering particles.
@@ -30,6 +29,7 @@ public class PointCloudVisualizer : MonoBehaviour
 
     Color32 startColor;
     Color32 failColor = Color.red;
+    Color32 ignoreColor = Color.yellow;
     float startSize;
 
     public static int pointAhead = 0; // 0 = no obstacle; 1 = go left; 2 = go right
@@ -90,8 +90,8 @@ public class PointCloudVisualizer : MonoBehaviour
     void UpdateParticles(IEnumerable<KeyValuePair<ulong, Vector3>> pts, int numParticles)
     {
         // Create or resize particle array if necessary
-        if (particles == null || (particles.Length < numParticles && particles.Length < maxPoints))
-            particles = new ParticleSystem.Particle[(int) (1.5 * numParticles)]; // Create an array with extra space to reduce re-creations.
+        if (particles == null || particles.Length < numParticles)
+            particles = new ParticleSystem.Particle[(int) (1.5 * numParticles)]; // Create an array with extra space to reduce the number of re-creations.
 
         // For calculations
         Vector3 userLoc = DepthImage.position;
@@ -118,6 +118,7 @@ public class PointCloudVisualizer : MonoBehaviour
                     numPoints += 1;
                     particles[index].startColor = failColor;
                 }
+
                 if (rX > 0) {
                     rightSum += rZ;
                     rightCount += 1;
