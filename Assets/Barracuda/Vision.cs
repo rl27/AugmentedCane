@@ -272,7 +272,7 @@ public class Vision : MonoBehaviour
         float dy = Mathf.Sin(radFromLeft);
         while (x >= 0 && y >= 0 && x < W && y < H) {
             int cls = (int) output[0, 0, (int) x, (int) y];
-            if (onWalkable && (cls < 4 || cls > 8)) // Cast from walkable, reached non-walkable
+            if (onWalkable && (cls < 2 || cls > 8)) // Cast from walkable, reached non-walkable; Including curb, curb cut, grating, and manhole as walkable
                 break;
             else if (!onWalkable && cls >= 4 && cls <= 6) { // Cast from non-walkable, reached walkable
                 valid = true;
