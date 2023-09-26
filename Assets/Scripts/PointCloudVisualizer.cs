@@ -33,6 +33,8 @@ public class PointCloudVisualizer : MonoBehaviour
     float startSize;
 
     public static int pointAhead = 0; // 0 = no obstacle; 1 = go left; 2 = go right
+    public static float ground = -1.0f; // Ground elevation (in meters) relative to camera
+    private const float groundPadding = 0.3f; // Height to add to calculated ground level to count as ground
 
     void Awake()
     {
@@ -109,12 +111,12 @@ public class PointCloudVisualizer : MonoBehaviour
             Vector3 pos = kvp.Value;
             Vector3 translated = pos - userLoc;
 
-            particles[index].startColor = startColor;
-            if (translated.y > -DepthImage.pointCollisionDown && translated.y < DepthImage.pointCollisionUp) { // Height check
+            particles[index].startColor = (translated.y > ground) ? startColor : ignoreColor;
+            if (translated.y > ground && translated.y < ground + DepthImage.personHeight) { // Height check
                 float rX = cos*translated.x - sin*translated.z;
                 float rZ = sin*translated.x + cos*translated.z;
                 // Distance & width check
-                if (rZ > 0 && rZ < DepthImage.distanceToObstacle && rX > -DepthImage.pointCollisionWidth && rX < DepthImage.pointCollisionWidth) {
+                if (rZ > 0 && rZ < DepthImage.distanceToObstacle && rX > -DepthImage.halfPersonWidth && rX < DepthImage.halfPersonWidth) {
                     numPoints += 1;
                     particles[index].startColor = failColor;
                 }

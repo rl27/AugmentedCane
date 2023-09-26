@@ -110,9 +110,8 @@ public class DepthImage : MonoBehaviour
     float collisionSumThreshold = 1.1f;
     int confidenceMax = 255;
 
-    public static float pointCollisionWidth = 0.3f; // Left & right distance (in meters) to check for point collision
-    public static float pointCollisionUp = 0.8f; // Up & down distance
-    public static float pointCollisionDown = 1.0f; // Up & down distance
+    public static float halfPersonWidth = 0.3f; // Estimated half-width of a person
+    public static float personHeight = 1.8f; // Estimated height of a person
 
     public enum Direction { Left, Right, None }
     public static Direction direction = Direction.None;
@@ -636,11 +635,11 @@ public class DepthImage : MonoBehaviour
                 float dist = GetDepth(x, y);
                 Vector3 pos = TransformLocalToWorld(ComputeVertex(x, y, dist));
                 Vector3 translated = pos - position;
-                if (translated.y > -pointCollisionDown && translated.y < pointCollisionUp) { // Height check
+                if (translated.y > PointCloudVisualizer.ground && translated.y < (PointCloudVisualizer.ground + personHeight)) { // Height check
                     float rX = cos*translated.x - sin*translated.z;
                     float rZ = sin*translated.x + cos*translated.z;
                     // Distance & width check
-                    if (rZ > 0 && rZ < distanceToObstacle && rX > -DepthImage.pointCollisionWidth && rX < DepthImage.pointCollisionWidth) {
+                    if (rZ > 0 && rZ < distanceToObstacle && rX > -halfPersonWidth && rX < halfPersonWidth) {
                         output[portrait ? y : x] += conf / confidenceMax;
                     }
 

@@ -42,13 +42,14 @@ public class Plane : MonoBehaviour
         TrackableId lowestPlane = TrackableId.invalidId;
         min = Single.PositiveInfinity;
         foreach (var plane in apm.trackables) {
-            // Check if plane is close to horizontal. Check if plane's center is lower than the previous lowest.
-            if (Mathf.Acos(Vector3.Dot(plane.normal, Vector3.up)) < Mathf.PI / 3f && plane.center.y < min) {
+            // Check if plane's center is lower than the previous lowest
+            if (plane.center.y < min) { // if (Mathf.Acos(Vector3.Dot(plane.normal, Vector3.up)) < Mathf.PI / 3f && plane.center.y < min) {
                 min = plane.center.y;
                 lowestPlane = plane.trackableId;
             }
             plane.GetComponent<PlaneVisualizer>().meshRenderer.material.color = defaultColor;
         }
+        info += "\nLowest plane: " + (min - DepthImage.position.y);
 
         // Set color of lowest plane to cyan
         var visualizer = apm.trackables[lowestPlane].GetComponent<PlaneVisualizer>();
