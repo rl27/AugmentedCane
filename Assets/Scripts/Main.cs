@@ -35,8 +35,6 @@ public class Main : MonoBehaviour
     PointCloud pc;
     Plane plane;
 
-    [SerializeField]
-
     bool depthActive = true;
     bool IMUActive = true;
     bool GPSActive = true;
