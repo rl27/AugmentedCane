@@ -1,5 +1,7 @@
 using System;
 using System.Text;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
@@ -248,8 +250,9 @@ public class DepthImage : MonoBehaviour
         // m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
         // m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
 
+
         // Check for obstacles using depth image
-        (float[] closeTotals, bool avgGoLeft) = AccumulateClosePoints(); // In portrait mode, index 0 = right side, max index = left side
+        (float[] closeTotals, bool avgGoLeft) = ProcessDepthImage(); // In portrait mode, index 0 = right side, max index = left side
         bool hasObstacle = false;
         int len = closeTotals.Length;
         for (int i = 0; i < len; i++) {
@@ -308,6 +311,12 @@ public class DepthImage : MonoBehaviour
             PlayCollision(goLeft ? -1 : 1);
         }
         // else m_StringBuilder.AppendLine("Obstacle: No");
+
+        // Do stuff with floor grid
+        ground = Mathf.Min(0, GetFloor() - position.y + groundPadding);
+        CleanupDict();
+        m_StringBuilder.AppendLine($"Num cells: {grid.Count}");
+        m_StringBuilder.AppendLine($"Ground: {ground}");
     }
 
     private void UpdateDepthImages()
@@ -611,10 +620,66 @@ public class DepthImage : MonoBehaviour
         return new Vector2(v1.x * v2.x, v1.y * v2.y);
     }
 
+    public static float ground = -1.0f; // Ground elevation (in meters) relative to camera
+    private const float groundPadding = 0.25f; // Height to add to calculated ground level to count as ground
+
+    // Dict keys are grid points. Each value is a queue of (elevation, confidence) for the points in the corresponding grid cell
+    private Dictionary<Vector2, Queue<Vector2>> grid = new Dictionary<Vector2, Queue<Vector2>>();
+    private int maxPointsPerCell = 50;
+    private void AddToGrid(Vector2 gridPt, Vector2 data)
+    {
+        if (!grid.ContainsKey(gridPt))
+            grid[gridPt] = new Queue<Vector2>();
+        Queue<Vector2> pts = grid[gridPt];
+        if (pts.Count < maxPointsPerCell)
+            pts.Enqueue(data);
+        else {
+            pts.Dequeue();
+            pts.Enqueue(data);
+        } 
+    }
+    private float GetFloor()
+    {
+        Vector2 gridPt = SnapToGrid(position);
+        if (!grid.ContainsKey(gridPt))
+            return -1;
+        Queue<Vector2> pts = grid[gridPt];
+        float sum1 = 0, sum2 = 0;
+        foreach (Vector2 v in pts) {
+            sum1 += v.x * v.y;
+            sum2 += v.y;
+        }
+        return sum1 / sum2;
+    }
+
+    // Delete any cells that are too far from user location
+    private float cellDeletionRange = 7f;
+    private void CleanupDict()
+    {
+        List<Vector2> pointsToRemove = new List<Vector2>();
+        foreach (Vector2 gridPt in grid.Keys) {
+            if (Vector2.Distance(gridPt, new Vector2(position.x, position.z)) > cellDeletionRange) {
+                pointsToRemove.Add(gridPt);
+            }
+        }
+        foreach (Vector2 gridPt in pointsToRemove)
+            grid.Remove(gridPt);
+    }
+
+    private float cellSize = 0.3f;
+    private Vector2 SnapToGrid(Vector3 v) {
+        return new Vector2(cellSize * Mathf.Round(v.x/cellSize), cellSize * Mathf.Round(v.z/cellSize));
+    }
+
+    // This function iterates over the depth image and does a variety of tasks.
+
     // This function returns a 1D array representing a horizontal row of pixels.
     // Each point in the 2D depth array that is (1) high enough confidence and (2) within a certain distance
     // will give a weighted vote towards the corresponding value in the 1D array.
-    private (float[], bool) AccumulateClosePoints()
+    // The second return value tells us whether there is more space on the left or the right side.
+
+    // This function also populates the grid dictionary.
+    private (float[], bool) ProcessDepthImage()
     {
         bool portrait = IsPortrait();
         float[] output = new float[portrait ? depthHeight : depthWidth];
@@ -635,7 +700,7 @@ public class DepthImage : MonoBehaviour
                 float dist = GetDepth(x, y);
                 Vector3 pos = TransformLocalToWorld(ComputeVertex(x, y, dist));
                 Vector3 translated = pos - position;
-                if (translated.y > PointCloudVisualizer.ground && translated.y < (PointCloudVisualizer.ground + personHeight)) { // Height check
+                if (translated.y > ground && translated.y < (ground + personHeight)) { // Height check
                     float rX = cos*translated.x - sin*translated.z;
                     float rZ = sin*translated.x + cos*translated.z;
                     // Distance & width check
@@ -653,6 +718,10 @@ public class DepthImage : MonoBehaviour
                         leftCount += conf;
                     }
                 }
+
+                // Add to grid
+                if (translated.y < 0)
+                    AddToGrid(SnapToGrid(pos), new Vector2(pos.y, conf));
             }
         }
 
