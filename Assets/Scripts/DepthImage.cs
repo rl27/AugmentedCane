@@ -661,7 +661,7 @@ public class DepthImage : MonoBehaviour
     {
         Vector2 gridPt = SnapToGrid(position);
         if (!grid.ContainsKey(gridPt))
-            return -0.5f + position.y;
+            return -0.5f - groundPadding + position.y;
         var pts = grid[gridPt];
         float sum1 = 0, sum2 = 0;
         foreach (Vector2 v in pts) {
