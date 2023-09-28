@@ -203,8 +203,8 @@ public class DepthImage : MonoBehaviour
 
         UpdateDepthImages();
 
-        // m_StringBuilder.AppendLine($"Width: {depthWidth}");
-        // m_StringBuilder.AppendLine($"Height: {depthHeight}");
+        m_StringBuilder.AppendLine($"Width: {depthWidth}");
+        m_StringBuilder.AppendLine($"Height: {depthHeight}");
 
         // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
         // Screen orientation does not change coordinate locations on the screen.
