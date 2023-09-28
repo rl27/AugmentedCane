@@ -657,18 +657,27 @@ public class DepthImage : MonoBehaviour
         
     }
 
+    private const int numFloors = 10;
+    private float[] pastFloors = new float[numFloors];
+    private int floorIndex = 0;
     private float GetFloor()
     {
         Vector2 gridPt = SnapToGrid(position);
-        if (!grid.ContainsKey(gridPt))
-            return -0.5f - groundPadding + position.y;
-        var pts = grid[gridPt];
-        float sum1 = 0, sum2 = 0;
-        foreach (Vector2 v in pts) {
-            sum1 += v.x * v.y;
-            sum2 += v.y;
+        float curFloor = -0.5f - groundPadding + position.y; // Default floor is 0.5m below camera
+        if (grid.ContainsKey(gridPt)) {
+            var pts = grid[gridPt];
+            if (pts.Count == maxPointsPerCell) {
+                float sum1 = 0, sum2 = 0;
+                foreach (Vector2 v in pts) {
+                    sum1 += v.x * v.y;
+                    sum2 += v.y;
+                }
+                curFloor = sum1 / sum2;
+            }
         }
-        return sum1 / sum2;
+        pastFloors[floorIndex] = curFloor;
+        floorIndex = (floorIndex + 1) % numFloors;
+        return pastFloors.Sum() / numFloors;
     }
 
     // Delete any cells that are too far from user location
