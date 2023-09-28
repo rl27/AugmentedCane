@@ -309,6 +309,7 @@ public class DepthImage : MonoBehaviour
         else if (PointCloudVisualizer.pointAhead != 0) {
             m_StringBuilder.AppendLine("Point Obstacle: Yes");
             bool goLeft = (PointCloudVisualizer.pointAhead == 1);
+            direction = goLeft ? Direction.Left : Direction.Right;
             m_StringBuilder.AppendLine(goLeft ? "Dir: Left" : "Dir: Right");
             PlayCollision(goLeft ? -1 : 1);
         }

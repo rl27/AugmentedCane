@@ -81,7 +81,7 @@ public class Vision : MonoBehaviour
         resizer = new TextureResizer();
         resizeOptions = new TextureResizer.ResizeOptions()
         {
-            aspectMode = TextureResizer.AspectMode.Bottom,
+            aspectMode = TextureResizer.AspectMode.Fill,
             rotationDegree = 90,
             mirrorHorizontal = false,
             mirrorVertical = false,
