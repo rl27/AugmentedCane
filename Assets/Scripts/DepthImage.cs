@@ -666,7 +666,7 @@ public class DepthImage : MonoBehaviour
             grid.Remove(gridPt);
     }
 
-    private float cellSize = 0.3f;
+    private float cellSize = 0.25f;
     private Vector2 SnapToGrid(Vector3 v) {
         return new Vector2(cellSize * Mathf.Round(v.x/cellSize), cellSize * Mathf.Round(v.z/cellSize));
     }
