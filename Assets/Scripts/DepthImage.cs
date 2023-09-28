@@ -154,6 +154,8 @@ public class DepthImage : MonoBehaviour
             m_RawCameraImage.enabled = false;
         }
 
+        v2c = new Vector2Comparer();
+
         shouldProceed = true;
     }
 
@@ -621,29 +623,46 @@ public class DepthImage : MonoBehaviour
     }
 
     public static float ground = -1.0f; // Ground elevation (in meters) relative to camera
-    private const float groundPadding = 0.25f; // Height to add to calculated ground level to count as ground
+    private const float groundPadding = 0.35f; // Height to add to calculated ground level to count as ground
 
-    // Dict keys are grid points. Each value is a queue of (elevation, confidence) for the points in the corresponding grid cell
-    private Dictionary<Vector2, Queue<Vector2>> grid = new Dictionary<Vector2, Queue<Vector2>>();
-    private int maxPointsPerCell = 50;
+    // Dict keys are grid points. Each value is a list of (elevation, confidence) for the points in the corresponding grid cell
+    private Dictionary<Vector2, List<Vector2>> grid = new Dictionary<Vector2, List<Vector2>>();
+    private int maxPointsPerCell = 48;
+
+    private Vector2Comparer v2c;
+    public class Vector2Comparer : IComparer<Vector2>
+    {
+        public int Compare(Vector2 u, Vector2 v) {
+            return (u.y > v.y) ? 1 : -1;
+        }
+    }
+
     private void AddToGrid(Vector2 gridPt, Vector2 data)
     {
         if (!grid.ContainsKey(gridPt))
-            grid[gridPt] = new Queue<Vector2>();
-        Queue<Vector2> pts = grid[gridPt];
-        if (pts.Count < maxPointsPerCell)
-            pts.Enqueue(data);
+            grid[gridPt] = new List<Vector2>();
+        List<Vector2> pts = grid[gridPt];
+        int index = ~pts.BinarySearch(data, v2c);
+        if (pts.Count < maxPointsPerCell) {
+            if (index >= pts.Count) pts.Add(data);
+            else pts.Insert(index, data);
+        }
         else {
-            pts.Dequeue();
-            pts.Enqueue(data);
-        } 
+            if (index > 0) {
+                if (index >= maxPointsPerCell) pts.Add(data);
+                else pts.Insert(index, data);
+                pts.RemoveAt(0);
+            }
+        }
+        
     }
+
     private float GetFloor()
     {
         Vector2 gridPt = SnapToGrid(position);
         if (!grid.ContainsKey(gridPt))
             return -0.5f + position.y;
-        Queue<Vector2> pts = grid[gridPt];
+        var pts = grid[gridPt];
         float sum1 = 0, sum2 = 0;
         foreach (Vector2 v in pts) {
             sum1 += v.x * v.y;
@@ -666,7 +685,7 @@ public class DepthImage : MonoBehaviour
             grid.Remove(gridPt);
     }
 
-    private float cellSize = 0.25f;
+    private float cellSize = 0.3f;
     private Vector2 SnapToGrid(Vector3 v) {
         return new Vector2(cellSize * Mathf.Round(v.x/cellSize), cellSize * Mathf.Round(v.z/cellSize));
     }
