@@ -642,7 +642,7 @@ public class DepthImage : MonoBehaviour
     {
         Vector2 gridPt = SnapToGrid(position);
         if (!grid.ContainsKey(gridPt))
-            return -0.3f;
+            return -0.5f + position.y;
         Queue<Vector2> pts = grid[gridPt];
         float sum1 = 0, sum2 = 0;
         foreach (Vector2 v in pts) {
@@ -653,7 +653,7 @@ public class DepthImage : MonoBehaviour
     }
 
     // Delete any cells that are too far from user location
-    private float cellDeletionRange = 7f;
+    private float cellDeletionRange = 6f;
     private void CleanupDict()
     {
         List<Vector2> pointsToRemove = new List<Vector2>();
