@@ -642,7 +642,7 @@ public class DepthImage : MonoBehaviour
     {
         Vector2 gridPt = SnapToGrid(position);
         if (!grid.ContainsKey(gridPt))
-            return -1;
+            return -0.3f;
         Queue<Vector2> pts = grid[gridPt];
         float sum1 = 0, sum2 = 0;
         foreach (Vector2 v in pts) {
