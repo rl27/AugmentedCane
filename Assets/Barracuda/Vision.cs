@@ -69,7 +69,7 @@ public class Vision : MonoBehaviour
     {
         #if UNITY_EDITOR
             testing = true;
-            testPNG = Utils.LoadPNG("Assets/TestImages/test4.png");
+            testPNG = Utils.LoadPNG("Assets/TestImages/test3.png");
         #endif
 
         tts = TTSHandler.GetComponent<TTS>();
