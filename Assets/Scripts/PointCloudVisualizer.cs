@@ -129,6 +129,9 @@ public class PointCloudVisualizer : MonoBehaviour
                 }
             }
 
+            if (translated.y < 0)
+                DepthImage.AddToGrid(pos);
+
             particles[index].startSize = startSize;
             particles[index].position = pos;
             particles[index].remainingLifetime = 1f;

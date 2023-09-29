@@ -624,11 +624,12 @@ public class DepthImage : MonoBehaviour
     }
 
     public static float ground = -0.5f; // Ground elevation (in meters) relative to camera; default floor is 0.5m below camera
-    private const float groundPadding = 0.4f; // Height to add to calculated ground level to count as ground
+    private const float groundPadding = 0.35f; // Height to add to calculated ground level to count as ground
 
     // Dict keys are grid points. Each value is a list of (elevation, confidence) for the points in the corresponding grid cell
-    private Dictionary<Vector2, List<Vector2>> grid = new Dictionary<Vector2, List<Vector2>>();
-    private int maxPointsPerCell = 32;
+    public static Dictionary<Vector2, Queue<float>> grid = new Dictionary<Vector2, Queue<float>>();
+    private const int maxPointsPerCell = 32; // Max points to store per cell
+    private const int minPointsPerCell = 5; // Min points needed to get elevation estimate from cell
 
     private Vector2Comparer v2c;
     public class Vector2Comparer : IComparer<Vector2>
@@ -638,22 +639,18 @@ public class DepthImage : MonoBehaviour
         }
     }
 
-    private void AddToGrid(Vector2 gridPt, Vector2 data)
+    public static void AddToGrid(Vector3 pointToAdd)
     {
+        Vector2 gridPt = SnapToGrid(pointToAdd);
         if (!grid.ContainsKey(gridPt))
-            grid[gridPt] = new List<Vector2>();
-        List<Vector2> pts = grid[gridPt];
-        int index = ~pts.BinarySearch(data, v2c);
+            grid[gridPt] = new Queue<float>();
+        Queue<float> pts = grid[gridPt];
         if (pts.Count < maxPointsPerCell) {
-            if (index >= pts.Count) pts.Add(data);
-            else pts.Insert(index, data);
+            pts.Enqueue(pointToAdd.y);
         }
         else {
-            if (index > 0) {
-                if (index >= maxPointsPerCell) pts.Add(data);
-                else pts.Insert(index, data);
-                pts.RemoveAt(0);
-            }
+            pts.Dequeue();
+            pts.Enqueue(pointToAdd.y);
         }
         
     }
@@ -666,25 +663,15 @@ public class DepthImage : MonoBehaviour
     // Get elevation of floor relative to device; Default return value is -0.5 meters
     private float GetFloor()
     {
-        float userElevation = position.y;
         Vector2 gridPt = SnapToGrid(position);
         if (grid.ContainsKey(gridPt)) {
             var pts = grid[gridPt];
-            if (pts.Count == maxPointsPerCell) {
-                float sum1 = 0, sum2 = 0;
-                foreach (Vector2 v in pts) {
-                    sum1 += v.x * v.y;
-                    sum2 += v.y;
-                }
-                m_StringBuilder.AppendLine($"conf avg: {sum2 / (confidenceMax * maxPointsPerCell)}");
-                if (sum2 / (confidenceMax * maxPointsPerCell) > confidenceThreshold) {
-                    pastFloors[floorIndex] = sum1 / sum2;
-                    floorIndex = (floorIndex + 1) % numFloors;
-                    return pastFloors.Sum() / numFloors + groundPadding - userElevation;
-                }
+            if (pts.Count >= minPointsPerCell) {
+                pastFloors[floorIndex] = pts.Average();
+                floorIndex = (floorIndex + 1) % numFloors;
             }
         }
-        return pastFloors.Sum() / numFloors + groundPadding - userElevation;
+        return pastFloors.Sum() / numFloors + groundPadding - position.y;
     }
 
     // Delete any cells that are too far from user location
@@ -701,8 +688,8 @@ public class DepthImage : MonoBehaviour
             grid.Remove(gridPt);
     }
 
-    private float cellSize = 0.3f;
-    private Vector2 SnapToGrid(Vector3 v) {
+    private const float cellSize = 0.3f;
+    private static Vector2 SnapToGrid(Vector3 v) {
         return new Vector2(cellSize * Mathf.Round(v.x/cellSize), cellSize * Mathf.Round(v.z/cellSize));
     }
 
@@ -752,11 +739,11 @@ public class DepthImage : MonoBehaviour
                         leftSum += rZ * conf;
                         leftCount += conf;
                     }
-                }
 
-                // Add to grid
-                if (translated.y < 0)
-                    AddToGrid(SnapToGrid(pos), new Vector2(pos.y, conf));
+                    // Add to grid
+                    // if (translated.y < 0)
+                    //     AddToGrid(SnapToGrid(pos), new Vector2(pos.y, conf));
+                }
             }
         }
 
