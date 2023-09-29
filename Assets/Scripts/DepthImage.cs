@@ -316,7 +316,7 @@ public class DepthImage : MonoBehaviour
         // else m_StringBuilder.AppendLine("Obstacle: No");
 
         // Do stuff with floor grid
-        ground = Mathf.Min(0, GetFloor() - position.y + groundPadding);
+        ground = Mathf.Min(0, GetFloor());
         CleanupDict();
         m_StringBuilder.AppendLine($"Num cells: {grid.Count}");
         m_StringBuilder.AppendLine($"Ground: {ground}");
@@ -623,8 +623,8 @@ public class DepthImage : MonoBehaviour
         return new Vector2(v1.x * v2.x, v1.y * v2.y);
     }
 
-    public static float ground = -0.5f; // Ground elevation (in meters) relative to camera
-    private const float groundPadding = 0.4f; // Height to add to calculated ground level to count as ground
+    public static float ground = -0.5f; // Ground elevation (in meters) relative to camera; default floor is 0.5m below camera
+    private const float groundPadding = 0.35f; // Height to add to calculated ground level to count as ground
 
     // Dict keys are grid points. Each value is a list of (elevation, confidence) for the points in the corresponding grid cell
     private Dictionary<Vector2, List<Vector2>> grid = new Dictionary<Vector2, List<Vector2>>();
@@ -659,12 +659,15 @@ public class DepthImage : MonoBehaviour
     }
 
     private const int numFloors = 15;
-    private float[] pastFloors = new float[numFloors];
+    private float[] pastFloors = new float[numFloors]; // Stores past floor elevations in world space
     private int floorIndex = 0;
+    private const float confidenceThreshold = 0.05f;
+
+    // Get elevation of floor relative to device; Default return value is -0.5 meters
     private float GetFloor()
     {
+        float userElevation = position.y;
         Vector2 gridPt = SnapToGrid(position);
-        float curFloor = -0.5f - groundPadding + position.y; // Default floor is 0.5m below camera
         if (grid.ContainsKey(gridPt)) {
             var pts = grid[gridPt];
             if (pts.Count == maxPointsPerCell) {
@@ -673,12 +676,15 @@ public class DepthImage : MonoBehaviour
                     sum1 += v.x * v.y;
                     sum2 += v.y;
                 }
-                curFloor = sum1 / sum2;
+                m_StringBuilder.AppendLine($"conf avg: {sum2 / (confidenceMax * maxPointsPerCell)}");
+                if (sum2 / (confidenceMax * maxPointsPerCell) > confidenceThreshold) {
+                    pastFloors[floorIndex] = sum1 / sum2;
+                    floorIndex = (floorIndex + 1) % numFloors;
+                    return pastFloors.Sum() / numFloors + groundPadding - userElevation;
+                }
             }
         }
-        pastFloors[floorIndex] = curFloor;
-        floorIndex = (floorIndex + 1) % numFloors;
-        return pastFloors.Sum() / numFloors;
+        return -0.5f;
     }
 
     // Delete any cells that are too far from user location
