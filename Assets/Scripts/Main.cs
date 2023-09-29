@@ -33,13 +33,11 @@ public class Main : MonoBehaviour
     [SerializeField]
     GameObject XR;
     PointCloud pc;
-    Plane plane;
 
     bool depthActive = true;
     bool IMUActive = true;
     bool GPSActive = true;
     bool pcActive = true;
-    bool planeActive = false;
 
     List<double> gpsCoords = new List<double>();
     List<byte[]> depthArrays = new List<byte[]>();
@@ -56,15 +54,12 @@ public class Main : MonoBehaviour
         sensors = SensorHandler.GetComponent<SensorData>();
         gps = GPSHandler.GetComponent<GPSData>();
         pc = XR.GetComponent<PointCloud>();
-        plane = XR.GetComponent<Plane>();
 
         DepthHandler.SetActive(depthActive);
         SensorHandler.SetActive(IMUActive);
         GPSHandler.SetActive(GPSActive);
         pc.enabled = pcActive;
         XR.GetComponent<ARPointCloudManager>().enabled = pcActive;
-        plane.enabled = planeActive;
-        XR.GetComponent<ARPlaneManager>().enabled = planeActive;
     }
 
     public void LogButtonPress()
@@ -104,8 +99,6 @@ public class Main : MonoBehaviour
             m_StringBuilder.AppendLine($"{depth.m_StringBuilder.ToString()}");
         if (pcActive)
             m_StringBuilder.AppendLine($"{pc.info}");
-        if (planeActive)
-            m_StringBuilder.AppendLine($"{plane.info}");
 
         LogText(m_StringBuilder.ToString());
     }

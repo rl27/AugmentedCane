@@ -704,7 +704,7 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 1
-  m_IsOn: 0
+  m_IsOn: 1
 --- !u!1 &338575855
 GameObject:
   m_ObjectHideFlags: 0
@@ -2284,7 +2284,9 @@ MonoBehaviour:
   m_DepthMaterial: {fileID: 2100000, guid: 3518299564ad40c488f2036459c24a33, type: 2}
   AudioHandler: {fileID: 1450406541}
   VisionHandler: {fileID: 1168124737}
-  toggle: {fileID: 300118945}
+  depthToggle: {fileID: 308117052}
+  smoothingToggle: {fileID: 300118945}
+  XR: {fileID: 984716422}
 --- !u!4 &975916387
 Transform:
   m_ObjectHideFlags: 0
@@ -2312,8 +2314,6 @@ GameObject:
   - component: {fileID: 984716423}
   - component: {fileID: 984716425}
   - component: {fileID: 984716426}
-  - component: {fileID: 984716428}
-  - component: {fileID: 984716427}
   m_Layer: 0
   m_Name: XR Origin
   m_TagString: Untagged
@@ -2379,32 +2379,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 65e0f6bfcd7464a43ace88d5ec0da4f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &984716427
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 984716422}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3d999d006a6bd8f46987f82afd9886a0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &984716428
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 984716422}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e1760703bbd54c04488a8d10600262ab, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_PlanePrefab: {fileID: 5167600316118093345, guid: 24d4697be6145d540bf1a976a9f6b373, type: 3}
-  m_DetectionMode: 1
 --- !u!1 &1156557273
 GameObject:
   m_ObjectHideFlags: 0

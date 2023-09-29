@@ -15,7 +15,7 @@ public class PointCloudVisualizer : MonoBehaviour
 
     // Keep track of all points.
     public Dictionary<ulong, Vector3> points = new Dictionary<ulong, Vector3>();
-    public Dictionary<ulong, float> confidences = new Dictionary<ulong, float>();
+    // public Dictionary<ulong, float> confidences = new Dictionary<ulong, float>();
 
     // ParticleSystem for rendering particles.
     new ParticleSystem particleSystem;
@@ -78,7 +78,7 @@ public class PointCloudVisualizer : MonoBehaviour
             ulong id = identifiers[i];
             // if (!confidences.ContainsKey(id) || confidences[id] > 0.2)
             // iPhone has a problem with generating points right on top of the camera, so we don't use points that are too close
-            if ((DepthImage.position - positions[i]).sqrMagnitude > 0.15f)
+            if (Vector3.Distance(DepthImage.position, positions[i]) > 0.4f)
                 points[id] = positions[i];
         }
 

@@ -118,7 +118,9 @@ public class DepthImage : MonoBehaviour
     public enum Direction { Left, Right, None }
     public static Direction direction = Direction.None;
 
-    public Toggle toggle;
+    public Toggle depthToggle;
+    public Toggle smoothingToggle;
+
     void Awake()
     {
         if (m_OcclusionManager == null) {
@@ -154,7 +156,7 @@ public class DepthImage : MonoBehaviour
             m_RawCameraImage.enabled = false;
         }
 
-        v2c = new Vector2Comparer();
+        pc = XR.GetComponent<PointCloud>();
 
         shouldProceed = true;
     }
@@ -252,6 +254,11 @@ public class DepthImage : MonoBehaviour
         // m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
         // m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
 
+        // Update floor grid
+        ground = Mathf.Min(0, GetFloor());
+        CleanupDict();
+        m_StringBuilder.AppendLine($"Num cells: {grid.Count}");
+        m_StringBuilder.AppendLine($"Ground: {ground}");
 
         // Check for obstacles using depth image
         (float[] closeTotals, bool avgGoLeft) = ProcessDepthImage(); // In portrait mode, index 0 = right side, max index = left side
@@ -314,12 +321,6 @@ public class DepthImage : MonoBehaviour
             PlayCollision(goLeft ? -1 : 1);
         }
         // else m_StringBuilder.AppendLine("Obstacle: No");
-
-        // Do stuff with floor grid
-        ground = Mathf.Min(0, GetFloor());
-        CleanupDict();
-        m_StringBuilder.AppendLine($"Num cells: {grid.Count}");
-        m_StringBuilder.AppendLine($"Ground: {ground}");
     }
 
     private void UpdateDepthImages()
@@ -394,14 +395,22 @@ public class DepthImage : MonoBehaviour
             Debug.Log(text);
     }
 
+    [SerializeField]
+    GameObject XR;
+    PointCloud pc;
+
     public void ToggleObstacleAvoidance()
     {
-        doObstacleAvoidance = !doObstacleAvoidance;
+        doObstacleAvoidance = depthToggle.isOn;
+        #if !UNITY_EDITOR
+            pc.enabled = doObstacleAvoidance;
+            XR.GetComponent<ARPointCloudManager>().enabled = doObstacleAvoidance;
+        #endif
     }
 
     public void ToggleSmoothing()
     {
-        m_OcclusionManager.environmentDepthTemporalSmoothingRequested = toggle.isOn;
+        m_OcclusionManager.environmentDepthTemporalSmoothingRequested = smoothingToggle.isOn;
     }
 
     private void UpdateRawImage(RawImage rawImage, XRCpuImage cpuImage, TextureFormat format, bool isDepth)
@@ -630,14 +639,6 @@ public class DepthImage : MonoBehaviour
     public static Dictionary<Vector2, Queue<float>> grid = new Dictionary<Vector2, Queue<float>>();
     private const int maxPointsPerCell = 32; // Max points to store per cell
     private const int minPointsPerCell = 5; // Min points needed to get elevation estimate from cell
-
-    private Vector2Comparer v2c;
-    public class Vector2Comparer : IComparer<Vector2>
-    {
-        public int Compare(Vector2 u, Vector2 v) {
-            return (u.y > v.y) ? 1 : -1;
-        }
-    }
 
     public static void AddToGrid(Vector3 pointToAdd)
     {
