@@ -624,11 +624,11 @@ public class DepthImage : MonoBehaviour
     }
 
     public static float ground = -0.5f; // Ground elevation (in meters) relative to camera; default floor is 0.5m below camera
-    private const float groundPadding = 0.35f; // Height to add to calculated ground level to count as ground
+    private const float groundPadding = 0.4f; // Height to add to calculated ground level to count as ground
 
     // Dict keys are grid points. Each value is a list of (elevation, confidence) for the points in the corresponding grid cell
     private Dictionary<Vector2, List<Vector2>> grid = new Dictionary<Vector2, List<Vector2>>();
-    private int maxPointsPerCell = 64;
+    private int maxPointsPerCell = 32;
 
     private Vector2Comparer v2c;
     public class Vector2Comparer : IComparer<Vector2>
@@ -661,7 +661,7 @@ public class DepthImage : MonoBehaviour
     private const int numFloors = 15;
     private float[] pastFloors = new float[numFloors]; // Stores past floor elevations in world space
     private int floorIndex = 0;
-    private const float confidenceThreshold = 0.05f;
+    private const float confidenceThreshold = 0.01f;
 
     // Get elevation of floor relative to device; Default return value is -0.5 meters
     private float GetFloor()
@@ -684,7 +684,7 @@ public class DepthImage : MonoBehaviour
                 }
             }
         }
-        return -0.5f;
+        return pastFloors.Sum() / numFloors + groundPadding - userElevation;
     }
 
     // Delete any cells that are too far from user location
