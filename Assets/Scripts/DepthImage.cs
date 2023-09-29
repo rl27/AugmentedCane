@@ -676,9 +676,10 @@ public class DepthImage : MonoBehaviour
 
     // Delete any cells that are too far from user location
     private float cellDeletionRange = 6f;
+    private List<Vector2> pointsToRemove = new List<Vector2>();
     private void CleanupDict()
     {
-        List<Vector2> pointsToRemove = new List<Vector2>();
+        pointsToRemove.Clear();
         foreach (Vector2 gridPt in grid.Keys) {
             if (Vector2.Distance(gridPt, new Vector2(position.x, position.z)) > cellDeletionRange) {
                 pointsToRemove.Add(gridPt);
