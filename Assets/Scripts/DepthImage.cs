@@ -659,7 +659,6 @@ public class DepthImage : MonoBehaviour
     private const int numFloors = 15;
     private float[] pastFloors = new float[numFloors]; // Stores past floor elevations in world space
     private int floorIndex = 0;
-    private const float confidenceThreshold = 0.01f;
 
     // Get elevation of floor relative to device; Default return value is -0.5 meters
     private float GetFloor()

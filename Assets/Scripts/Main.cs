@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
+using CMAESnet;
 
 public class Main : MonoBehaviour
 {
@@ -60,6 +61,28 @@ public class Main : MonoBehaviour
         GPSHandler.SetActive(GPSActive);
         pc.enabled = pcActive;
         XR.GetComponent<ARPointCloudManager>().enabled = pcActive;
+
+        TestCMAES();        
+    }
+
+    private void TestCMAES()
+    {
+        double[] initial = new double[] { 0, 0 };
+        CMAESOptimizer cmaoptimizer = new CMAESOptimizer(TestFunctions, initial, 1.5);
+
+        DateTime start = DateTime.Now;
+        cmaoptimizer.Optimize();
+        DateTime end = DateTime.Now;
+        Debug.Log((end - start).TotalSeconds);
+
+        double[] optimizedArray = cmaoptimizer.ResultVector;
+
+        Debug.Log(String.Format("x1={0}, x2={1}", optimizedArray[0], optimizedArray[1]));
+    }
+
+    private static double TestFunctions(IList<double> x)
+    {
+        return Math.Pow(x[0] - 3, 2) + Math.Pow(10 * (x[1] + 2), 2);
     }
 
     public void LogButtonPress()
