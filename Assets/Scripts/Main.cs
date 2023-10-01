@@ -65,22 +65,30 @@ public class Main : MonoBehaviour
         TestCMAES();        
     }
 
+    private double[] bestVector = null;
+    private double bestValue = double.MaxValue;
     private void TestCMAES()
     {
-        double[] initial = new double[] { 0, 0 };
-        CMAESOptimizer cmaoptimizer = new CMAESOptimizer(TestFunctions, initial, 1.5);
+        double[] x = new double[] { 0, 0 };
+        CMAES cmaoptimizer = new CMAES(x, 1.5);
 
-        DateTime start = DateTime.Now;
-        cmaoptimizer.Optimize();
-        DateTime end = DateTime.Now;
-        Debug.Log((end - start).TotalSeconds);
+        bool converged = false;
+        for (int i = 0; i < 1000; i++) {
+            double output = TestFunction(x);
+            if (output < bestValue) {
+                bestValue = output;
+                bestVector = x;
+            }
+            (x, converged) = cmaoptimizer.Optimize(x, output);
+            if (converged) break;
+        }
 
-        double[] optimizedArray = cmaoptimizer.ResultVector;
-
-        Debug.Log(String.Format("x1={0}, x2={1}", optimizedArray[0], optimizedArray[1]));
+        Debug.Log(bestVector[0]);
+        Debug.Log(bestVector[1]);
+        Debug.Log(bestValue);
     }
 
-    private static double TestFunctions(IList<double> x)
+    private static double TestFunction(double[] x)
     {
         return Math.Pow(x[0] - 3, 2) + Math.Pow(10 * (x[1] + 2), 2);
     }

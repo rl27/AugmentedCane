@@ -740,10 +740,6 @@ public class DepthImage : MonoBehaviour
                         leftSum += rZ * conf;
                         leftCount += conf;
                     }
-
-                    // Add to grid
-                    // if (translated.y < 0)
-                    //     AddToGrid(SnapToGrid(pos), new Vector2(pos.y, conf));
                 }
             }
         }
