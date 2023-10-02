@@ -288,6 +288,7 @@ public class Vision : MonoBehaviour
         for (int i = 0; i < numRaycasts; i++) {
             (int cls, int count) = RaycastToWalkable(W/2, H-1, ref output, i * radWidth);
             if (cls != -1 && count < bestCount) {
+                if (count == 0) return cls;
                 bestCount = count;
                 bestCls = cls;
             }
