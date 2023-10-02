@@ -216,7 +216,7 @@ public class Vision : MonoBehaviour
             float x = -1, y = -1;
             float bestDirection = 0;
             for (int i = 0; i < numRaycasts; i++) {
-                (float a, float b) = PerformRaycast(W/2, H-1, ref output, i * radWidth, true);
+                (float a, float b) = PerformRaycast(W/2, H-1, ref output, i * radWidth);
                 if (b > y) {
                     (x, y) = (a, b);
                     bestDirection = i * radWidth * Mathf.Rad2Deg - 90;
@@ -262,28 +262,29 @@ public class Vision : MonoBehaviour
         inputView.enabled = doSidewalkDirection;
     }
 
-    // Returns coordinates of raycast relative to middle of bottom of image
-    // Grating & manhole are "wildcards" and can count as either road or sidewalk/crosswalk
-    // Returns (0, -1) if no suitable point is found
-    private (float, float) PerformRaycast(float x, float y, ref Tensor output, float radFromLeft, bool onWalkable)
+    // Returns end coordinates of raycast w.r.t. middle of bottom of image
+    // Curb, curb cut, grating, manhole are counted as walkable when raycasting
+    private const int maxSkips = 16;
+    private (float, float) PerformRaycast(float x, float y, ref Tensor output, float radFromLeft)
     {
-        bool valid = onWalkable;
         float dx = -Mathf.Cos(radFromLeft);
         float dy = Mathf.Sin(radFromLeft);
+        float numSkips = 0;
+        float validX = x;
+        float validY = y;
         while (x >= 0 && y >= 0 && x < W && y < H) {
             int cls = (int) output[0, 0, (int) x, (int) y];
-            if (onWalkable && (cls < 2 || cls > 8)) // Cast from walkable, reached non-walkable; Including curb, curb cut, grating, and manhole as walkable
-                break;
-            else if (!onWalkable && cls >= 4 && cls <= 6) { // Cast from non-walkable, reached walkable
-                valid = true;
-                break;
+            if (cls < 2 || cls > 8) { // On non-walkable; break if too many skips used
+                if (++numSkips > maxSkips) break;
+            }
+            else { // On walkable; reset skips and update validX, validY
+                (validX, validY) = (x, y);
+                numSkips = 0;
             }
             x += dx;
             y -= dy;
         }
-        if (valid)
-            return (x-W/2, H-1-y);
-        return (0, -1); // This only occurs if we start from non-walkable and no raycasts hit a walkable
+        return (validX-W/2, H-1-validY);
     }
 
     private int lastClass = 0;
