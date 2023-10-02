@@ -207,13 +207,12 @@ public class Vision : MonoBehaviour
     {
         if (!doSidewalkDirection) return;
 
-        int curCls = (int) output[0, 0, W/2, H-1];
-
-        if (curCls >= 4 && curCls <= 6) { // Sidewalk, crosswalk
+        int curCls = CheckForWalkable(ref output);
+        if (StrictWalkable(curCls)) { // Sidewalk or crosswalk close to middle of bottom of output image
             lastWalkableTime = DateTime.Now;
 
             // Raycast to find highest walkable point
-            float x = -1, y = -1;
+            float x = 0, y = 0;
             float bestDirection = 0;
             for (int i = 0; i < numRaycasts; i++) {
                 (float a, float b) = PerformRaycast(W/2, H-1, ref output, i * radWidth);
@@ -223,19 +222,14 @@ public class Vision : MonoBehaviour
                 }
             }
             // Set orientation
-            if (x != -1) {
-                // float _velocity = 0;
-                // relativeDir = Mathf.SmoothDampAngle(relativeDir, bestDirection * scale, ref _velocity, 0.06f);
+            values[avgIndex] = bestDirection * scale;
+            relativeDir = 0;
+            for (int i = 0; i < numValues; i++)
+                relativeDir += values[(avgIndex - i + numValues) % numValues] * weights[i];
+            avgIndex = (avgIndex + 1) % numValues;
 
-                values[avgIndex] = bestDirection * scale;
-                relativeDir = 0;
-                for (int i = 0; i < numValues; i++)
-                    relativeDir += values[(avgIndex - i + numValues) % numValues] * weights[i];
-                avgIndex = (avgIndex + 1) % numValues;
-
-                direction = (relativeDir + SensorData.heading + 360) % 360;
-                lastValidDirection = DateTime.Now;
-            }
+            direction = (relativeDir + SensorData.heading + 360) % 360;
+            lastValidDirection = DateTime.Now;
 
             PlayAudio(curCls);
         }
@@ -264,7 +258,7 @@ public class Vision : MonoBehaviour
 
     // Returns end coordinates of raycast w.r.t. middle of bottom of image
     // Curb, curb cut, grating, manhole are counted as walkable when raycasting
-    private const int maxSkips = 16;
+    private const int maxSkips = 30;
     private (float, float) PerformRaycast(float x, float y, ref Tensor output, float radFromLeft)
     {
         float dx = -Mathf.Cos(radFromLeft);
@@ -274,7 +268,7 @@ public class Vision : MonoBehaviour
         float validY = y;
         while (x >= 0 && y >= 0 && x < W && y < H) {
             int cls = (int) output[0, 0, (int) x, (int) y];
-            if (cls < 2 || cls > 8) { // On non-walkable; break if too many skips used
+            if (!LaxWalkable(cls)) { // On non-walkable; break if too many skips used
                 if (++numSkips > maxSkips) break;
             }
             else { // On walkable; reset skips and update validX, validY
@@ -285,6 +279,46 @@ public class Vision : MonoBehaviour
             y -= dy;
         }
         return (validX-W/2, H-1-validY);
+    }
+
+    // If sidewalk or crosswalk found, returns the corresponding class. Otherwise, returns the bottom/middle of the image.
+    private int CheckForWalkable(ref Tensor output)
+    {
+        int bestCls = (int) output[0, 0, W/2, H-1], bestCount = Int32.MaxValue;
+        for (int i = 0; i < numRaycasts; i++) {
+            (int cls, int count) = RaycastToWalkable(W/2, H-1, ref output, i * radWidth);
+            if (cls != -1 && count < bestCount) {
+                bestCount = count;
+                bestCls = cls;
+            }
+        }
+        return bestCls;
+    }
+    // Search for up to maxSkips iterations for sidewalk or crosswalk
+    private (int, int) RaycastToWalkable(float x, float y, ref Tensor output, float radFromLeft)
+    {
+        float dx = -Mathf.Cos(radFromLeft);
+        float dy = Mathf.Sin(radFromLeft);
+        float numSkips = 0;
+        int count = 0;
+        while (x >= 0 && y >= 0 && x < W && y < H) {
+            int cls = (int) output[0, 0, (int) x, (int) y];
+            if (StrictWalkable(cls)) return (cls, count);
+            else if (++numSkips > maxSkips) break;
+            x += dx;
+            y -= dy;
+            count++;
+        }
+        return (-1, 999);
+    }
+
+    // Sidewalk or crosswalk
+    private bool StrictWalkable(int cls) {
+        return (cls >= 4 && cls <= 6);
+    }
+    // Sidewalk, crosswalk, curb, curb cut, grating, manhole
+    private bool LaxWalkable(int cls) {
+        return (cls >= 2 && cls <= 8);
     }
 
     private int lastClass = 0;

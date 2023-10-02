@@ -257,11 +257,11 @@ public class DepthImage : MonoBehaviour
         // Update floor grid
         ground = Mathf.Min(0, GetFloor());
         CleanupDict();
-        m_StringBuilder.AppendLine($"Num cells: {grid.Count}");
-        Vector2 gridPt = SnapToGrid(position);
-        if (grid.ContainsKey(gridPt))
-            m_StringBuilder.AppendLine($"Num pts: {grid[SnapToGrid(position)].Count}");
-        else m_StringBuilder.AppendLine("Num pts: 0");
+        // m_StringBuilder.AppendLine($"Num cells: {grid.Count}");
+        // Vector2 gridPt = SnapToGrid(position);
+        // if (grid.ContainsKey(gridPt))
+        //     m_StringBuilder.AppendLine($"Num pts: {grid[SnapToGrid(position)].Count}");
+        // else m_StringBuilder.AppendLine("Num pts: 0");
         m_StringBuilder.AppendLine($"Ground: {ground}");
 
         // Check for obstacles using depth image
