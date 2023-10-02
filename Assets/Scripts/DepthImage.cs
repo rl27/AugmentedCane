@@ -671,7 +671,9 @@ public class DepthImage : MonoBehaviour
         if (grid.ContainsKey(gridPt)) {
             var pts = grid[gridPt];
             if (pts.Count >= minPointsPerCell) {
-                pastFloors[floorIndex] = pts.Average();
+                var orderedPts = pts.OrderBy(p => p);
+                float median = (pts.ElementAt(pts.Count/2) + pts.ElementAt((pts.Count-1)/2)) / 2;
+                pastFloors[floorIndex] = median;
                 floorIndex = (floorIndex + 1) % numFloors;
             }
         }
