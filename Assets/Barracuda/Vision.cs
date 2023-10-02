@@ -285,10 +285,10 @@ public class Vision : MonoBehaviour
     private int CheckForWalkable(ref Tensor output)
     {
         int bestCls = (int) output[0, 0, W/2, H-1], bestCount = Int32.MaxValue;
+        if (StrictWalkable(bestCls)) return bestCls;
         for (int i = 0; i < numRaycasts; i++) {
             (int cls, int count) = RaycastToWalkable(W/2, H-1, ref output, i * radWidth);
             if (cls != -1 && count < bestCount) {
-                if (count == 0) return cls;
                 bestCount = count;
                 bestCls = cls;
             }
