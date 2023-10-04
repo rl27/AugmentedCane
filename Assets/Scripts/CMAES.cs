@@ -14,7 +14,7 @@ namespace CMAESnet
         // Inputs: initial mean, step size for CMA-ES, (optional) seed number
         public CMAES(IList<double> initial, double sigma, int randSeed = 0)
         {
-            cma = new CMA(initial, sigma, seed: randSeed);
+            cma = new CMA(initial, sigma, seed: randSeed, tol_sigma: 1e-1, tol_C: 1e-1);
         }
 
         // Inputs: initial mean, step size for CMA-ES, lower/upper bounds of search range, (optional) seed number
@@ -29,7 +29,7 @@ namespace CMAESnet
             bounds.SetColumn(0, lowerBounds.ToArray());
             bounds.SetColumn(1, upperBounds.ToArray());
 
-            cma = new CMA(initial, sigma, bounds, seed: randSeed);
+            cma = new CMA(initial, sigma, bounds, seed: randSeed, tol_sigma: 1e-1, tol_C: 1e-1);
         }
 
         List<Tuple<Vector<double>, double>> solutions = new List<Tuple<Vector<double>, double>>();
