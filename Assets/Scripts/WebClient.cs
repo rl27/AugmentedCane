@@ -11,13 +11,63 @@ public class WebClient : MonoBehaviour
 {
     private static string ROUTE_SERVER_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
     private static string TTS_SERVER_URL = "https://texttospeech.googleapis.com/v1beta1/text:synthesize";
+    private static string OVERPASS_PREFIX = "https://overpass-api.de/api/interpreter?data=[bbox:";
+    private static string OVERPASS_SUFFIX = "][out:csv(::type,::lat,::lon,'name')];way['highway'~'^(trunk|primary|secondary|tertiary|unclassified|residential)$'];node(way_link:3-);foreach->.c{.c;out;way(bn);out;}";
     private static string apiKey;
     private static bool apiKeyInitialized = false;
+
+    public struct Intersection {
+        public Navigation.Point coords;
+        public string[] streetNames;
+        public Intersection(double x, double y, string[] streets) {
+            coords = new Navigation.Point(x, y);
+            streetNames = streets;
+        }
+        public override string ToString() {
+            string str = coords.ToString() + ' ';
+            foreach (string street in streetNames) {
+                str += ' ' + street;
+            }
+            return str;
+        }
+    }
 
     void Awake()
     {
         string apikeyPath = Path.Combine(Application.streamingAssetsPath, "apikey.txt");
         StartCoroutine(GetAPIKey(apikeyPath));
+        StartCoroutine(SendOverpassRequest(new Navigation.Point(42.36185376977386,-71.12857818603516), new Navigation.Point(42.3645807984835,-71.12405061721802),
+            response => {
+                List<Intersection> intersections = new List<Intersection>();
+                double lat = 0, lng = 0;
+                List<string> streetNames = new List<string>();
+                string[] lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 1; i < lines.Length; i++) {
+                    string line = lines[i];
+                    string[] split = line.Split('\t', StringSplitOptions.RemoveEmptyEntries);
+                    if (line.Length >= 4 && line.Substring(0, 4) == "node") {
+                        // Save previous node data if present & valid
+                        // In some cases a node will have something like 2x "Sawyer Terrace" as ways, in which case we should ignore
+                        if (streetNames.Count > 1) {
+                            Intersection inter = new Intersection(lat, lng, streetNames.ToArray());
+                            intersections.Add(inter);
+                            streetNames.Clear();
+                        }
+                        // Initiate data for current node
+                        lat = Convert.ToDouble(split[1]);
+                        lng = Convert.ToDouble(split[2]);
+                    }
+                    else { // Add street name to list
+                        foreach (string str in split) {
+                            if (str != "way" && !streetNames.Contains(str))
+                                streetNames.Add(str);
+                        }
+                    }
+                }
+                foreach (var inter in intersections)
+                    Debug.Log(inter);
+            })
+        );
     }
 
     private IEnumerator GetAPIKey(string apikeyPath)
@@ -34,6 +84,22 @@ public class WebClient : MonoBehaviour
         #endif
         apiKeyInitialized = true;
         yield break;
+    }
+
+    // Find nearby intersections
+    public static IEnumerator SendOverpassRequest(Navigation.Point bottomLeft, Navigation.Point topRight, Action<string> callback)
+    {
+        string url = String.Format("{0}{1},{2},{3},{4}{5}", OVERPASS_PREFIX, bottomLeft.lat, bottomLeft.lng, topRight.lat, topRight.lng, OVERPASS_SUFFIX);
+
+        using (UnityWebRequest webRequest = new UnityWebRequest(url, "GET"))
+        {
+            webRequest.downloadHandler = (DownloadHandler) new DownloadHandlerBuffer();
+            // webRequest.SetRequestHeader("Content-Type", "text/csv");
+            yield return webRequest.SendWebRequest();
+            if (checkStatus(webRequest, url.Split('/'))) {
+                callback(webRequest.downloadHandler.text);
+            }
+        }
     }
 
     public static IEnumerator SendLogData(Dictionary<string, dynamic> coords)
@@ -62,7 +128,7 @@ public class WebClient : MonoBehaviour
         yield return new WaitUntil(() => apiKeyInitialized);
 
         using (UnityWebRequest webRequest = new UnityWebRequest(url, "POST"))
-        {   
+        {
             // Request and wait for the desired page.
             byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(request.ToString());
             webRequest.uploadHandler = (UploadHandler) new UploadHandlerRaw(jsonToSend);
@@ -146,7 +212,7 @@ public class WebClient : MonoBehaviour
         yield return new WaitUntil(() => apiKeyInitialized);
 
         using (UnityWebRequest webRequest = new UnityWebRequest(url, "POST"))
-        {   
+        {
             // Request and wait for the desired page.
             byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(request.ToString());
             webRequest.uploadHandler = (UploadHandler) new UploadHandlerRaw(jsonToSend);

@@ -62,7 +62,7 @@ public class Main : MonoBehaviour
         pc.enabled = pcActive;
         XR.GetComponent<ARPointCloudManager>().enabled = pcActive;
 
-        TestCMAES();        
+        // TestCMAES();
     }
 
     private double[] bestVector = null;
