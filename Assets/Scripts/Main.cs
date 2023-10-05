@@ -69,7 +69,7 @@ public class Main : MonoBehaviour
     private void TestCMAES()
     {
         double[] x = new double[] { 0, 0 };
-        CMAES cmaoptimizer = new CMAES(x, 1.0);
+        CMAES cmaoptimizer = new CMAES(x, 1.5);
 
         bool converged = false;
 
@@ -82,8 +82,8 @@ public class Main : MonoBehaviour
                 bestVector = x;
             }
             (x, converged) = cmaoptimizer.Optimize(x, output);
-            means += cmaoptimizer.cma._mean[0] + " " + cmaoptimizer.cma._mean[1] + " ";
-            sigmas += cmaoptimizer.cma._sigma + " ";
+            means += cmaoptimizer.cma._mean[0] + ", " + cmaoptimizer.cma._mean[1] + ", ";
+            sigmas += cmaoptimizer.cma._sigma + ", ";
             if (converged) break;
         }
 
