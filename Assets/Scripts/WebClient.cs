@@ -36,7 +36,7 @@ public class WebClient : MonoBehaviour
     {
         string apikeyPath = Path.Combine(Application.streamingAssetsPath, "apikey.txt");
         StartCoroutine(GetAPIKey(apikeyPath));
-        StartCoroutine(SendOverpassRequest(new Navigation.Point(42.36185376977386,-71.12857818603516), new Navigation.Point(42.3645807984835,-71.12405061721802),
+        /*StartCoroutine(SendOverpassRequest(new Navigation.Point(42.36185376977386,-71.12857818603516), new Navigation.Point(42.3645807984835,-71.12405061721802),
             response => {
                 List<Intersection> intersections = new List<Intersection>();
                 double lat = 0, lng = 0;
@@ -67,7 +67,7 @@ public class WebClient : MonoBehaviour
                 foreach (var inter in intersections)
                     Debug.Log(inter);
             })
-        );
+        );*/
     }
 
     private IEnumerator GetAPIKey(string apikeyPath)
