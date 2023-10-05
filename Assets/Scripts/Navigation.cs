@@ -235,8 +235,8 @@ public class Navigation : MonoBehaviour
         // Play orientation audio
         PlayOrientationAudio(useRelative ? Vision.relativeDir : ori, useRelative);
 
-        // TTS orientation info
-        if ((DateTime.Now - lastOriented).TotalSeconds > orientationUpdateInterval) {
+        // TTS orientation info - only request when no obstacle so info is up-to-date
+        if ((DateTime.Now - lastOriented).TotalSeconds > orientationUpdateInterval && DepthImage.direction == DepthImage.Direction.None) {
             string facingCardinal = CardinalOrientation(SensorData.heading);
             string targetCardinal = CardinalOrientation(ori);
             tts.RequestTTS(String.Format("Facing {0}, head {1} for {2} meters", facingCardinal, targetCardinal, Math.Round(dist)));
