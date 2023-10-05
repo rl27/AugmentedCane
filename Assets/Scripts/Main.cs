@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
-using CMAESnet;
 
 public class Main : MonoBehaviour
 {
@@ -62,7 +61,7 @@ public class Main : MonoBehaviour
         pc.enabled = pcActive;
         XR.GetComponent<ARPointCloudManager>().enabled = pcActive;
 
-        // TestCMAES();
+        TestCMAES();
     }
 
     private double[] bestVector = null;
@@ -70,9 +69,12 @@ public class Main : MonoBehaviour
     private void TestCMAES()
     {
         double[] x = new double[] { 0, 0 };
-        CMAES cmaoptimizer = new CMAES(x, 1.5);
+        CMAES cmaoptimizer = new CMAES(x, 1.0);
 
         bool converged = false;
+
+        string means = "";
+        string sigmas = "";
         for (int i = 0; i < 1000; i++) {
             double output = TestFunction(x);
             if (output < bestValue) {
@@ -80,12 +82,16 @@ public class Main : MonoBehaviour
                 bestVector = x;
             }
             (x, converged) = cmaoptimizer.Optimize(x, output);
+            means += cmaoptimizer.cma._mean[0] + " " + cmaoptimizer.cma._mean[1] + " ";
+            sigmas += cmaoptimizer.cma._sigma + " ";
             if (converged) break;
         }
 
-        Debug.Log(bestVector[0]);
-        Debug.Log(bestVector[1]);
-        Debug.Log(bestValue);
+        // Debug.Log(bestVector[0]);
+        // Debug.Log(bestVector[1]);
+        // Debug.Log(bestValue);
+        Debug.Log(means);
+        Debug.Log(sigmas);
     }
 
     private static double TestFunction(double[] x)
