@@ -10,6 +10,7 @@ using UnityEngine.XR.ARSubsystems;
 // ARFoundation references:
 // https://github.com/Unity-Technologies/arfoundation-samples/blob/main/Assets/Scripts/Runtime/DisplayDepthImage.cs
 // https://github.com/Unity-Technologies/arfoundation-samples/blob/main/Assets/Scripts/Runtime/CpuImageSample.cs
+[RequireComponent(typeof(AudioSource))]
 public class DepthImage : MonoBehaviour
 {
     // For logging
@@ -33,6 +34,10 @@ public class DepthImage : MonoBehaviour
     [SerializeField]
     [Tooltip("The ARCameraManager which will produce camera frame events.")]
     ARCameraManager m_CameraManager;
+
+    AudioSource audioSource;
+    public static float collisionAudioDelay = 0.2f;
+    private DateTime collisionLastPlayed;
 
     // The UI RawImage used to display the image on screen.
     public RawImage rawImage {
@@ -65,10 +70,6 @@ public class DepthImage : MonoBehaviour
     }
     [SerializeField]
     Material m_DepthMaterial;
-
-    [SerializeField]
-    GameObject AudioHandler;
-    AudioPlayer audioPlayer;
 
     [SerializeField]
     GameObject VisionHandler;
@@ -109,7 +110,7 @@ public class DepthImage : MonoBehaviour
     private bool doObstacleAvoidance = true;
     public static float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
     int collisionWindowWidth = 24; // Min. pixel gap to go through
-    float collisionSumThreshold = 1.1f;
+    public static float collisionSumThreshold = 1.1f;
     int confidenceMax = 255;
 
     public static float halfPersonWidth = 0.3f; // Estimated half-width of a person
@@ -144,7 +145,7 @@ public class DepthImage : MonoBehaviour
             confidenceMax = 2;
         #endif
 
-        audioPlayer = AudioHandler.GetComponent<AudioPlayer>();
+        audioSource = GetComponent<AudioSource>();
         vision = VisionHandler.GetComponent<Vision>();
 
         // Set depth image material
@@ -205,8 +206,8 @@ public class DepthImage : MonoBehaviour
 
         UpdateDepthImages();
 
-        m_StringBuilder.AppendLine($"Width: {depthWidth}");
-        m_StringBuilder.AppendLine($"Height: {depthHeight}");
+        // m_StringBuilder.AppendLine($"Width: {depthWidth}");
+        // m_StringBuilder.AppendLine($"Height: {depthHeight}");
 
         // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
         // Screen orientation does not change coordinate locations on the screen.
@@ -372,9 +373,14 @@ public class DepthImage : MonoBehaviour
     // mag = -1 for left, mag = 1 for right
     private void PlayCollision(int mag)
     {
+        if ((DateTime.Now - collisionLastPlayed).TotalSeconds < collisionAudioDelay + audioSource.clip.length)
+            return;
         float localRot = -rotation.y * Mathf.Deg2Rad;
-        AudioHandler.transform.position = position + new Vector3(mag * Mathf.Cos(localRot), 0, mag * Mathf.Sin(localRot));
-        audioPlayer.PlayCollision();
+        this.transform.position = position + new Vector3(mag * Mathf.Cos(localRot), 0, mag * Mathf.Sin(localRot));
+        if (!audioSource.isPlaying) {
+            collisionLastPlayed = DateTime.Now;
+            audioSource.PlayOneShot(audioSource.clip, 2);
+        }
     }
 
     private void UpdateCameraImage()
