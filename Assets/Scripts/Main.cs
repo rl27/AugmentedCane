@@ -69,7 +69,7 @@ public class Main : MonoBehaviour
     // 2.5, 0.3, 1.1, 0.2
     private double[] x = new double[] { DepthImage.distanceToObstacle, DepthImage.halfPersonWidth, DepthImage.collisionSumThreshold, DepthImage.collisionAudioDelay };
     private double[] lowerBounds = new double[] {0.5, 0.01, 0.01, 0};
-    private double[] upperBounds = new double[] {4, 0.7, 80, 2};
+    private double[] upperBounds = new double[] {4, 0.7, 80, 1};
 
     private double[] bestVector = null;
     private double bestValue = double.MaxValue;
