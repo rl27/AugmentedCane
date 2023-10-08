@@ -37,7 +37,7 @@ public class DepthImage : MonoBehaviour
 
     AudioSource audioSource;
     public static float collisionAudioDelay = 0.2f;
-    private DateTime collisionLastPlayed;
+    private double collisionLastPlayed = 0;
 
     // The UI RawImage used to display the image on screen.
     public RawImage rawImage {
@@ -373,12 +373,13 @@ public class DepthImage : MonoBehaviour
     // mag = -1 for left, mag = 1 for right
     private void PlayCollision(int mag)
     {
-        if ((DateTime.Now - collisionLastPlayed).TotalSeconds < collisionAudioDelay + audioSource.clip.length)
+        double curTime = AudioSettings.dspTime;
+        if (curTime - collisionLastPlayed < collisionAudioDelay + audioSource.clip.length)
             return;
         float localRot = -rotation.y * Mathf.Deg2Rad;
         this.transform.position = position + new Vector3(mag * Mathf.Cos(localRot), 0, mag * Mathf.Sin(localRot));
         if (!audioSource.isPlaying) {
-            collisionLastPlayed = DateTime.Now;
+            collisionLastPlayed = curTime;
             audioSource.PlayOneShot(audioSource.clip, 2);
         }
     }
