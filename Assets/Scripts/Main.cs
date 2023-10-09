@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Text;
 using System.Collections.Generic;
 using UnityEngine;
@@ -46,6 +47,20 @@ public class Main : MonoBehaviour
     // private DateTime gpsLastLog;
     // private float gpsLogInterval = 0.2f;
 
+    CMAES cmaoptimizer;
+
+    // distanceToObstacle, halfPersonWidth, collisionSumThreshold, collisionAudioDelay
+    // 2.5, 0.3, 1.1, 0.2
+    private double[] original = new double[] { DepthImage.distanceToObstacle, DepthImage.halfPersonWidth, DepthImage.collisionSumThreshold, DepthImage.collisionAudioDelay };
+    private double[] x;
+    private double[] lowerBounds = new double[] {0.5, 0.01, 0.01, 0};
+    private double[] upperBounds = new double[] {4, 0.7, 80, 1};
+
+    private double[] bestVector = null;
+    private double bestValue = double.MaxValue;
+
+    private string cmaesPath;
+
     void Awake()
     {
         Screen.sleepTimeout = SleepTimeout.NeverSleep; // Prevent phone from dimming/sleeping
@@ -61,25 +76,16 @@ public class Main : MonoBehaviour
         pc.enabled = pcActive;
         XR.GetComponent<ARPointCloudManager>().enabled = pcActive;
 
-        cmaoptimizer = new CMAES(x, 0.3, lowerBounds, upperBounds);
-    }
-
-    CMAES cmaoptimizer;
-    // distanceToObstacle, halfPersonWidth, collisionSumThreshold, collisionAudioDelay
-    // 2.5, 0.3, 1.1, 0.2
-    private double[] x = new double[] { DepthImage.distanceToObstacle, DepthImage.halfPersonWidth, DepthImage.collisionSumThreshold, DepthImage.collisionAudioDelay };
-    private double[] lowerBounds = new double[] {0.5, 0.01, 0.01, 0};
-    private double[] upperBounds = new double[] {4, 0.7, 80, 1};
-
-    private double[] bestVector = null;
-    private double bestValue = double.MaxValue;
-
-    private void SetParams()
-    {
-        DepthImage.distanceToObstacle = (float)x[0];
-        DepthImage.halfPersonWidth = (float)x[1];
-        DepthImage.collisionSumThreshold = (float)x[2];
-        DepthImage.collisionAudioDelay = (float)x[3];
+        cmaesPath = Path.Combine(Application.persistentDataPath, "cmaes.bin");
+        if (!File.Exists(cmaesPath)) {
+            x = Normalize(original);
+            cmaoptimizer = new CMAES(x, 0.3, Normalize(lowerBounds), Normalize(upperBounds));
+        }
+        else {
+            cmaoptimizer = BinarySerialization.ReadFromBinaryFile<CMAES>(cmaesPath);
+            x = cmaoptimizer.ask;
+            SetParams();
+        }
     }
 
     // Use sample for CMA generation
@@ -97,13 +103,39 @@ public class Main : MonoBehaviour
         return converged;
     }
 
+    private void SetParams()
+    {
+        double[] x2 = Denormalize(x);
+        DepthImage.distanceToObstacle = (float) x2[0];
+        DepthImage.halfPersonWidth = (float) x2[1];
+        DepthImage.collisionSumThreshold = (float) x2[2];
+        DepthImage.collisionAudioDelay = (float) x2[3];
+    }
+
+    private double[] Normalize(double[] v)
+    {
+        double[] v2 = new double[v.Length];
+        for (int i = 0; i < v.Length; i++)
+            v2[i] = v[i] / upperBounds[i];
+        return v2;
+    }
+    private double[] Denormalize(double[] v)
+    {
+        double[] v2 = new double[v.Length];
+        for (int i = 0; i < v.Length; i++)
+            v2[i] = v[i] * upperBounds[i];
+        return v2;
+    }
+
+    private string GetString(double[] v) {
+        return Math.Round(v[0],2) + " " + Math.Round(v[1],2) + " " + Math.Round(v[2],2) + " " + Math.Round(v[3],2);
+    }
+
     // Enter a sample for CMA-ES
     public void OnSampleEntered(string input)
     {
         float output;
         if (float.TryParse(input, out output)) {
-            // SAVE X, OUTPUT, MEAN, SIGMA HERE
-
             CMAGenerate(output);
         }
     }
@@ -132,8 +164,18 @@ public class Main : MonoBehaviour
         // log["depth"] = depthArrays;
         // log["model"] = SystemInfo.deviceModel;
         // log["gps"] = gpsCoords;
-        log["params"] = x;
+        log["inputs"] = cmaoptimizer.inputs;
+        log["outputs"] = cmaoptimizer.outputs;
+        log["means"] = cmaoptimizer.means;
+        log["sigmas"] = cmaoptimizer.sigmas;
         StartCoroutine(WebClient.SendLogData(log));
+    }
+
+    public void ResetButtonPress()
+    {
+        File.Delete(cmaesPath);
+        x = Normalize(original);
+        cmaoptimizer = new CMAES(x, 0.3, Normalize(lowerBounds), Normalize(upperBounds));
     }
 
     // Update is called once per frame
@@ -152,7 +194,7 @@ public class Main : MonoBehaviour
         m_StringBuilder.Clear();
         m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}\n");
 
-        m_StringBuilder.AppendLine($"{Math.Round(Vision.direction, 1)}°, {Math.Round(Vision.relativeDir, 1)}°, {Vision.logging}\n");
+        m_StringBuilder.AppendLine($"{Math.Round(Vision.direction, 1)}°, {Math.Round(Vision.relativeDir, 1)}°, {Vision.logging}");
 
         if (GPSActive) {
             // m_StringBuilder.AppendLine($"{gps.GPSstring()}");
@@ -163,7 +205,12 @@ public class Main : MonoBehaviour
         if (depthActive)
             m_StringBuilder.AppendLine($"{depth.m_StringBuilder.ToString()}");
         if (pcActive)
-            m_StringBuilder.AppendLine($"{pc.info}");
+            m_StringBuilder.AppendLine($"{pc.info}\n");
+        
+        m_StringBuilder.AppendLine($"Gen {cmaoptimizer.cma.Generation}, sample {cmaoptimizer.solutions.Count}");
+        m_StringBuilder.AppendLine($"Params: {GetString(Denormalize(x))}");
+        m_StringBuilder.AppendLine($"Mean: {GetString(Denormalize(cmaoptimizer.cma._mean.ToArray()))}");
+        m_StringBuilder.AppendLine($"Sigma: {Math.Round(cmaoptimizer.cma._sigma,3)}");
 
         LogText(m_StringBuilder.ToString());
     }

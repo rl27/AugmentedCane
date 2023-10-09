@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+using Random = UnityEngine.Random;
 
 using MathNet.Numerics.Distributions;
 using MathNet.Numerics.LinearAlgebra;
-using MathNet.Numerics.Random;
 
 // Based on: https://github.com/yn-cloud/CMAES.NET/blob/master/CMAES.NET/CMA.cs
 
+[Serializable]
 public class CMA2
 {
     private readonly int _mu;
@@ -29,7 +30,7 @@ public class CMA2
     private Matrix<double> _B;
     private Matrix<double> _bounds;
     private readonly int _n_max_resampling;
-    private readonly Xorshift _rng;
+    // private readonly Random _rng;
     private readonly double _epsilon;
     private readonly double _tol_sigma;
     private readonly double _tol_C;
@@ -156,7 +157,8 @@ public class CMA2
         _n_max_resampling = nMaxResampling;
 
         Generation = 0;
-        _rng = new Xorshift(seed);
+        // _rng = new Random(seed);
+        Random.InitState(seed);
 
         _epsilon = 1e-8;
 
@@ -351,7 +353,7 @@ public class CMA2
         Vector<double> z = Vector<double>.Build.Dense(Dim);
         for (int i = 0; i < z.Count; i++)
         {
-            z[i] = Normal.Sample(_rng, 0, 1);
+            z[i] = SampleGaussian(0, 1);
         }
         Matrix<double> Ddiagonal = Matrix<double>.Build.DenseDiagonal(_D.Count, 1);
         for (int i = 0; i < Ddiagonal.RowCount; i++)
@@ -361,5 +363,16 @@ public class CMA2
         Matrix<double> y = _B * Ddiagonal * z.ToColumnMatrix();
         Vector<double> x = _mean + (_sigma * y.Column(0));
         return x;
+    }
+
+    private double SampleGaussian(double mean, double stddev)
+    {
+        // The method requires sampling from a uniform random of (0,1]
+        // but Random.NextDouble() returns a sample of [0,1).
+
+        double x1 = 1 - Random.value;
+        double x2 = 1 - Random.value;
+        double y1 = Math.Sqrt(-2.0 * Math.Log(x1)) * Math.Cos(2.0 * Math.PI * x2);
+        return y1 * stddev + mean;
     }
 }

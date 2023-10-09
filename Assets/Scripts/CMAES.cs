@@ -1,13 +1,21 @@
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 using MathNet.Numerics.LinearAlgebra;
 
 // Based on: https://github.com/yn-cloud/CMAES.NET/blob/master/CMAES.NET/CMAESOptimizer.cs
 
+[Serializable]
 public class CMAES
 {
     public CMA2 cma;
+    public double[] ask;
+    public List<double[]> inputs = new List<double[]>();
+    public List<double> outputs = new List<double>();
+    public List<double[]> means = new List<double[]>();
+    public List<double> sigmas = new List<double>();
 
     // Inputs: initial mean, step size for CMA-ES, (optional) seed number
     public CMAES(IList<double> initial, double sigma, int randSeed = 0)
@@ -30,10 +38,15 @@ public class CMAES
         cma = new CMA2(initial, sigma, bounds, seed: randSeed, tol_sigma: 1e-1, tol_C: 1e-1);
     }
 
-    List<Tuple<Vector<double>, double>> solutions = new List<Tuple<Vector<double>, double>>();
+    public List<Tuple<Vector<double>, double>> solutions = new List<Tuple<Vector<double>, double>>();
 
     public (double[], bool) Optimize(double[] x, double output)
     {
+        inputs.Add(x);
+        outputs.Add(output);
+        means.Add(cma._mean.ToArray());
+        sigmas.Add(cma._sigma);
+
         Vector<double> vx = Vector<double>.Build.Dense(x);
         solutions.Add(new Tuple<Vector<double>, double>(vx, output));
 
@@ -43,6 +56,10 @@ public class CMAES
             solutions.Clear();
         }
 
-        return (cma.Ask().ToArray(), cma.IsConverged());
+        ask = cma.Ask().ToArray();
+
+        BinarySerialization.WriteToBinaryFile<CMAES>(Path.Combine(Application.persistentDataPath, "cmaes.bin"), this);
+
+        return (ask, cma.IsConverged());
     }
 }

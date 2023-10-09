@@ -196,7 +196,7 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"Camera position: {position}");
         m_StringBuilder.AppendLine($"Camera rotation: {rotation.y}");
 
-        m_StringBuilder.AppendLine($"FOV: {2*Mathf.Atan(depthWidth/(2*focalLength.x))*Mathf.Rad2Deg}, {2*Mathf.Atan(depthHeight/(2*focalLength.y))*Mathf.Rad2Deg}");
+        // m_StringBuilder.AppendLine($"FOV: {2*Mathf.Atan(depthWidth/(2*focalLength.x))*Mathf.Rad2Deg}, {2*Mathf.Atan(depthHeight/(2*focalLength.y))*Mathf.Rad2Deg}");
 
         if (Vision.doSidewalkDirection)
             UpdateCameraImage();
