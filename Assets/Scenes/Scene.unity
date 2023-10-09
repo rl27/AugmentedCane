@@ -3671,7 +3671,7 @@ MonoBehaviour:
   inputView: {fileID: 630529197}
   outputViewParent: {fileID: 2000448425}
   inputViewParent: {fileID: 630529194}
-  modelAsset: {fileID: 5022602860645237092, guid: 77776d7016eb6244c96bdda763a23518, type: 3}
+  modelAsset: {fileID: 5022602860645237092, guid: 2611cc78af271804fb6605963614df77, type: 3}
   compute: {fileID: 7200000, guid: f07148396908444429733077acb4ee0c, type: 3}
   sidewalk: {fileID: 8300000, guid: 1d39abad520b48b4fa36806012d16920, type: 3}
   crosswalk: {fileID: 8300000, guid: 5cb35b1523c46544d9cf7a307749d22f, type: 3}
@@ -3737,7 +3737,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   AudioSourceObject: {fileID: 1210721349}
   onAxis: {fileID: 8300000, guid: 40b4547f914042640a32152c67253059, type: 3}
-  offAxis: {fileID: 8300000, guid: 4e9fccc9d8ca5c24ba418b93e73a98c9, type: 3}
+  offAxis: {fileID: 8300000, guid: ca1910cda0e5f374b89243d571cf226c, type: 3}
   behind: {fileID: 8300000, guid: 8b8dff2e0c1d0764a9d505b54068be53, type: 3}
   reachWaypoint: {fileID: 8300000, guid: d834733ee4c994042849935369cbca04, type: 3}
   TTSHandler: {fileID: 207288727}
