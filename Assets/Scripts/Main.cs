@@ -143,7 +143,7 @@ public class Main : MonoBehaviour
     // Comma-separated params entered
     public void OnParamsEntered(string input)
     {
-        string[] splits = input.Split(',');
+        string[] splits = input.Split(' ');
         if (splits.Length != 4)
             return;
         float p0, p1, p2, p3;
@@ -176,6 +176,7 @@ public class Main : MonoBehaviour
         File.Delete(cmaesPath);
         x = Normalize(original);
         cmaoptimizer = new CMAES(x, 0.3, Normalize(lowerBounds), Normalize(upperBounds));
+        SetParams();
     }
 
     // Update is called once per frame
