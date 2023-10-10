@@ -162,11 +162,20 @@ public class DepthImage : MonoBehaviour
         shouldProceed = true;
     }
 
+    double curTime = 0;
+    double lastDSP = 0;
+
     // This is called every frame
     void Update()
     {
         if (!shouldProceed)
             return;
+
+        if (lastDSP != AudioSettings.dspTime) {
+            lastDSP = AudioSettings.dspTime;
+            curTime = lastDSP;
+        }
+        else curTime += Time.unscaledDeltaTime;
 
         // Check if device supports environment depth.
         var descriptor = m_OcclusionManager.descriptor;
@@ -383,7 +392,6 @@ public class DepthImage : MonoBehaviour
     private double lastScheduled = -10;
     private void PlayCollision(int mag, float delay)
     {
-        double curTime = AudioSettings.dspTime;
         double nextSchedule = Math.Max(curTime, lastScheduled + audioSource.clip.length + delay);
         if (!audioSource.isPlaying && nextSchedule - curTime < 0.15) { // Schedule next audio if it will be needed soon
             float localRot = -rotation.y * Mathf.Deg2Rad;
