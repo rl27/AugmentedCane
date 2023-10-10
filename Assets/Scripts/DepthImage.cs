@@ -36,9 +36,8 @@ public class DepthImage : MonoBehaviour
     ARCameraManager m_CameraManager;
 
     AudioSource audioSource;
-    public static float collisionAudioMaxDelay = 0.5f; // Rate at which audio plays for obstacles at max distance
+    public static float collisionAudioMaxDelay = 1.0f; // Rate at which audio plays for obstacles at max distance
     public static float collisionAudioMinDistanceRatio = 0.2f; // Distance ratio where audio speed caps out (multiply by distanceToObstacle)
-    private double collisionLastPlayed = 0;
 
     // The UI RawImage used to display the image on screen.
     public RawImage rawImage {
@@ -381,16 +380,17 @@ public class DepthImage : MonoBehaviour
     }
 
     // mag = -1 for left, mag = 1 for right
+    private double lastScheduled = -10;
     private void PlayCollision(int mag, float delay)
     {
         double curTime = AudioSettings.dspTime;
-        if (curTime - collisionLastPlayed < delay + audioSource.clip.length)
-            return;
-        float localRot = -rotation.y * Mathf.Deg2Rad;
-        this.transform.position = position + new Vector3(mag * Mathf.Cos(localRot), 0, mag * Mathf.Sin(localRot));
-        if (!audioSource.isPlaying) {
-            collisionLastPlayed = curTime;
-            audioSource.PlayOneShot(audioSource.clip, 2);
+        double nextSchedule = Math.Max(curTime, lastScheduled + audioSource.clip.length + delay);
+        if (!audioSource.isPlaying && nextSchedule - curTime < 0.15) { // Schedule next audio if it will be needed soon
+            float localRot = -rotation.y * Mathf.Deg2Rad;
+            this.transform.position = position + new Vector3(mag * Mathf.Cos(localRot), 0, mag * Mathf.Sin(localRot));
+
+            audioSource.PlayScheduled(nextSchedule);
+            lastScheduled = nextSchedule;
         }
     }
 
