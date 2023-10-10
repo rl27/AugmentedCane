@@ -33,6 +33,7 @@ public class PointCloudVisualizer : MonoBehaviour
     float startSize;
 
     public static int pointAhead = 0; // 0 = no obstacle; 1 = go left; 2 = go right
+    public static float closest = 999;
 
     void Awake()
     {
@@ -105,6 +106,7 @@ public class PointCloudVisualizer : MonoBehaviour
         float rightCount = 0;
         float rightSum = 0;
         int numPoints = 0;
+        closest = 999f;
         foreach (var kvp in pts) {
             Vector3 pos = kvp.Value;
             Vector3 translated = pos - userLoc;
@@ -117,6 +119,8 @@ public class PointCloudVisualizer : MonoBehaviour
                 if (rZ > 0 && rZ < DepthImage.distanceToObstacle && rX > -DepthImage.halfPersonWidth && rX < DepthImage.halfPersonWidth) {
                     numPoints += 1;
                     particles[index].startColor = failColor;
+                    float t = rX*rX+rZ*rZ;
+                    if (t < closest) closest = t;
                 }
 
                 if (rX > 0) {
@@ -137,6 +141,8 @@ public class PointCloudVisualizer : MonoBehaviour
             particles[index].remainingLifetime = 1f;
             index++;
         }
+
+        closest = Mathf.Sqrt(closest);
 
         if (numPoints >= 3) {
             float leftAvg = (leftCount == 0) ? Single.PositiveInfinity : leftSum/leftCount;

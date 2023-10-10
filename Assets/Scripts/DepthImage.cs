@@ -36,7 +36,8 @@ public class DepthImage : MonoBehaviour
     ARCameraManager m_CameraManager;
 
     AudioSource audioSource;
-    public static float collisionAudioDelay = 0.2f;
+    public static float collisionAudioMaxDelay = 0.5f; // Rate at which audio plays for obstacles at max distance
+    public static float collisionAudioMinDistanceRatio = 0.2f; // Distance ratio where audio speed caps out (multiply by distanceToObstacle)
     private double collisionLastPlayed = 0;
 
     // The UI RawImage used to display the image on screen.
@@ -266,7 +267,7 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"Ground: {ground}");
 
         // Check for obstacles using depth image
-        (float[] closeTotals, bool avgGoLeft) = ProcessDepthImage(); // In portrait mode, index 0 = right side, max index = left side
+        (float[] closeTotals, bool avgGoLeft, float closest) = ProcessDepthImage(); // In portrait mode, index 0 = right side, max index = left side
         bool hasObstacle = false;
         int len = closeTotals.Length;
         for (int i = 0; i < len; i++) {
@@ -275,6 +276,7 @@ public class DepthImage : MonoBehaviour
                 break;
             }
         }
+        float delay = collisionAudioMaxDelay;
         // Obstacle detected in depth image
         if (hasObstacle) {
             m_StringBuilder.AppendLine("Obstacle: Yes");
@@ -314,16 +316,24 @@ public class DepthImage : MonoBehaviour
             }
             
             direction = goLeft ? Direction.Left : Direction.Right;
+            delay = (closest/distanceToObstacle - collisionAudioMinDistanceRatio) / (1-collisionAudioMinDistanceRatio);
+            delay = Mathf.Clamp(delay, 0, 1) * collisionAudioMaxDelay;
+            PlayCollision(goLeft ? -1 : 1, delay);
+
             m_StringBuilder.AppendLine(goLeft ? "Dir: Left" : "Dir: Right");
-            PlayCollision(goLeft ? -1 : 1);
+            m_StringBuilder.AppendLine($"Closest {Math.Round(closest, 2)}; Delay {Math.Round(delay, 2)}");
         }
         // If depth image detects no obstacle, check if point cloud detects obstacle
         else if (PointCloudVisualizer.pointAhead != 0) {
             m_StringBuilder.AppendLine("Point Obstacle: Yes");
             bool goLeft = (PointCloudVisualizer.pointAhead == 1);
             direction = goLeft ? Direction.Left : Direction.Right;
+            delay = (PointCloudVisualizer.closest/distanceToObstacle - collisionAudioMinDistanceRatio) / (1-collisionAudioMinDistanceRatio);
+            delay = Mathf.Clamp(delay, 0, 1) * collisionAudioMaxDelay;
+            PlayCollision(goLeft ? -1 : 1, delay);
+
             m_StringBuilder.AppendLine(goLeft ? "Dir: Left" : "Dir: Right");
-            PlayCollision(goLeft ? -1 : 1);
+            m_StringBuilder.AppendLine($"Closest {Math.Round(PointCloudVisualizer.closest, 2)}; Delay {Math.Round(delay, 2)}");
         }
         // else m_StringBuilder.AppendLine("Obstacle: No");
     }
@@ -371,10 +381,10 @@ public class DepthImage : MonoBehaviour
     }
 
     // mag = -1 for left, mag = 1 for right
-    private void PlayCollision(int mag)
+    private void PlayCollision(int mag, float delay)
     {
         double curTime = AudioSettings.dspTime;
-        if (curTime - collisionLastPlayed < collisionAudioDelay + audioSource.clip.length)
+        if (curTime - collisionLastPlayed < delay + audioSource.clip.length)
             return;
         float localRot = -rotation.y * Mathf.Deg2Rad;
         this.transform.position = position + new Vector3(mag * Mathf.Cos(localRot), 0, mag * Mathf.Sin(localRot));
@@ -713,9 +723,10 @@ public class DepthImage : MonoBehaviour
     // Each point in the 2D depth array that is (1) high enough confidence and (2) within a certain distance
     // will give a weighted vote towards the corresponding value in the 1D array.
     // The second return value tells us whether there is more space on the left or the right side.
+    // The third return value is the closest point that counts as an obstacle.
 
     // This function also populates the grid dictionary.
-    private (float[], bool) ProcessDepthImage()
+    private (float[], bool, float) ProcessDepthImage()
     {
         bool portrait = IsPortrait();
         float[] output = new float[portrait ? depthHeight : depthWidth];
@@ -727,6 +738,8 @@ public class DepthImage : MonoBehaviour
         float leftCount = 0;
         float rightSum = 0;
         float rightCount = 0;
+
+        float closest = 999f;
 
         for (int y = 0; y < depthHeight; y++) {
             for (int x = 0; x < depthWidth; x++) {
@@ -742,6 +755,8 @@ public class DepthImage : MonoBehaviour
                     // Distance & width check
                     if (rZ > 0 && rZ < distanceToObstacle && rX > -halfPersonWidth && rX < halfPersonWidth) {
                         output[portrait ? y : x] += conf / confidenceMax;
+                        float t = rX*rX+rZ*rZ;
+                        if (t < closest) closest = t;
                     }
 
                     // Weighted depth averages using points that pass the height check
@@ -757,10 +772,12 @@ public class DepthImage : MonoBehaviour
             }
         }
 
+        closest = Mathf.Sqrt(closest);
+
         float leftAvg = (leftCount == 0) ? Single.PositiveInfinity : leftSum/leftCount;
         float rightAvg = (rightCount == 0) ? Single.PositiveInfinity : rightSum/rightCount;
         bool avgGoLeft = leftAvg > rightAvg;
 
-        return (output, avgGoLeft);
+        return (output, avgGoLeft, closest);
     }
 }

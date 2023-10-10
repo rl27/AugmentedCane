@@ -49,12 +49,10 @@ public class Main : MonoBehaviour
 
     CMAES cmaoptimizer;
 
-    // distanceToObstacle, halfPersonWidth, collisionSumThreshold, collisionAudioDelay
-    // 2.5, 0.3, 1.1, 0.2
-    private double[] original = new double[] { DepthImage.distanceToObstacle, DepthImage.halfPersonWidth, DepthImage.collisionSumThreshold, DepthImage.collisionAudioDelay };
+    private double[] original = new double[] { DepthImage.distanceToObstacle, DepthImage.halfPersonWidth, DepthImage.collisionSumThreshold, DepthImage.collisionAudioMaxDelay, DepthImage.collisionAudioMinDistanceRatio };
     private double[] x;
-    private double[] lowerBounds = new double[] {0.5, 0.01, 0.01, 0};
-    private double[] upperBounds = new double[] {4, 0.7, 80, 1};
+    private double[] lowerBounds = new double[] {0.5, 0.01, 0.01, 0, 0};
+    private double[] upperBounds = new double[] {4, 0.7, 80, 1, 1};
 
     private double[] bestVector = null;
     private double bestValue = double.MaxValue;
@@ -109,7 +107,8 @@ public class Main : MonoBehaviour
         DepthImage.distanceToObstacle = (float) x2[0];
         DepthImage.halfPersonWidth = (float) x2[1];
         DepthImage.collisionSumThreshold = (float) x2[2];
-        DepthImage.collisionAudioDelay = (float) x2[3];
+        DepthImage.collisionAudioMaxDelay = (float) x2[3];
+        DepthImage.collisionAudioMinDistanceRatio = (float) x2[4];
     }
 
     private double[] Normalize(double[] v)
@@ -128,14 +127,18 @@ public class Main : MonoBehaviour
     }
 
     private string GetString(double[] v) {
-        return Math.Round(v[0],2) + " " + Math.Round(v[1],2) + " " + Math.Round(v[2],2) + " " + Math.Round(v[3],2);
+        string outStr = "";
+        for (int i = 0; i < v.Length; i++) {
+            outStr += Math.Round(v[i],2) + " ";
+        }
+        return outStr;
     }
 
     // Enter a sample for CMA-ES
     public void OnSampleEntered(string input)
     {
-        float output;
-        if (float.TryParse(input, out output)) {
+        double output;
+        if (double.TryParse(input, out output)) {
             CMAGenerate(output);
         }
     }
@@ -144,18 +147,15 @@ public class Main : MonoBehaviour
     public void OnParamsEntered(string input)
     {
         string[] splits = input.Split(' ');
-        if (splits.Length != 4)
+        if (splits.Length != original.Length)
             return;
-        float p0, p1, p2, p3;
-        if (float.TryParse(splits[0], out p0) &&
-            float.TryParse(splits[1], out p1) &&
-            float.TryParse(splits[2], out p2) &&
-            float.TryParse(splits[3], out p3)) {
-            DepthImage.distanceToObstacle = p0;
-            DepthImage.halfPersonWidth = p1;
-            DepthImage.collisionSumThreshold = p2;
-            DepthImage.collisionAudioDelay = p3;
+        double[] ps = new double[original.Length];
+        for (int i = 0; i < original.Length; i++) {
+            if (!double.TryParse(splits[i], out ps[i]))
+                return;
         }
+        x = Normalize(ps);
+        SetParams();
     }
 
     public void LogButtonPress()
