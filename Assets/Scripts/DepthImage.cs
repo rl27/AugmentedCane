@@ -34,8 +34,9 @@ public class DepthImage : MonoBehaviour
     [Tooltip("The ARCameraManager which will produce camera frame events.")]
     ARCameraManager m_CameraManager;
 
-    // Multiple audio sources to queue collision audio with no delay
+    // Using multiple audio sources to queue collision audio with no delay
     // https://johnleonardfrench.com/ultimate-guide-to-playscheduled-in-unity/#queue_clips
+    // https://docs.unity3d.com/ScriptReference/AudioSource.SetScheduledEndTime.html
     public AudioSource[] audioSources;
     public static float collisionAudioMaxDelay = 1.0f; // Rate at which audio plays for obstacles at max distance
     public static float collisionAudioMinDistance = 0.5f; // Distance where audio speed caps out
