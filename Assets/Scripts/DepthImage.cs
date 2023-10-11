@@ -34,9 +34,12 @@ public class DepthImage : MonoBehaviour
     [Tooltip("The ARCameraManager which will produce camera frame events.")]
     ARCameraManager m_CameraManager;
 
+    // Multiple audio sources to queue collision audio with no delay
+    // https://johnleonardfrench.com/ultimate-guide-to-playscheduled-in-unity/#queue_clips
     public AudioSource[] audioSources;
     public static float collisionAudioMaxDelay = 1.0f; // Rate at which audio plays for obstacles at max distance
     public static float collisionAudioMinDistance = 0.5f; // Distance where audio speed caps out
+    private double audioDuration;
 
     // The UI RawImage used to display the image on screen.
     public RawImage rawImage {
@@ -156,6 +159,8 @@ public class DepthImage : MonoBehaviour
         }
 
         pc = XR.GetComponent<PointCloud>();
+
+        audioDuration = (double) audioSources[0].clip.samples / audioSources[0].clip.frequency;
 
         shouldProceed = true;
     }
@@ -394,8 +399,7 @@ public class DepthImage : MonoBehaviour
         float localRot = -rotation.y * Mathf.Deg2Rad;
         this.transform.position = position + new Vector3(mag * Mathf.Cos(localRot), 0, mag * Mathf.Sin(localRot));
 
-        double duration = (double) audioSources[0].clip.samples / audioSources[0].clip.frequency;
-        double nextSchedule = Math.Max(curTime, lastScheduled + duration + delay);
+        double nextSchedule = Math.Max(curTime, lastScheduled + audioDuration + delay);
         if (nextSchedule - curTime < 0.15) { // Schedule next audio if it will be needed soon
             audioSources[audioSelect].PlayScheduled(nextSchedule);
             audioSelect = (audioSelect + 1) % audioSources.Length;
