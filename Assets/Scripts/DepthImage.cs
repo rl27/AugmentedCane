@@ -10,7 +10,6 @@ using UnityEngine.XR.ARSubsystems;
 // ARFoundation references:
 // https://github.com/Unity-Technologies/arfoundation-samples/blob/main/Assets/Scripts/Runtime/DisplayDepthImage.cs
 // https://github.com/Unity-Technologies/arfoundation-samples/blob/main/Assets/Scripts/Runtime/CpuImageSample.cs
-[RequireComponent(typeof(AudioSource))]
 public class DepthImage : MonoBehaviour
 {
     // For logging
@@ -35,9 +34,9 @@ public class DepthImage : MonoBehaviour
     [Tooltip("The ARCameraManager which will produce camera frame events.")]
     ARCameraManager m_CameraManager;
 
-    AudioSource audioSource;
+    public AudioSource[] audioSources;
     public static float collisionAudioMaxDelay = 1.0f; // Rate at which audio plays for obstacles at max distance
-    public static float collisionAudioMinDistanceRatio = 0.2f; // Distance ratio where audio speed caps out (multiply by distanceToObstacle)
+    public static float collisionAudioMinDistance = 0.5f; // Distance where audio speed caps out
 
     // The UI RawImage used to display the image on screen.
     public RawImage rawImage {
@@ -145,7 +144,6 @@ public class DepthImage : MonoBehaviour
             confidenceMax = 2;
         #endif
 
-        audioSource = GetComponent<AudioSource>();
         vision = VisionHandler.GetComponent<Vision>();
 
         // Set depth image material
@@ -324,7 +322,7 @@ public class DepthImage : MonoBehaviour
             }
             
             direction = goLeft ? Direction.Left : Direction.Right;
-            delay = (closest/distanceToObstacle - collisionAudioMinDistanceRatio) / (1-collisionAudioMinDistanceRatio);
+            delay = (closest - collisionAudioMinDistance) / (distanceToObstacle - collisionAudioMinDistance);
             delay = Mathf.Clamp(delay, 0, 1) * collisionAudioMaxDelay;
             PlayCollision(goLeft ? -1 : 1, delay);
 
@@ -336,7 +334,7 @@ public class DepthImage : MonoBehaviour
             m_StringBuilder.AppendLine("Point Obstacle: Yes");
             bool goLeft = (PointCloudVisualizer.pointAhead == 1);
             direction = goLeft ? Direction.Left : Direction.Right;
-            delay = (PointCloudVisualizer.closest/distanceToObstacle - collisionAudioMinDistanceRatio) / (1-collisionAudioMinDistanceRatio);
+            delay = (PointCloudVisualizer.closest - collisionAudioMinDistance) / (distanceToObstacle - collisionAudioMinDistance);
             delay = Mathf.Clamp(delay, 0, 1) * collisionAudioMaxDelay;
             PlayCollision(goLeft ? -1 : 1, delay);
 
@@ -390,14 +388,17 @@ public class DepthImage : MonoBehaviour
 
     // mag = -1 for left, mag = 1 for right
     private double lastScheduled = -10;
+    private int audioSelect = 0;
     private void PlayCollision(int mag, float delay)
     {
-        double nextSchedule = Math.Max(curTime, lastScheduled + audioSource.clip.length + delay);
-        if (!audioSource.isPlaying && nextSchedule - curTime < 0.15) { // Schedule next audio if it will be needed soon
-            float localRot = -rotation.y * Mathf.Deg2Rad;
-            this.transform.position = position + new Vector3(mag * Mathf.Cos(localRot), 0, mag * Mathf.Sin(localRot));
+        float localRot = -rotation.y * Mathf.Deg2Rad;
+        this.transform.position = position + new Vector3(mag * Mathf.Cos(localRot), 0, mag * Mathf.Sin(localRot));
 
-            audioSource.PlayScheduled(nextSchedule);
+        double duration = (double) audioSources[0].clip.samples / audioSources[0].clip.frequency;
+        double nextSchedule = Math.Max(curTime, lastScheduled + duration + delay);
+        if (nextSchedule - curTime < 0.15) { // Schedule next audio if it will be needed soon
+            audioSources[audioSelect].PlayScheduled(nextSchedule);
+            audioSelect = (audioSelect + 1) % audioSources.Length;
             lastScheduled = nextSchedule;
         }
     }
