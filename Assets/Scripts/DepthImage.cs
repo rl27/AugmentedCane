@@ -271,7 +271,7 @@ public class DepthImage : MonoBehaviour
         // m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
 
         // Update floor grid
-        ground = Mathf.Min(0, GetFloor());
+        ground = Mathf.Min(-0.5f, GetFloor());
         CleanupDict();
         // m_StringBuilder.AppendLine($"Num cells: {grid.Count}");
         // Vector2 gridPt = SnapToGrid(position);
@@ -696,7 +696,7 @@ public class DepthImage : MonoBehaviour
     private float[] pastFloors = new float[numFloors]; // Stores past floor elevations in world space
     private int floorIndex = 0;
 
-    // Get elevation of floor relative to device; Default return value is -0.5 meters
+    // Get elevation of floor relative to device
     private float GetFloor()
     {
         Vector2 gridPt = SnapToGrid(position);
