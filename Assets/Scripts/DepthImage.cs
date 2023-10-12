@@ -38,7 +38,7 @@ public class DepthImage : MonoBehaviour
     // https://johnleonardfrench.com/ultimate-guide-to-playscheduled-in-unity/#queue_clips
     // https://docs.unity3d.com/ScriptReference/AudioSource.SetScheduledEndTime.html
     public AudioSource[] audioSources;
-    public static float collisionAudioMinRate = 0.5f; // Rate at which audio plays for obstacles at max distance
+    public static float collisionAudioMinRate = 2f; // Rate at which audio plays for obstacles at max distance
     public static float collisionAudioCapDistance = 0.5f; // Distance where audio speed caps out
     private float collisionAudioMaxRate;
     private double audioDuration; // Collision audio duration = 0.0853333333333333 (if using audioclip.length, it's 0.08533333)
