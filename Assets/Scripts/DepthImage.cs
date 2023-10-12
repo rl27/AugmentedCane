@@ -38,9 +38,10 @@ public class DepthImage : MonoBehaviour
     // https://johnleonardfrench.com/ultimate-guide-to-playscheduled-in-unity/#queue_clips
     // https://docs.unity3d.com/ScriptReference/AudioSource.SetScheduledEndTime.html
     public AudioSource[] audioSources;
-    public static float collisionAudioMaxDelay = 1.0f; // Rate at which audio plays for obstacles at max distance
-    public static float collisionAudioMinDistance = 0.5f; // Distance where audio speed caps out
-    private double audioDuration;
+    public static float collisionAudioMinRate = 0.5f; // Rate at which audio plays for obstacles at max distance
+    public static float collisionAudioCapDistance = 0.5f; // Distance where audio speed caps out
+    private float collisionAudioMaxRate;
+    private double audioDuration; // Collision audio duration = 0.0853333333333333 (if using audioclip.length, it's 0.08533333)
 
     // The UI RawImage used to display the image on screen.
     public RawImage rawImage {
@@ -162,6 +163,7 @@ public class DepthImage : MonoBehaviour
         pc = XR.GetComponent<PointCloud>();
 
         audioDuration = (double) audioSources[0].clip.samples / audioSources[0].clip.frequency;
+        collisionAudioMaxRate = 1 / (float)audioDuration;
 
         shouldProceed = true;
     }
@@ -288,7 +290,6 @@ public class DepthImage : MonoBehaviour
                 break;
             }
         }
-        float delay = collisionAudioMaxDelay;
         // Obstacle detected in depth image
         if (hasObstacle) {
             m_StringBuilder.AppendLine("Obstacle: Yes");
@@ -328,24 +329,24 @@ public class DepthImage : MonoBehaviour
             }
             
             direction = goLeft ? Direction.Left : Direction.Right;
-            delay = (closest - collisionAudioMinDistance) / (distanceToObstacle - collisionAudioMinDistance);
-            delay = Mathf.Clamp(delay, 0, 1) * collisionAudioMaxDelay;
-            PlayCollision(goLeft ? -1 : 1, delay);
+            float rate = (closest - collisionAudioCapDistance) / (distanceToObstacle - collisionAudioCapDistance);
+            rate = Mathf.Lerp(collisionAudioMaxRate, collisionAudioMinRate, rate);
+            PlayCollision(goLeft ? -1 : 1, 1/rate - audioDuration);
 
             m_StringBuilder.AppendLine(goLeft ? "Dir: Left" : "Dir: Right");
-            m_StringBuilder.AppendLine($"Closest {Math.Round(closest, 2)}; Delay {Math.Round(delay, 2)}");
+            m_StringBuilder.AppendLine($"Closest {Math.Round(closest, 2)}; Rate {Math.Round(rate, 2)}");
         }
         // If depth image detects no obstacle, check if point cloud detects obstacle
         else if (PointCloudVisualizer.pointAhead != 0) {
             m_StringBuilder.AppendLine("Point Obstacle: Yes");
             bool goLeft = (PointCloudVisualizer.pointAhead == 1);
             direction = goLeft ? Direction.Left : Direction.Right;
-            delay = (PointCloudVisualizer.closest - collisionAudioMinDistance) / (distanceToObstacle - collisionAudioMinDistance);
-            delay = Mathf.Clamp(delay, 0, 1) * collisionAudioMaxDelay;
-            PlayCollision(goLeft ? -1 : 1, delay);
+            float rate = (closest - collisionAudioCapDistance) / (distanceToObstacle - collisionAudioCapDistance);
+            rate = Mathf.Lerp(collisionAudioMaxRate, collisionAudioMinRate, rate);
+            PlayCollision(goLeft ? -1 : 1, 1/rate - audioDuration);
 
             m_StringBuilder.AppendLine(goLeft ? "Dir: Left" : "Dir: Right");
-            m_StringBuilder.AppendLine($"Closest {Math.Round(PointCloudVisualizer.closest, 2)}; Delay {Math.Round(delay, 2)}");
+            m_StringBuilder.AppendLine($"Closest {Math.Round(PointCloudVisualizer.closest, 2)}; Rate {Math.Round(rate, 2)}");
         }
         // else m_StringBuilder.AppendLine("Obstacle: No");
     }
@@ -395,7 +396,7 @@ public class DepthImage : MonoBehaviour
     // mag = -1 for left, mag = 1 for right
     private double lastScheduled = -10;
     private int audioSelect = 0;
-    private void PlayCollision(int mag, float delay)
+    private void PlayCollision(int mag, double delay)
     {
         float localRot = -rotation.y * Mathf.Deg2Rad;
         this.transform.position = position + new Vector3(mag * Mathf.Cos(localRot), 0, mag * Mathf.Sin(localRot));

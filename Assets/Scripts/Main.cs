@@ -49,10 +49,10 @@ public class Main : MonoBehaviour
 
     CMAES cmaoptimizer;
 
-    private double[] original = new double[] { DepthImage.distanceToObstacle, DepthImage.halfPersonWidth, DepthImage.collisionSumThreshold, DepthImage.collisionAudioMaxDelay, DepthImage.collisionAudioMinDistance };
+    private double[] original = new double[] { DepthImage.distanceToObstacle, DepthImage.halfPersonWidth, DepthImage.collisionSumThreshold, DepthImage.collisionAudioMinRate, DepthImage.collisionAudioCapDistance };
     private double[] x;
-    private double[] lowerBounds = new double[] {0.5, 0.01, 0.01, 0, 0.1};
-    private double[] upperBounds = new double[] {4, 0.7, 80, 2, 3};
+    private double[] lowerBounds = new double[] {0.5, 0.01, 0.01, 0.25, 0.1};
+    private double[] upperBounds = new double[] {4, 0.7, 80, 11, 3};
 
     private double[] bestVector = null;
     private double bestValue = double.MaxValue;
@@ -82,7 +82,7 @@ public class Main : MonoBehaviour
         else {
             cmaoptimizer = BinarySerialization.ReadFromBinaryFile<CMAES>(cmaesPath);
             x = cmaoptimizer.ask;
-            x[4] = Math.Min(x[4], x[0]); // Cap collisionAudioMinDistance if it is greater than distanceToObstacle
+            x[4] = Math.Min(x[4], x[0]); // Cap collisionAudioCapDistance if it is greater than distanceToObstacle
             SetParams();
         }
     }
@@ -108,8 +108,8 @@ public class Main : MonoBehaviour
         DepthImage.distanceToObstacle = (float) x2[0];
         DepthImage.halfPersonWidth = (float) x2[1];
         DepthImage.collisionSumThreshold = (float) x2[2];
-        DepthImage.collisionAudioMaxDelay = (float) x2[3];
-        DepthImage.collisionAudioMinDistance = (float) x2[4];
+        DepthImage.collisionAudioMinRate = (float) x2[3];
+        DepthImage.collisionAudioCapDistance = (float) x2[4];
     }
 
     private double[] Normalize(double[] v)
