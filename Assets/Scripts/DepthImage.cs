@@ -114,7 +114,7 @@ public class DepthImage : MonoBehaviour
     private bool doObstacleAvoidance = true;
     public static float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
     int collisionWindowWidth = 24; // Min. pixel gap to go through
-    public static float collisionSumThreshold = 1.1f;
+    public static float depthConfidenceThreshold = 0.06f;
     int confidenceMax = 255;
 
     public static float halfPersonWidth = 0.3f; // Estimated half-width of a person
@@ -285,7 +285,7 @@ public class DepthImage : MonoBehaviour
         bool hasObstacle = false;
         int len = closeTotals.Length;
         for (int i = 0; i < len; i++) {
-            if (closeTotals[i] >= collisionSumThreshold) {
+            if (closeTotals[i] > 0) {
                 hasObstacle = true;
                 break;
             }
@@ -298,7 +298,7 @@ public class DepthImage : MonoBehaviour
             int start = 0, end = 0, temp = 0;
             bool open = false;
             for (int i = 0; i < len-1; i++) {
-                if (closeTotals[i] > collisionSumThreshold) { // No gap
+                if (closeTotals[i] > 0) { // No gap
                     if (open) { // End gap
                         if (end - start < i - temp)
                             (start, end) = (temp, i);
@@ -341,7 +341,7 @@ public class DepthImage : MonoBehaviour
             m_StringBuilder.AppendLine("Point Obstacle: Yes");
             bool goLeft = (PointCloudVisualizer.pointAhead == 1);
             direction = goLeft ? Direction.Left : Direction.Right;
-            float rate = (closest - collisionAudioCapDistance) / (distanceToObstacle - collisionAudioCapDistance);
+            float rate = (PointCloudVisualizer.closest - collisionAudioCapDistance) / (distanceToObstacle - collisionAudioCapDistance);
             rate = Mathf.Lerp(collisionAudioMaxRate, collisionAudioMinRate, rate);
             PlayCollision(goLeft ? -1 : 1, 1/rate - audioDuration);
 
@@ -759,7 +759,7 @@ public class DepthImage : MonoBehaviour
         for (int y = 0; y < depthHeight; y++) {
             for (int x = 0; x < depthWidth; x++) {
                 float conf = GetConfidence(x, y);
-                if (conf == 0) continue;
+                if (conf / confidenceMax < depthConfidenceThreshold) continue;
 
                 float dist = GetDepth(x, y);
                 Vector3 pos = TransformLocalToWorld(ComputeVertex(x, y, dist));

@@ -49,7 +49,7 @@ public class Main : MonoBehaviour
 
     CMAES cmaoptimizer;
 
-    private double[] original = new double[] { DepthImage.distanceToObstacle, DepthImage.halfPersonWidth, DepthImage.collisionSumThreshold, DepthImage.collisionAudioMinRate, DepthImage.collisionAudioCapDistance };
+    private double[] original = new double[] { DepthImage.distanceToObstacle, DepthImage.halfPersonWidth, DepthImage.depthConfidenceThreshold, DepthImage.collisionAudioMinRate, DepthImage.collisionAudioCapDistance };
     private double[] x;
     private double[] lowerBounds = new double[] {0.5, 0.01, 0.01, 0.5, 0.1};
     private double[] upperBounds = new double[] {4, 0.7, 80, 11, 3};
@@ -107,7 +107,7 @@ public class Main : MonoBehaviour
         double[] x2 = Denormalize(x);
         DepthImage.distanceToObstacle = (float) x2[0];
         DepthImage.halfPersonWidth = (float) x2[1];
-        DepthImage.collisionSumThreshold = (float) x2[2];
+        DepthImage.depthConfidenceThreshold = (float) x2[2];
         DepthImage.collisionAudioMinRate = (float) x2[3];
         DepthImage.collisionAudioCapDistance = (float) x2[4];
     }
