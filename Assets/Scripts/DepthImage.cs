@@ -114,7 +114,7 @@ public class DepthImage : MonoBehaviour
     private bool doObstacleAvoidance = true;
     public static float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
     int collisionWindowWidth = 24; // Min. pixel gap to go through
-    public static float depthConfidenceThreshold = 0.06f;
+    public static float depthConfidenceThreshold = 0.1f;
     int confidenceMax = 255;
 
     public static float halfPersonWidth = 0.3f; // Estimated half-width of a person
@@ -281,11 +281,11 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"Ground: {ground}");
 
         // Check for obstacles using depth image
-        (float[] closeTotals, bool avgGoLeft, float closest) = ProcessDepthImage(); // In portrait mode, index 0 = right side, max index = left side
+        (int[] closeTotals, bool avgGoLeft, float closest) = ProcessDepthImage(); // In portrait mode, index 0 = right side, max index = left side
         bool hasObstacle = false;
         int len = closeTotals.Length;
         for (int i = 0; i < len; i++) {
-            if (closeTotals[i] > 0) {
+            if (closeTotals[i] >= 3) {
                 hasObstacle = true;
                 break;
             }
@@ -741,10 +741,10 @@ public class DepthImage : MonoBehaviour
     // The third return value is the closest point that counts as an obstacle.
 
     // This function also populates the grid dictionary.
-    private (float[], bool, float) ProcessDepthImage()
+    private (int[], bool, float) ProcessDepthImage()
     {
         bool portrait = IsPortrait();
-        float[] output = new float[portrait ? depthHeight : depthWidth];
+        int[] output = new int[portrait ? depthHeight : depthWidth];
 
         float sin = Mathf.Sin(rotation.y * Mathf.Deg2Rad);
         float cos = Mathf.Cos(rotation.y * Mathf.Deg2Rad);
@@ -769,7 +769,7 @@ public class DepthImage : MonoBehaviour
                     float rZ = sin*translated.x + cos*translated.z;
                     // Distance & width check
                     if (rZ > 0 && rZ < distanceToObstacle && rX > -halfPersonWidth && rX < halfPersonWidth) {
-                        output[portrait ? y : x] += conf / confidenceMax;
+                        output[portrait ? y : x] += 1;
                         float t = rX*rX+rZ*rZ;
                         if (t < closest) closest = t;
                     }
