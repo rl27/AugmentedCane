@@ -201,13 +201,15 @@ public class DepthImage : MonoBehaviour
         }
 
         // position and rotation briefly become 0 on focus loss/regain, which can mess things up
+        // Same for localToWorldTransform
         if (camera.transform.position != Vector3.zero && camera.transform.rotation.eulerAngles != Vector3.zero) {
             position = camera.transform.position;
             rotation = camera.transform.rotation.eulerAngles;
         }
 
         screenRotation = Matrix4x4.Rotate(Quaternion.Euler(0, 0, GetRotationForScreen()));
-        localToWorldTransform = camera.transform.localToWorldMatrix * screenRotation;
+        if (camera.transform.localToWorldMatrix != Matrix4x4.identity)
+            localToWorldTransform = camera.transform.localToWorldMatrix * screenRotation;
 
         m_StringBuilder.Clear();
 
