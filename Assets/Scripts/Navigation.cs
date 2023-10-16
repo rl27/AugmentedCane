@@ -13,6 +13,7 @@ public class Navigation : MonoBehaviour
 {
     [NonSerialized]
     public static string info;
+    public static StringBuilder intersectionStringBuilder = new StringBuilder();
 
     [SerializeField]
     GameObject AudioSourceObject;
@@ -37,7 +38,7 @@ public class Navigation : MonoBehaviour
     GameObject TTSHandler;
     TTS tts;
 
-    // Rough conversion: 0.00001 = 1 meter
+    // Rough conversion: 0.00001 = 1.1 meters
     private double closeRadius = 0.000045;
     private double farRadius = 0.00020;
     private double farLineDist = 0.00020;
@@ -53,6 +54,11 @@ public class Navigation : MonoBehaviour
     private float minPitch = 0.5f; // Minimum pitch to apply to audio
 
     private bool reachedFirstWaypoint = false;
+
+    private List<Intersection> intersections = new List<Intersection>();
+    private Point lastIntersectionCenter = new Point(0, 0);
+    private const double intersectionSearchRadius = 0.00500; // Search for intersections 0.5 km left/right/up/down from user location
+    private const double intersectionNearbyRadius = 0.00045;
 
     private bool testing = false;
 
@@ -81,6 +87,23 @@ public class Navigation : MonoBehaviour
         }
     }
 
+    public struct Intersection {
+        public Point coords;
+        public string[] streetNames;
+        public Intersection(double x, double y, string[] streets) {
+            coords = new Navigation.Point(x, y);
+            streetNames = streets;
+        }
+        public override string ToString() {
+            // string str = coords.ToString() + ' ';
+            string str = "";
+            foreach (string street in streetNames) {
+                str += ' ' + street;
+            }
+            return str;
+        }
+    }
+
     void Start()
     {
         audioSource = GetComponent<AudioSource>();
@@ -92,6 +115,9 @@ public class Navigation : MonoBehaviour
             // Point end = new Point(42.36302180414251,-71.12749282880507);
             Point end = new Point("trader joes allston");
             RequestWaypoints(start, end);
+
+            Point center = new Point(42.363255290008, -71.126765958627);
+            RequestIntersections(center);
         }
     }
 
@@ -128,6 +154,51 @@ public class Navigation : MonoBehaviour
     {
         if (input != "")
             RequestWaypoints(GPSData.EstimatedUserLocation(), new Point(input));
+    }
+
+    public void RequestIntersections(Point center)
+    {
+        lastIntersectionCenter = center;
+        Point bottomLeft = new Point(center.lat - intersectionSearchRadius, center.lng - intersectionSearchRadius);
+        Point topRight = new Point(center.lat + intersectionSearchRadius, center.lng + intersectionSearchRadius);
+        StartCoroutine(WebClient.SendOverpassRequest(bottomLeft, topRight,
+            response => {
+                double lat = 0, lng = 0;
+                List<string> streetNames = new List<string>();
+                string[] lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                intersections.Clear();
+                for (int i = 1; i < lines.Length; i++) {
+                    string line = lines[i];
+                    string[] split = line.Split('\t', StringSplitOptions.RemoveEmptyEntries);
+                    if (line.Length >= 4 && line.Substring(0, 4) == "node") {
+                        // Save previous node data if present & valid
+                        // In some cases a node will have something like 2x "Sawyer Terrace" as ways, in which case we should ignore
+                        if (streetNames.Count > 1) {
+                            Intersection inter = new Intersection(lat, lng, streetNames.ToArray());
+                            intersections.Add(inter);
+                            streetNames.Clear();
+                        }
+                        // Initiate data for current node
+                        lat = Convert.ToDouble(split[1]);
+                        lng = Convert.ToDouble(split[2]);
+                    }
+                    else { // Add street name to list
+                        foreach (string str in split) {
+                            if (str != "way" && !streetNames.Contains(str))
+                                streetNames.Add(str);
+                        }
+                    }
+                }
+                // Save data for last node
+                if (streetNames.Count > 1) {
+                    Intersection inter = new Intersection(lat, lng, streetNames.ToArray());
+                    intersections.Add(inter);
+                    streetNames.Clear();
+                }
+                // foreach (var inter in intersections)
+                //     Debug.Log(inter);
+            })
+        );
     }
 
     // Call this first to request a route and populate variables
@@ -175,6 +246,17 @@ public class Navigation : MonoBehaviour
             if ((DateTime.Now - Vision.lastValidDirection).TotalSeconds < Vision.validDuration)
                 PlayOrientationAudio(Vision.relativeDir, true);
             return;
+        }
+
+        // Intersection stuff
+        if (Dist(loc, lastIntersectionCenter) > intersectionSearchRadius - intersectionNearbyRadius) {
+            RequestIntersections(loc);
+        }
+        intersectionStringBuilder.Clear();
+        foreach (var inter in intersections) {
+            double d = Dist(loc, inter.coords);
+            if (d < intersectionNearbyRadius)
+                intersectionStringBuilder.AppendLine($"{d*GPSData.degreeToMeter}m: {inter}");
         }
 
         (int bestWaypoint, bool closeToWaypoint) = FindBestWaypoint(loc);

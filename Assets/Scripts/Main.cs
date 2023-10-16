@@ -201,6 +201,7 @@ public class Main : MonoBehaviour
         if (GPSActive) {
             // m_StringBuilder.AppendLine($"{gps.GPSstring()}");
             m_StringBuilder.AppendLine($"{Navigation.info}\n");
+            m_StringBuilder.AppendLine($"{Navigation.intersectionStringBuilder.ToString()}\n");
         }
         if (IMUActive)
             m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
