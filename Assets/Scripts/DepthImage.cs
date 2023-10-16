@@ -217,7 +217,7 @@ public class DepthImage : MonoBehaviour
             UpdateCameraImage();
 
         direction = Direction.None;
-        if (!doObstacleAvoidance) return;
+        if (!doObstacleAvoidance || rotation.y == 0) return;
 
         UpdateDepthImages();
 
