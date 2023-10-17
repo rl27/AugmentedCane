@@ -256,7 +256,7 @@ public class Navigation : MonoBehaviour
         foreach (var inter in intersections) {
             double d = Dist(loc, inter.coords);
             if (d < intersectionNearbyRadius)
-                intersectionStringBuilder.AppendLine($"{d*GPSData.degreeToMeter}m: {inter}");
+                intersectionStringBuilder.AppendLine($"{Math.Round(d*GPSData.degreeToMeter,2)}m: {inter}");
         }
 
         (int bestWaypoint, bool closeToWaypoint) = FindBestWaypoint(loc);
