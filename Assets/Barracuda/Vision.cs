@@ -175,6 +175,15 @@ public class Vision : MonoBehaviour
 
         ProcessOutput(output);
 
+        // Use this code if GetResultTexture is not working
+        /*Texture2D output2D = new Texture2D(W, H, TextureFormat.RGB24, false);
+        for (int i = 0; i < W; i++) {
+            for (int j = 0; j < H; j++) {
+                output2D.SetPixel(i, H-j, COLOR_TABLE[(int)output[0, 0, i, j]]);
+            }
+        }
+        output2D.Apply();
+        SetTextures(resizedTex, output2D);*/
         SetTextures(resizedTex, GetResultTexture(output.ToReadOnlyArray()));
         
         input.Dispose();
