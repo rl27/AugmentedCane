@@ -80,7 +80,7 @@ public class Navigation : MonoBehaviour
             this.isAddress = true;
         }
         public override string ToString() {
-            string ll = Math.Round(lat, 7) + "," + Math.Round(lng, 7);
+            string ll = lat.ToString("F7") + ", " + lng.ToString("F7");
             if (!isAddress)
                 return ll;
             return address + ": " + ll;
@@ -256,7 +256,7 @@ public class Navigation : MonoBehaviour
         foreach (var inter in intersections) {
             double d = Dist(loc, inter.coords);
             if (d < intersectionNearbyRadius)
-                intersectionStringBuilder.AppendLine($"{Math.Round(d*GPSData.degreeToMeter,2)}m: {inter}");
+                intersectionStringBuilder.AppendLine($"{(d*GPSData.degreeToMeter).ToString("F1")}m: {inter}");
         }
 
         (int bestWaypoint, bool closeToWaypoint) = FindBestWaypoint(loc);
@@ -299,7 +299,7 @@ public class Navigation : MonoBehaviour
         int targetWaypoint = curWaypoint + 1;
         double ori = Orientation(loc, allPoints[targetWaypoint]); // Absolute direction towards waypoint
         double dist = GPSData.degreeToMeter * Dist(loc, allPoints[targetWaypoint]);
-        info = String.Format("WP {0}, {1}°, {2} m", targetWaypoint, Math.Round(ori), Math.Round(dist, 2));
+        info = String.Format("WP {0}, {1}°, {2} m", targetWaypoint, ori.ToString("F0"), dist.ToString("F2"));
 
         bool useRelative = false;
 
@@ -311,7 +311,7 @@ public class Navigation : MonoBehaviour
                 ori = Vision.direction;
                 useRelative = true;
             }
-            info += String.Format(", {0}°, {1}", Math.Round(Vision.direction), useRelative);
+            info += String.Format(", {0}°, {1}", Vision.direction.ToString("F0"), useRelative);
         }
 
         // Play orientation audio
@@ -321,7 +321,7 @@ public class Navigation : MonoBehaviour
         if ((DateTime.Now - lastOriented).TotalSeconds > orientationUpdateInterval && DepthImage.direction == DepthImage.Direction.None) {
             string facingCardinal = CardinalOrientation(SensorData.heading);
             string targetCardinal = CardinalOrientation(ori);
-            tts.RequestTTS(String.Format("Facing {0}, head {1} for {2} meters", facingCardinal, targetCardinal, Math.Round(dist)));
+            tts.RequestTTS(String.Format("Facing {0}, head {1} for {2} meters", facingCardinal, targetCardinal, dist.ToString("F0")));
             lastOriented = DateTime.Now;
         }
     }

@@ -136,7 +136,6 @@ public class DepthImage : MonoBehaviour
             LogDepth("No camera manager");
             return;
         }
-
         camera = m_CameraManager.GetComponent<Camera>();
         if (!camera) {
             LogDepth("No camera");
@@ -214,7 +213,7 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.Clear();
 
         m_StringBuilder.AppendLine($"Camera position: {position}");
-        m_StringBuilder.AppendLine($"Camera rotation: {rotation.y}");
+        m_StringBuilder.AppendLine($"Camera rotation: {rotation.y.ToString("F1")}");
 
         // m_StringBuilder.AppendLine($"FOV: {2*Mathf.Atan(depthWidth/(2*focalLength.x))*Mathf.Rad2Deg}, {2*Mathf.Atan(depthHeight/(2*focalLength.y))*Mathf.Rad2Deg}");
 
@@ -226,8 +225,9 @@ public class DepthImage : MonoBehaviour
 
         UpdateDepthImages();
 
-        // m_StringBuilder.AppendLine($"Width: {depthWidth}");
-        // m_StringBuilder.AppendLine($"Height: {depthHeight}");
+        m_StringBuilder.AppendLine($"Depth dims: {depthWidth} {depthHeight}");
+        if (m_RawCameraImage.texture != null)
+            m_StringBuilder.AppendLine($"Img dims: {m_RawCameraImage.texture.width} {m_RawCameraImage.texture.height}");
 
         // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
         // Screen orientation does not change coordinate locations on the screen.
@@ -241,39 +241,37 @@ public class DepthImage : MonoBehaviour
         // m_StringBuilder.AppendLine($"(0.5,0.5): {GetConfidence(new Vector2(0.5f, 0.5f))}");
         // m_StringBuilder.AppendLine($"(0.9,0.9): {GetConfidence(new Vector2(0.9f, 0.9f))}");
 
-        // int numLow = 0;
-        // int numMed = 0;
-        // int numHigh = 0;
-        // #if UNITY_ANDROID
-        //     for (int y = 0; y < depthHeight; y++) {
-        //         for (int x = 0; x < depthWidth; x++) {
-        //             int val = confidenceArray[(y * depthWidth) + x];
-        //             if (val == 0)
-        //                 numLow += 1;
-        //             else if (val < 255)
-        //                 numMed += 1;
-        //             else if (val == 255)
-        //                 numHigh += 1;
-        //         }
-        //     }
-        // #elif UNITY_IOS
-        //     for (int y = 0; y < depthHeight; y++) {
-        //         for (int x = 0; x < depthWidth; x++) {
-        //             int val = confidenceArray[(y * depthWidth) + x];
-        //             if (val == 0)
-        //                 numLow += 1;
-        //             else if (val == 1)
-        //                 numMed += 1;
-        //             else if (val == 2)
-        //                 numHigh += 1;
-        //         }
-        //     }
-        // #endif
-        // int numPixels = depthWidth * depthHeight;
-        // m_StringBuilder.AppendLine("CONFIDENCE PROPORTIONS:");
-        // m_StringBuilder.AppendLine($"Low: {(float) numLow / numPixels}");
-        // m_StringBuilder.AppendLine($"Med: {(float) numMed / numPixels}");
-        // m_StringBuilder.AppendLine($"High: {(float) numHigh / numPixels}");
+        int numLow = 0;
+        int numMed = 0;
+        int numHigh = 0;
+        #if UNITY_ANDROID
+            for (int y = 0; y < depthHeight; y++) {
+                for (int x = 0; x < depthWidth; x++) {
+                    int val = confidenceArray[(y * depthWidth) + x];
+                    if (val <= 255*depthConfidenceThreshold)
+                        numLow += 1;
+                    else if (val < 255)
+                        numMed += 1;
+                    else if (val == 255)
+                        numHigh += 1;
+                }
+            }
+        #elif UNITY_IOS
+            for (int y = 0; y < depthHeight; y++) {
+                for (int x = 0; x < depthWidth; x++) {
+                    int val = confidenceArray[(y * depthWidth) + x];
+                    if (val == 0)
+                        numLow += 1;
+                    else if (val == 1)
+                        numMed += 1;
+                    else if (val == 2)
+                        numHigh += 1;
+                }
+            }
+        #endif
+        int numPixels = depthWidth * depthHeight;
+        m_StringBuilder.AppendLine("Confidence proportions:");
+        m_StringBuilder.AppendLine($"  Low {((float) numLow / numPixels).ToString("F3")}; Med {((float) numMed / numPixels).ToString("F3")}; High {((float) numHigh / numPixels).ToString("F3")}");
 
         // Update floor grid
         ground = Mathf.Min(-0.5f, GetFloor());
@@ -297,7 +295,7 @@ public class DepthImage : MonoBehaviour
         }
         // Obstacle detected in depth image
         if (hasObstacle) {
-            m_StringBuilder.AppendLine("Obstacle: Yes");
+            m_StringBuilder.AppendLine("Obstacle ahead");
 
             // Search for longest gap
             int start = 0, end = 0, temp = 0;
@@ -338,20 +336,20 @@ public class DepthImage : MonoBehaviour
             rate = Mathf.Lerp(collisionAudioMaxRate, collisionAudioMinRate, rate);
             PlayCollision(goLeft ? -1 : 1, 1/rate - audioDuration);
 
-            m_StringBuilder.AppendLine(goLeft ? "Dir: Left" : "Dir: Right");
-            m_StringBuilder.AppendLine($"Closest {Math.Round(closest, 2)}; Rate {Math.Round(rate, 2)}");
+            m_StringBuilder.AppendLine(goLeft ? " Dir: Left" : "Dir: Right");
+            m_StringBuilder.AppendLine($" Closest {closest.ToString("F2")}m; Beep rate {rate.ToString("F2")}");
         }
         // If depth image detects no obstacle, check if point cloud detects obstacle
         else if (PointCloudVisualizer.pointAhead != 0) {
-            m_StringBuilder.AppendLine("Point Obstacle: Yes");
+            m_StringBuilder.AppendLine("Point Obstacle ahead");
             bool goLeft = (PointCloudVisualizer.pointAhead == 1);
             direction = goLeft ? Direction.Left : Direction.Right;
             float rate = (PointCloudVisualizer.closest - collisionAudioCapDistance) / (distanceToObstacle - collisionAudioCapDistance);
             rate = Mathf.Lerp(collisionAudioMaxRate, collisionAudioMinRate, rate);
             PlayCollision(goLeft ? -1 : 1, 1/rate - audioDuration);
 
-            m_StringBuilder.AppendLine(goLeft ? "Dir: Left" : "Dir: Right");
-            m_StringBuilder.AppendLine($"Closest {Math.Round(PointCloudVisualizer.closest, 2)}; Rate {Math.Round(rate, 2)}");
+            m_StringBuilder.AppendLine(goLeft ? " Dir: Left" : "Dir: Right");
+            m_StringBuilder.AppendLine($" Closest {PointCloudVisualizer.closest.ToString("F2")}m; Beep rate {rate.ToString("F2")}");
         }
         // else m_StringBuilder.AppendLine("Obstacle: No");
     }

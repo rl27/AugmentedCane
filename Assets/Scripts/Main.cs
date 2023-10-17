@@ -130,7 +130,7 @@ public class Main : MonoBehaviour
     private string GetString(double[] v) {
         string outStr = "";
         for (int i = 0; i < v.Length; i++) {
-            outStr += Math.Round(v[i],2) + " ";
+            outStr += v[i].ToString("F2") + " ";
         }
         return outStr;
     }
@@ -196,24 +196,26 @@ public class Main : MonoBehaviour
         m_StringBuilder.Clear();
         m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}\n");
 
-        m_StringBuilder.AppendLine($"{Math.Round(Vision.direction, 1)}°, {Math.Round(Vision.relativeDir, 1)}°, {Vision.logging}");
+        m_StringBuilder.AppendLine($"Sidewalk: {Vision.direction.ToString("F1")}°, {Vision.relativeDir.ToString("F1")}°, {Vision.logging}");
 
         if (GPSActive) {
-            // m_StringBuilder.AppendLine($"{gps.GPSstring()}");
-            m_StringBuilder.AppendLine($"{Navigation.info}\n");
-            m_StringBuilder.AppendLine($"{Navigation.intersectionStringBuilder.ToString()}\n");
+            m_StringBuilder.AppendLine($"{gps.GPSstring()}");
+            if (Navigation.initialized) {
+                m_StringBuilder.AppendLine($"{Navigation.info}\n");
+                m_StringBuilder.AppendLine($"{Navigation.intersectionStringBuilder.ToString()}\n");
+            }
         }
         if (IMUActive)
             m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
         if (depthActive)
             m_StringBuilder.AppendLine($"{depth.m_StringBuilder.ToString()}");
-        if (pcActive)
-            m_StringBuilder.AppendLine($"{pc.info}\n");
+        // if (pcActive)
+        //     m_StringBuilder.AppendLine($"{pc.info}\n");
         
         m_StringBuilder.AppendLine($"Gen {cmaoptimizer.cma.Generation}, sample {cmaoptimizer.solutions.Count}");
         m_StringBuilder.AppendLine($"Params: {GetString(Denormalize(x))}");
         m_StringBuilder.AppendLine($"Mean: {GetString(Denormalize(cmaoptimizer.cma._mean.ToArray()))}");
-        m_StringBuilder.AppendLine($"Sigma: {Math.Round(cmaoptimizer.cma._sigma,3)}");
+        m_StringBuilder.AppendLine($"Sigma: {cmaoptimizer.cma._sigma.ToString("F3")}");
 
         LogText(m_StringBuilder.ToString());
     }
