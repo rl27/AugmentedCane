@@ -63,8 +63,8 @@ public class GPSData : MonoBehaviour
         float angleDiff = (heading - rot) * Mathf.Deg2Rad;
         float sin = Mathf.Sin(angleDiff);
         float cos = Mathf.Cos(angleDiff);
-        return new Navigation.Point(gps.latitude + (posDiff.z * cos - posDiff.x * sin) / degreeToMeter,
-                                    gps.longitude + (posDiff.z * sin + posDiff.x * cos) / degreeToMeter);
+        return new Navigation.Point((double)(decimal) gps.latitude + (posDiff.z * cos - posDiff.x * sin) / degreeToMeter,
+                                    (double)(decimal) gps.longitude + (posDiff.z * sin + posDiff.x * cos) / degreeToMeter);
     }
 
     // Start location services
