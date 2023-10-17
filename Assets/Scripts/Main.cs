@@ -59,6 +59,8 @@ public class Main : MonoBehaviour
 
     private string cmaesPath;
 
+    public static int FPS = 0;
+
     void Awake()
     {
         Screen.sleepTimeout = SleepTimeout.NeverSleep; // Prevent phone from dimming/sleeping
@@ -194,7 +196,8 @@ public class Main : MonoBehaviour
         // }
 
         m_StringBuilder.Clear();
-        m_StringBuilder.AppendLine($"FPS: {(int)(1.0f / Time.smoothDeltaTime)}\n");
+        FPS = (int)(1.0f / Time.smoothDeltaTime);
+        m_StringBuilder.AppendLine($"FPS: {FPS}\n");
 
         m_StringBuilder.AppendLine($"Sidewalk: {Vision.direction.ToString("F1")}°, {Vision.relativeDir.ToString("F1")}°, {Vision.logging}");
 
