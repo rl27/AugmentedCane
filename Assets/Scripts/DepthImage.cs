@@ -212,8 +212,8 @@ public class DepthImage : MonoBehaviour
 
         m_StringBuilder.Clear();
 
-        m_StringBuilder.AppendLine($"Camera position: {position}");
-        m_StringBuilder.AppendLine($"Camera rotation: {rotation.y.ToString("F1")}");
+        m_StringBuilder.AppendLine($"Local position: {position}");
+        m_StringBuilder.AppendLine($"Local rotation: {rotation.y.ToString("F1")}°");
 
         // m_StringBuilder.AppendLine($"FOV: {2*Mathf.Atan(depthWidth/(2*focalLength.x))*Mathf.Rad2Deg}, {2*Mathf.Atan(depthHeight/(2*focalLength.y))*Mathf.Rad2Deg}");
 
@@ -281,7 +281,7 @@ public class DepthImage : MonoBehaviour
         // if (grid.ContainsKey(gridPt))
         //     m_StringBuilder.AppendLine($"Num pts: {grid[SnapToGrid(position)].Count}");
         // else m_StringBuilder.AppendLine("Num pts: 0");
-        m_StringBuilder.AppendLine($"Ground: {ground}");
+        m_StringBuilder.AppendLine($"Ground: {ground.ToString("F2")}m");
 
         // Check for obstacles using depth image
         (int[] closeTotals, bool avgGoLeft, float closest) = ProcessDepthImage(); // In portrait mode, index 0 = right side, max index = left side
