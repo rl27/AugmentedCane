@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
@@ -126,6 +127,8 @@ public class DepthImage : MonoBehaviour
     double curTime = 0;
     double lastDSP = 0;
 
+    XRCameraConfiguration bestConfig;
+
     void Awake()
     {
         camera = m_CameraManager.GetComponent<Camera>();
@@ -142,6 +145,18 @@ public class DepthImage : MonoBehaviour
         //     LogDepth("No camera");
         //     return;
         // }
+
+        NativeArray<XRCameraConfiguration> configurations = m_CameraManager.GetConfigurations(Allocator.Temp);
+        bestConfig = configurations[0];
+        foreach (var config in configurations)
+        {
+            if (config.width < Vision.H || config.height < Vision.W) // Assume Vision.H == Vision.W
+                continue;
+            if ((float) bestConfig.width / bestConfig.height < (float) config.width / config.height)
+                continue;
+            if (config.height < bestConfig.height || config.width < bestConfig.width || config.framerate < bestConfig.framerate)
+                bestConfig = config;
+        }
 
         m_CameraManager.frameReceived += OnCameraFrameReceived;
 
@@ -168,8 +183,14 @@ public class DepthImage : MonoBehaviour
         collisionAudioMaxRate = 1 / (float)audioDuration;
     }
 
+    bool initConfig = false;
     void OnCameraFrameReceived(ARCameraFrameEventArgs eventArgs)
     {
+        if (!initConfig) {
+            m_CameraManager.subsystem.currentConfiguration = bestConfig;
+            initConfig = true;
+        }
+
         if (Vision.doSidewalkDirection && !Vision.working)
             UpdateCameraImage();
 

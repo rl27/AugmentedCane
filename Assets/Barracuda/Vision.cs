@@ -44,8 +44,8 @@ public class Vision : MonoBehaviour
     private RenderTexture labelTex;
     private int labelToTexKernel;
 
-    private int W = 480;
-    private int H = 480;
+    public static int W = 480;
+    public static int H = 480;
 
     public AudioClip sidewalk;
     public AudioClip crosswalk;
@@ -162,10 +162,13 @@ public class Vision : MonoBehaviour
         // worker.Execute(input);
         var enumerator = worker.StartManualSchedule(input);
         int step = 0;
-        int stepsPerFrame = Math.Clamp(12 + 2*(Main.FPS-10), 12, 52); // Total num of steps for MNV3 is 221
-        if (220 % stepsPerFrame == 0) stepsPerFrame++;
+        int stepsPerFrame;
+        // Total num of steps for MNV3 is 221
         while (enumerator.MoveNext()) {
-            if (++step % stepsPerFrame == 0) yield return null;
+            stepsPerFrame = Math.Clamp(12 + 2*(Main.FPS-10), 12, 52);
+            if (++step % stepsPerFrame == 0) {
+                if (step != 220 && step != 221) yield return null;
+            }
         }
 
         // (0, 0, 0  , 0  ) = top left
