@@ -99,9 +99,6 @@ public class DepthImage : MonoBehaviour
 
     private bool showCameraImage = false;
 
-    // True if everything is fine and Update() should be called. False if something went wrong.
-    private bool shouldProceed = false;
-
     // Converts local coordinates to world coordinates.
     private Matrix4x4 localToWorldTransform = Matrix4x4.identity;
     private Matrix4x4 screenRotation = Matrix4x4.Rotate(Quaternion.identity);
@@ -126,21 +123,27 @@ public class DepthImage : MonoBehaviour
     public Toggle depthToggle;
     public Toggle smoothingToggle;
 
+    double curTime = 0;
+    double lastDSP = 0;
+
     void Awake()
     {
-        if (m_OcclusionManager == null) {
-            LogDepth("No occlusion manager");
-            return;
-        }
-        if (m_CameraManager == null) {
-            LogDepth("No camera manager");
-            return;
-        }
         camera = m_CameraManager.GetComponent<Camera>();
-        if (!camera) {
-            LogDepth("No camera");
-            return;
-        }
+
+        // if (m_OcclusionManager == null) {
+        //     LogDepth("No occlusion manager");
+        //     return;
+        // }
+        // if (m_CameraManager == null) {
+        //     LogDepth("No camera manager");
+        //     return;
+        // }
+        // if (!camera) {
+        //     LogDepth("No camera");
+        //     return;
+        // }
+
+        m_CameraManager.frameReceived += OnCameraFrameReceived;
 
         #if UNITY_ANDROID
             confidenceMax = 255;
@@ -163,19 +166,24 @@ public class DepthImage : MonoBehaviour
 
         audioDuration = (double) audioSources[0].clip.samples / audioSources[0].clip.frequency;
         collisionAudioMaxRate = 1 / (float)audioDuration;
-
-        shouldProceed = true;
     }
 
-    double curTime = 0;
-    double lastDSP = 0;
+    void OnCameraFrameReceived(ARCameraFrameEventArgs eventArgs)
+    {
+        if (Vision.doSidewalkDirection && !Vision.working)
+            UpdateCameraImage();
+
+        direction = Direction.None;
+        if (doObstacleAvoidance) {
+            UpdateDepthImages();
+            ProcessDepthImages();
+        }
+    }
 
     // This is called every frame
     void Update()
     {
-        if (!shouldProceed)
-            return;
-
+        // Update timer for collision audio
         if (lastDSP != AudioSettings.dspTime) {
             lastDSP = AudioSettings.dspTime;
             curTime = lastDSP;
@@ -205,26 +213,60 @@ public class DepthImage : MonoBehaviour
             position = camera.transform.position;
             rotation = camera.transform.rotation.eulerAngles;
         }
-
         screenRotation = Matrix4x4.Rotate(Quaternion.Euler(0, 0, GetRotationForScreen()));
         if (camera.transform.localToWorldMatrix != Matrix4x4.identity)
             localToWorldTransform = camera.transform.localToWorldMatrix * screenRotation;
 
         m_StringBuilder.Clear();
-
         m_StringBuilder.AppendLine($"Local position: {position}");
         m_StringBuilder.AppendLine($"Local rotation: {rotation.y.ToString("F1")}°");
-
         // m_StringBuilder.AppendLine($"FOV: {2*Mathf.Atan(depthWidth/(2*focalLength.x))*Mathf.Rad2Deg}, {2*Mathf.Atan(depthHeight/(2*focalLength.y))*Mathf.Rad2Deg}");
+    }
 
-        if (Vision.doSidewalkDirection)
-            UpdateCameraImage();
+    private void UpdateDepthImages()
+    {
+        // Acquire a depth image and update the corresponding raw image.
+        if (occlusionManager.TryAcquireEnvironmentDepthCpuImage(out XRCpuImage image)) {
+            using (image) {
+                UpdateRawImage(m_RawImage, image, image.format.AsTextureFormat(), true);
 
-        direction = Direction.None;
-        if (!doObstacleAvoidance) return;
+                // Get distance data into depthArray
+                // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/Common/Scripts/MotionStereoDepthDataSource.cs#L250
+                depthWidth = image.width;
+                depthHeight = image.height;
+                UpdateCameraParams();
 
-        UpdateDepthImages();
+                int numPixels = depthWidth * depthHeight;
+                Debug.Assert(image.planeCount == 1, "Plane count is not 1");
+                depthStride = image.GetPlane(0).pixelStride;
+                int numBytes = numPixels * depthStride;
+                if (depthArray.Length != numBytes)
+                    depthArray = new byte[numBytes];
+                image.GetPlane(0).data.CopyTo(depthArray);
+            }
+        }
 
+        // Acquire a depth confidence image.
+        if (occlusionManager.TryAcquireEnvironmentDepthConfidenceCpuImage(out XRCpuImage confidenceImage)) {
+            using (confidenceImage) {
+                if (confidenceImage.width != depthWidth || confidenceImage.height != depthHeight) {
+                    LogDepth("Confidence dimensions don't match");
+                }
+                else {
+                    int numPixels = depthWidth * depthHeight;
+                    Debug.Assert(confidenceImage.planeCount == 1, "Plane count is not 1");
+                    confidenceStride = confidenceImage.GetPlane(0).pixelStride;
+                    int numBytes = numPixels * confidenceStride;
+                    if (confidenceArray.Length != numBytes)
+                        confidenceArray = new byte[numBytes];
+                    confidenceImage.GetPlane(0).data.CopyTo(confidenceArray);
+                }
+            }
+        }
+    }
+
+    private void ProcessDepthImages()
+    {
         m_StringBuilder.AppendLine($"Depth dims: {depthWidth} {depthHeight}");
         if (m_RawCameraImage.texture != null)
             m_StringBuilder.AppendLine($"Img dims: {m_RawCameraImage.texture.width} {m_RawCameraImage.texture.height}");
@@ -354,48 +396,6 @@ public class DepthImage : MonoBehaviour
         // else m_StringBuilder.AppendLine("Obstacle: No");
     }
 
-    private void UpdateDepthImages()
-    {
-        // Acquire a depth image and update the corresponding raw image.
-        if (occlusionManager.TryAcquireEnvironmentDepthCpuImage(out XRCpuImage image)) {
-            using (image) {
-                UpdateRawImage(m_RawImage, image, image.format.AsTextureFormat(), true);
-
-                // Get distance data into depthArray
-                // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/Common/Scripts/MotionStereoDepthDataSource.cs#L250
-                depthWidth = image.width;
-                depthHeight = image.height;
-                UpdateCameraParams();
-
-                int numPixels = depthWidth * depthHeight;
-                Debug.Assert(image.planeCount == 1, "Plane count is not 1");
-                depthStride = image.GetPlane(0).pixelStride;
-                int numBytes = numPixels * depthStride;
-                if (depthArray.Length != numBytes)
-                    depthArray = new byte[numBytes];
-                image.GetPlane(0).data.CopyTo(depthArray);
-            }
-        }
-
-        // Acquire a depth confidence image.
-        if (occlusionManager.TryAcquireEnvironmentDepthConfidenceCpuImage(out XRCpuImage confidenceImage)) {
-            using (confidenceImage) {
-                if (confidenceImage.width != depthWidth || confidenceImage.height != depthHeight) {
-                    LogDepth("Confidence dimensions don't match");
-                }
-                else {
-                    int numPixels = depthWidth * depthHeight;
-                    Debug.Assert(confidenceImage.planeCount == 1, "Plane count is not 1");
-                    confidenceStride = confidenceImage.GetPlane(0).pixelStride;
-                    int numBytes = numPixels * confidenceStride;
-                    if (confidenceArray.Length != numBytes)
-                        confidenceArray = new byte[numBytes];
-                    confidenceImage.GetPlane(0).data.CopyTo(confidenceArray);
-                }
-            }
-        }
-    }
-
     // mag = -1 for left, mag = 1 for right
     private double lastScheduled = -10;
     private int audioSelect = 0;
@@ -418,10 +418,8 @@ public class DepthImage : MonoBehaviour
         // Acquire a camera image, update the corresponding raw image, and do CV
         if (m_CameraManager.TryAcquireLatestCpuImage(out XRCpuImage cameraImage)) {
             using (cameraImage) {
-                if (!Vision.working) {
-                    UpdateRawImage(m_RawCameraImage, cameraImage, TextureFormat.RGB24, false);
-                    StartCoroutine(vision.Detect(m_RawCameraImage.texture));
-                }
+                UpdateRawImage(m_RawCameraImage, cameraImage, TextureFormat.RGB24, false);
+                StartCoroutine(vision.Detect(m_RawCameraImage.texture));
             }
         }
     }
