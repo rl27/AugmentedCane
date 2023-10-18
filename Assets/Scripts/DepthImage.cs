@@ -127,9 +127,6 @@ public class DepthImage : MonoBehaviour
     double curTime = 0;
     double lastDSP = 0;
 
-    XRCameraConfiguration bestConfig;
-    int bestConfigIndex = 0;
-
     void Awake()
     {
         camera = m_CameraManager.GetComponent<Camera>();
@@ -146,21 +143,6 @@ public class DepthImage : MonoBehaviour
         //     LogDepth("No camera");
         //     return;
         // }
-
-        NativeArray<XRCameraConfiguration> configurations = m_CameraManager.GetConfigurations(Allocator.Temp);
-        bestConfig = configurations[0];
-        for (int i = 0; i < configurations.Length; i++)
-        {
-            var config = configurations[i];
-            if (config.width < Vision.H || config.height < Vision.W) // Assume Vision.H == Vision.W
-                continue;
-            if ((float) bestConfig.width / bestConfig.height < (float) config.width / config.height)
-                continue;
-            if (config.height < bestConfig.height || config.width < bestConfig.width || config.framerate < bestConfig.framerate) {
-                bestConfig = config;
-                bestConfigIndex = i;
-            }
-        }
 
         m_CameraManager.frameReceived += OnCameraFrameReceived;
 
@@ -191,7 +173,7 @@ public class DepthImage : MonoBehaviour
     void OnCameraFrameReceived(ARCameraFrameEventArgs eventArgs)
     {
         if (!initConfig) {
-            m_CameraManager.subsystem.currentConfiguration = m_CameraManager.GetConfigurations(Allocator.Temp)[bestConfigIndex];
+            SetXRCameraConfiguration();
             initConfig = true;
         }
 
@@ -447,6 +429,23 @@ public class DepthImage : MonoBehaviour
                 StartCoroutine(vision.Detect(m_RawCameraImage.texture));
             }
         }
+    }
+
+    void SetXRCameraConfiguration()
+    {
+        NativeArray<XRCameraConfiguration> configurations = m_CameraManager.GetConfigurations(Allocator.Temp);
+        var bestConfig = configurations[0];
+        foreach (var config in configurations)
+        {
+            if (config.width < Vision.H || config.height < Vision.W) // Assume Vision.H == Vision.W
+                continue;
+            if ((float) bestConfig.width / bestConfig.height < (float) config.width / config.height)
+                continue;
+            if (config.height < bestConfig.height || config.width < bestConfig.width || config.framerate < bestConfig.framerate) {
+                bestConfig = config;
+            }
+        }
+        m_CameraManager.subsystem.currentConfiguration = bestConfig;
     }
 
     // Log the given text to the depth info text box.
