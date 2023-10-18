@@ -406,7 +406,6 @@ public class DepthImage : MonoBehaviour
 
         double nextSchedule = Math.Max(curTime, lastScheduled + audioDuration + delay);
         while (nextSchedule - curTime < 0.3 && !audioSources[audioSelect].isPlaying) { // Schedule next audio if it will be needed soon
-            Debug.unityLogger.Log("mytag", nextSchedule-curTime);
             audioSources[audioSelect].PlayScheduled(nextSchedule);
             audioSelect = (audioSelect + 1) % audioSources.Length;
             lastScheduled = nextSchedule;
