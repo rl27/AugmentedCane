@@ -167,7 +167,7 @@ public class Vision : MonoBehaviour
         while (enumerator.MoveNext()) {
             stepsPerFrame = Math.Clamp(12 + 2*(Main.FPS-10), 12, 52);
             if (++step % stepsPerFrame == 0) {
-                if (step != 220 && step != 221) yield return null;
+                if (step != 220 && step != 221) yield return null; // Bandaid fix for iPhone bug
             }
         }
 
@@ -198,7 +198,7 @@ public class Vision : MonoBehaviour
 
     public static DateTime lastValidDirection; // To be used by other scripts to determine whether to use vision direction
     public static float validDuration = 1.5f;
-    public static float maxDisparity = 75; // Max degree difference from GPS waypoint direction
+    public static float maxDisparity = 60; // Max degree difference from GPS waypoint direction
 
     public static float relativeDir; // Relative direction
     public static float direction; // Absolute direction based on current heading & segmentation outputs
