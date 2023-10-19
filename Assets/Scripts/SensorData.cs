@@ -61,8 +61,8 @@ public class SensorData : MonoBehaviour
             headingIndex = headingIndex + 1;
             pastHeadingDiffs[headingIndex % numHeadings] = Input.compass.trueHeading - DepthImage.rotation.y;
             headingDiff = HeadingDiffAverage();
-            heading = headingDiff + DepthImage.rotation.y;
         }
+        heading = (headingDiff + DepthImage.rotation.y) % 360;
 
         // Wait for a bit before trying to update again
         // yield return new WaitForSeconds(delay);
