@@ -39,7 +39,7 @@ public class Navigation : MonoBehaviour
     TTS tts;
 
     // Rough conversion: 0.00001 = 1.1 meters
-    private double closeRadius = 0.000045;
+    private double closeRadius = 0.00005;
     private double farRadius = 0.00020;
     private double farLineDist = 0.00020;
 
@@ -297,14 +297,19 @@ public class Navigation : MonoBehaviour
 
         // Calculate orientation & distance to next waypoint
         int targetWaypoint = curWaypoint + 1;
-        double ori = Orientation(loc, allPoints[targetWaypoint]); // Absolute direction towards waypoint
+        double ori;
+        if (curWaypoint != -1)
+            ori = Orientation(allPoints[curWaypoint], allPoints[targetWaypoint]); // Parallel direction towards target waypoint
+        else
+            ori = Orientation(loc, allPoints[targetWaypoint]); // Absolute direction towards target waypoint
         double dist = GPSData.degreeToMeter * Dist(loc, allPoints[targetWaypoint]);
         info = String.Format("WP {0}, {1}°, {2} m", targetWaypoint, ori.ToString("F0"), dist.ToString("F2"));
 
         bool useRelative = false;
 
         // Use segmentation direction if info is not too old & it's close enough to waypoint direction
-        if ((DateTime.Now - Vision.lastValidDirection).TotalSeconds < Vision.validDuration) {
+        // Don't use if haven't reached first waypoint
+        if (reachedFirstWaypoint && (DateTime.Now - Vision.lastValidDirection).TotalSeconds < Vision.validDuration) {
             double visionDiff = (Vision.direction - ori + 360) % 360;
             if (visionDiff > 180) visionDiff -= 360;
             if (Math.Abs(visionDiff) < Vision.maxDisparity) {
