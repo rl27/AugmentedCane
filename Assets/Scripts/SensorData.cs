@@ -15,21 +15,20 @@ public class SensorData : MonoBehaviour
     public static Vector3 attitude;
     public static Vector3 mag;
     public static float heading;
-    // private float _headingVelocity = 0f;
-
-    // private float delay = 0.05f;
+    private float headingDiff;
+    private float headingAccuracy;
 
     private bool dataUpdating = false;
 
-    // Moving average of heading
-    private static int numHeadings = 6;
-    private float[] pastHeadings = new float[numHeadings];
+    // Moving average for heading
+    private static int numHeadings = 9;
+    private float[] pastHeadingDiffs = new float[numHeadings];
     private int headingIndex = 0;
 
     void Awake()
     {
         Input.gyro.enabled = true;
-        Input.gyro.updateInterval = 0.05f;
+        Input.gyro.updateInterval = 0.033333f;
         Input.compass.enabled = true;
     }
 
@@ -56,9 +55,14 @@ public class SensorData : MonoBehaviour
 
         // heading = Mathf.SmoothDampAngle(heading, Input.compass.trueHeading, ref _headingVelocity, 0.1f);
 
-        headingIndex = (headingIndex + 1) % numHeadings;
-        pastHeadings[headingIndex] = Input.compass.trueHeading;
-        heading = pastHeadings.Sum() / numHeadings;
+        // https://docs.unity3d.com/ScriptReference/Compass-headingAccuracy.html
+        headingAccuracy = Input.compass.headingAccuracy;
+        if (headingAccuracy != -1 || headingIndex < numHeadings - 1) {
+            headingIndex = headingIndex + 1;
+            pastHeadingDiffs[headingIndex % numHeadings] = Input.compass.trueHeading - DepthImage.rotation.y;
+            headingDiff = HeadingDiffAverage();
+            heading = headingDiff + DepthImage.rotation.y;
+        }
 
         // Wait for a bit before trying to update again
         // yield return new WaitForSeconds(delay);
@@ -73,6 +77,29 @@ public class SensorData : MonoBehaviour
     // Format IMU data into string
     public string IMUstring() {
         // return string.Format("Accel: {0} \nGyro: {1} \nMag: {2} \nAttitude: {3} \nHeading: {4}", accel, gyro, mag, attitude, heading);
-        return string.Format("Attitude: {0} \nHeading: {1}°", attitude, heading.ToString("F1"));
+        return string.Format("Attitude: {0} \nHeading: {1}°, Diff: {2}°, Acc: {3}", attitude, heading.ToString("F1"), headingDiff.ToString("F1"), headingAccuracy);
+    }
+
+    private float HeadingDiffAverage()
+    {
+        float closerToPi = 0;
+        for (int i = 0; i < numHeadings; i++) {
+            if (pastHeadingDiffs[i] > 90 && pastHeadingDiffs[i] < 270) closerToPi++;
+        }
+
+        float sum = 0;
+        if (closerToPi > numHeadings/2) { // [0,360]
+            sum = pastHeadingDiffs.Sum();
+        }
+        else { // [-180,180]
+            for (int i = 0; i < numHeadings; i++) {
+                float temp = pastHeadingDiffs[i];
+                if (temp > 180) temp -= 360;
+                sum += temp;
+            }
+            Debug.unityLogger.Log("mytag", sum);
+            if (sum < 0) sum = (sum % 360) + 360;
+        }
+        return sum / numHeadings;
     }
 }
