@@ -97,7 +97,6 @@ public class SensorData : MonoBehaviour
                 if (temp > 180) temp -= 360;
                 sum += temp;
             }
-            Debug.unityLogger.Log("mytag", sum);
             if (sum < 0) sum = (sum % 360) + 360;
         }
         return sum / numHeadings;
