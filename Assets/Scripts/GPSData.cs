@@ -63,6 +63,8 @@ public class GPSData : MonoBehaviour
         float angleDiff = (heading - rot) * Mathf.Deg2Rad;
         float sin = Mathf.Sin(angleDiff);
         float cos = Mathf.Cos(angleDiff);
+        // This ToString("R") thing is magic. Summons extra precision out of nowhere.
+        // https://forum.unity.com/threads/precision-of-location-longitude-is-worse-when-longitude-is-beyond-100-degrees.133192/
         return new Navigation.Point(Convert.ToDouble(gps.latitude.ToString("R")) + (posDiff.z * cos - posDiff.x * sin) / degreeToMeter,
                                     Convert.ToDouble(gps.longitude.ToString("R")) + (posDiff.z * sin + posDiff.x * cos) / degreeToMeter);
     }
