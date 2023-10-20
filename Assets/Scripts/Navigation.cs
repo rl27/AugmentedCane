@@ -142,9 +142,9 @@ public class Navigation : MonoBehaviour
         string[] splits = input.Split(',');
         if (splits.Length != 2)
             return;
-        float targetLat;
-        float targetLng;
-        if (float.TryParse(splits[0], out targetLat) && float.TryParse(splits[1], out targetLng)) {
+        double targetLat;
+        double targetLng;
+        if (double.TryParse(splits[0], out targetLat) && double.TryParse(splits[1], out targetLng)) {
             RequestWaypoints(GPSData.EstimatedUserLocation(), new Point(targetLat, targetLng));
         }
     }
