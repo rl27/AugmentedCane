@@ -13,7 +13,7 @@ public class GPSData : MonoBehaviour
     [NonSerialized]
     public static LocationInfo gps;
 
-    private float desiredAccuracyInMeters = 4f;
+    private float desiredAccuracyInMeters = 2f;
     private float updateDistanceInMeters = 3f;
 
     private float delay = 0.5f;
@@ -63,8 +63,8 @@ public class GPSData : MonoBehaviour
         float angleDiff = (heading - rot) * Mathf.Deg2Rad;
         float sin = Mathf.Sin(angleDiff);
         float cos = Mathf.Cos(angleDiff);
-        return new Navigation.Point((double)(decimal) gps.latitude + (posDiff.z * cos - posDiff.x * sin) / degreeToMeter,
-                                    (double)(decimal) gps.longitude + (posDiff.z * sin + posDiff.x * cos) / degreeToMeter);
+        return new Navigation.Point(Convert.ToDouble(gps.latitude.ToString("R")) + (posDiff.z * cos - posDiff.x * sin) / degreeToMeter,
+                                    Convert.ToDouble(gps.longitude.ToString("R")) + (posDiff.z * sin + posDiff.x * cos) / degreeToMeter);
     }
 
     // Start location services
@@ -146,6 +146,6 @@ public class GPSData : MonoBehaviour
         // return string.Format("GPS last update: {0} \nLatitude: {1} \nLongitude: {2} \nHorizontal accuracy: {3}",
         //     DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp).LocalDateTime.TimeOfDay, gps.latitude.ToString("R"), gps.longitude.ToString("R"), gps.horizontalAccuracy);
         return string.Format("GPS last updated: {0} \nAccuracy: {1}m \nLat/Lng: {2}, {3} \nEst. loc: {4}\n",
-            DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp).LocalDateTime.TimeOfDay, gps.horizontalAccuracy.ToString("F2"), gps.latitude.ToString("F7"), gps.longitude.ToString("F7"), EstimatedUserLocation());
+            DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp).LocalDateTime.TimeOfDay, gps.horizontalAccuracy.ToString("F2"), gps.latitude.ToString("R"), gps.longitude.ToString("R"), EstimatedUserLocation());
     }
 }

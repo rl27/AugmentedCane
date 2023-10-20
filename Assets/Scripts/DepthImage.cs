@@ -275,8 +275,10 @@ public class DepthImage : MonoBehaviour
     private void ProcessDepthImages()
     {
         m_StringBuilder.AppendLine($"Depth dims: {depthWidth} {depthHeight}");
-        if (m_RawCameraImage.texture != null)
-            m_StringBuilder.AppendLine($"Img dims: {m_RawCameraImage.texture.width} {m_RawCameraImage.texture.height}");
+        if (m_CameraManager.subsystem.currentConfiguration != null) {
+            var cfg = (XRCameraConfiguration) m_CameraManager.subsystem.currentConfiguration;
+            m_StringBuilder.AppendLine($"Img dims: {cfg.width} {cfg.height} {cfg.framerate}FPS");
+        }
 
         // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
         // Screen orientation does not change coordinate locations on the screen.
