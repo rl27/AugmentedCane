@@ -13,7 +13,7 @@ public class GPSData : MonoBehaviour
     [NonSerialized]
     public static LocationInfo gps;
 
-    private float desiredAccuracyInMeters = 2f;
+    private float desiredAccuracyInMeters = 1f;
     private float updateDistanceInMeters = 3f;
 
     private float delay = 0.5f;
