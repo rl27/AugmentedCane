@@ -50,6 +50,8 @@ public class Vision : MonoBehaviour
     public AudioClip crosswalk;
     public AudioClip road;
 
+    private Unity.Sentis.BackendType backendType;
+
     public static readonly Color32[] COLOR_TABLE = new Color32[]
     {
         new Color32(0, 0, 0, 255), // background
@@ -76,9 +78,10 @@ public class Vision : MonoBehaviour
         model = ModelLoader.Load(modelAsset);
 
         if (SystemInfo.supportsComputeShaders)
-            worker = WorkerFactory.CreateWorker(BackendType.GPUCompute, model);
+            backendType = BackendType.GPUCompute;
         else
-            worker = WorkerFactory.CreateWorker(BackendType.GPUPixel, model);
+            backendType = BackendType.GPUPixel;
+        worker = WorkerFactory.CreateWorker(backendType, model);
 
         resizer = new TextureResizer();
         resizeOptions = new TextureResizer.ResizeOptions()
@@ -171,10 +174,10 @@ public class Vision : MonoBehaviour
             }
         }
 
-        // (0, 0, 0  , 0  ) = top left
-        // (0, 0, 0  , H-1) = bottom left
-        // (0, 0, W-1, 0  ) = top right
-        // (0, 0, W-1, H-1) = bottom right
+        // [0, 0  , 0  ] = top left
+        // [0, H-1, 0  ] = bottom left
+        // [0, 0,   W-1] = top right
+        // [0, H-1, W-1] = bottom right
         TensorInt output = worker.PeekOutput() as TensorInt; // output.shape: 1, 480, 480
         output.MakeReadable();
         ProcessOutput(output);
@@ -280,7 +283,7 @@ public class Vision : MonoBehaviour
         float validX = x;
         float validY = y;
         while (x >= 0 && y >= 0 && x < W && y < H) {
-            int cls = (int) output[0, 0, (int) x, (int) y];
+            int cls = (int) output[0, (int) y, (int) x];
             if (!LaxWalkable(cls)) { // On non-walkable; break if too many skips used
                 if (++numSkips > maxSkips) break;
             }
@@ -297,7 +300,7 @@ public class Vision : MonoBehaviour
     // If sidewalk or crosswalk found, returns the corresponding class. Otherwise, returns the bottom/middle of the image.
     private int CheckForWalkable(ref TensorInt output)
     {
-        int bestCls = (int) output[0, 0, W/2, H-1], bestCount = Int32.MaxValue;
+        int bestCls = (int) output[0, H-1, W/2], bestCount = Int32.MaxValue;
         if (StrictWalkable(bestCls)) return bestCls;
         for (int i = 0; i < numRaycasts; i++) {
             (int cls, int count) = RaycastToWalkable(W/2, H-1, ref output, i * radWidth);
@@ -316,7 +319,7 @@ public class Vision : MonoBehaviour
         float numSkips = 0;
         int count = 0;
         while (x >= 0 && y >= 0 && x < W && y < H) {
-            int cls = (int) output[0, 0, (int) x, (int) y];
+            int cls = (int) output[0, (int) y, (int) x];
             if (StrictWalkable(cls)) return (cls, count);
             else if (++numSkips > maxSkips) break;
             x += dx;

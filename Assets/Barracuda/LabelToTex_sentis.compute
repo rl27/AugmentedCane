@@ -4,7 +4,7 @@
 
 uint Width;
 uint Height;
-StructuredBuffer<float> LabelBuffer;
+StructuredBuffer<int> LabelBuffer;
 StructuredBuffer<float4> ColorTable;
 RWTexture2D<float4> Result;
 
@@ -17,7 +17,7 @@ void Init (uint2 tid : SV_DispatchThreadID)
 [numthreads(8,8,1)]
 void LabelToTex (uint2 tid : SV_DispatchThreadID)
 {
-    uint gid = tid.x * Height + (Width - 1 - tid.y);
+    uint gid = (Height - 1 - tid.y) * Width + tid.x;
     int cls = LabelBuffer[gid];
     float4 c = ColorTable[cls];
     Result[tid] = c;
