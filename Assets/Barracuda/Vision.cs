@@ -168,7 +168,7 @@ public class Vision : MonoBehaviour
         int stepsPerFrame;
         // Total num of steps for MNV3 is 209
         while (enumerator.MoveNext()) {
-            stepsPerFrame = Math.Clamp(12 + 2*(Main.FPS-10), 12, 52);
+            stepsPerFrame = Math.Clamp(10 + 2*(Main.FPS-10), 10, 50);
             if (++step % stepsPerFrame == 0) {
                 if (step != 208 && step != 209) yield return null; // Bandaid fix for iPhone bug
             }
