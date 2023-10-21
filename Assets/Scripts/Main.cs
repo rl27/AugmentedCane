@@ -196,7 +196,7 @@ public class Main : MonoBehaviour
         // }
 
         m_StringBuilder.Clear();
-        FPS = Convert.ToInt32(1.0 / Time.unscaledDeltaTime);
+        FPS = Convert.ToInt32(1.0 / Time.smoothDeltaTime);
         m_StringBuilder.AppendLine($"FPS: {FPS}\n");
 
         m_StringBuilder.AppendLine($"Sidewalk: {Vision.direction.ToString("F1")}°, {Vision.relativeDir.ToString("F1")}°, {Vision.logging}");
