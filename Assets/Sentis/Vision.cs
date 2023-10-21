@@ -80,6 +80,7 @@ public class Vision : MonoBehaviour
         worker = WorkerFactory.CreateWorker(backendType, model);
 
         // Do this at the start so the first call to this later doesn't stall
+        // The initial lag only happens once; if the app is closed and re-opened, it doesn't happen
         Texture2D temp = Texture2D.blackTexture;
         input = TextureConverter.ToTensor(temp);
 
