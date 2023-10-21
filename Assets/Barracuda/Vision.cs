@@ -3,9 +3,8 @@ using System.Collections;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
-using Unity.Barracuda;
+using Unity.Sentis;
 
-// https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/GettingStarted.html
 public class Vision : MonoBehaviour
 {
     [SerializeField]
@@ -26,7 +25,7 @@ public class Vision : MonoBehaviour
     public GameObject inputViewParent;
     private AspectRatioFitter inputAspectRatioFitter;
 
-    public NNModel modelAsset;
+    public ModelAsset modelAsset;
     private Model model;
     private IWorker worker;
 
@@ -75,8 +74,11 @@ public class Vision : MonoBehaviour
         tts = TTSHandler.GetComponent<TTS>();
 
         model = ModelLoader.Load(modelAsset);
-        // See worker types here: https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/Worker.html
-        worker = WorkerFactory.CreateWorker(WorkerFactory.Type.ComputePrecompiled, model);
+
+        if (SystemInfo.supportsComputeShaders)
+            worker = WorkerFactory.CreateWorker(BackendType.GPUCompute, model);
+        else
+            worker = WorkerFactory.CreateWorker(BackendType.GPUPixel, model);
 
         resizer = new TextureResizer();
         resizeOptions = new TextureResizer.ResizeOptions()
@@ -102,7 +104,7 @@ public class Vision : MonoBehaviour
         labelTex = new RenderTexture(resizeOptions.width, resizeOptions.height, 0, RenderTextureFormat.ARGB32);
         labelTex.enableRandomWrite = true;
         labelTex.Create();
-        labelBuffer = new ComputeBuffer(resizeOptions.width * resizeOptions.height, sizeof(float));
+        labelBuffer = new ComputeBuffer(resizeOptions.width * resizeOptions.height, sizeof(int));
         colorTableBuffer = new ComputeBuffer(COLOR_TABLE.Length, sizeof(float) * 4);
 
         int initKernel = compute.FindKernel("Init");
@@ -147,27 +149,25 @@ public class Vision : MonoBehaviour
         return tex2D;
     }
 
-    Tensor input;
-    // https://forum.unity.com/threads/asynchronous-inference-in-barracuda.1370181/
+    TensorFloat input;
     public IEnumerator Detect(Texture tex)
     {
         if (working)
             yield break;
         working = true;
 
-        // https://docs.unity3d.com/Packages/com.unity.barracuda@3.0/manual/TensorHandling.html
         Texture2D resizedTex = ResizeTexture(tex);
-        input = new Tensor(resizedTex); // BHWC: 1, H, W, 3
+        input = TextureConverter.ToTensor(resizedTex); // input.shape: 1, 3, 480, 480
 
         // worker.Execute(input);
         var enumerator = worker.StartManualSchedule(input);
         int step = 0;
         int stepsPerFrame;
-        // Total num of steps for MNV3 is 221
+        // Total num of steps for MNV3 is 209
         while (enumerator.MoveNext()) {
             stepsPerFrame = Math.Clamp(12 + 2*(Main.FPS-10), 12, 52);
             if (++step % stepsPerFrame == 0) {
-                if (step != 220 && step != 221) yield return null; // Bandaid fix for iPhone bug
+                if (step != 208 && step != 209) yield return null; // Bandaid fix for iPhone bug
             }
         }
 
@@ -175,9 +175,10 @@ public class Vision : MonoBehaviour
         // (0, 0, 0  , H-1) = bottom left
         // (0, 0, W-1, 0  ) = top right
         // (0, 0, W-1, H-1) = bottom right
-        Tensor output = worker.PeekOutput(); // Debug.Log(output.shape); // BHWC: 1, 1, W, H
-
+        TensorInt output = worker.PeekOutput() as TensorInt; // output.shape: 1, 480, 480
+        output.MakeReadable();
         ProcessOutput(output);
+        SetTextures(resizedTex, GetResultTexture(output.ToReadOnlyArray()));
 
         // Use this code if GetResultTexture is not working
         /*Texture2D output2D = new Texture2D(W, H, TextureFormat.RGB24, false);
@@ -188,7 +189,6 @@ public class Vision : MonoBehaviour
         }
         output2D.Apply();
         SetTextures(resizedTex, output2D);*/
-        SetTextures(resizedTex, GetResultTexture(output.ToReadOnlyArray()));
         
         input.Dispose();
         // output.Dispose();
@@ -216,7 +216,7 @@ public class Vision : MonoBehaviour
     private static int numRaycasts = 31;
     private float radWidth = Mathf.PI / (numRaycasts - 1);
 
-    private void ProcessOutput(Tensor output)
+    private void ProcessOutput(TensorInt output)
     {
         if (!doSidewalkDirection) return;
 
@@ -272,7 +272,7 @@ public class Vision : MonoBehaviour
     // Returns end coordinates of raycast w.r.t. middle of bottom of image
     // Curb, curb cut, grating, manhole are counted as walkable when raycasting
     private const int maxSkips = 30;
-    private (float, float) PerformRaycast(float x, float y, ref Tensor output, float radFromLeft)
+    private (float, float) PerformRaycast(float x, float y, ref TensorInt output, float radFromLeft)
     {
         float dx = -Mathf.Cos(radFromLeft);
         float dy = Mathf.Sin(radFromLeft);
@@ -295,7 +295,7 @@ public class Vision : MonoBehaviour
     }
 
     // If sidewalk or crosswalk found, returns the corresponding class. Otherwise, returns the bottom/middle of the image.
-    private int CheckForWalkable(ref Tensor output)
+    private int CheckForWalkable(ref TensorInt output)
     {
         int bestCls = (int) output[0, 0, W/2, H-1], bestCount = Int32.MaxValue;
         if (StrictWalkable(bestCls)) return bestCls;
@@ -309,7 +309,7 @@ public class Vision : MonoBehaviour
         return bestCls;
     }
     // Search for up to maxSkips iterations for sidewalk or crosswalk
-    private (int, int) RaycastToWalkable(float x, float y, ref Tensor output, float radFromLeft)
+    private (int, int) RaycastToWalkable(float x, float y, ref TensorInt output, float radFromLeft)
     {
         float dx = -Mathf.Cos(radFromLeft);
         float dy = Mathf.Sin(radFromLeft);
@@ -387,7 +387,7 @@ public class Vision : MonoBehaviour
         inputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
     }
 
-    private RenderTexture GetResultTexture(float[] data)
+    private RenderTexture GetResultTexture(int[] data)
     {
         labelBuffer.SetData(data);
         compute.SetBuffer(labelToTexKernel, "LabelBuffer", labelBuffer);
