@@ -154,6 +154,8 @@ public class Vision : MonoBehaviour
     }
 
     TensorFloat input;
+    const int maxStepsPerFrame = 50;
+    const float maxTimePerFrame = 0.1f;
     public IEnumerator Detect(Texture tex)
     {
         if (working)
@@ -164,14 +166,25 @@ public class Vision : MonoBehaviour
         input = TextureConverter.ToTensor(resizedTex); // input.shape: 1, 3, 480, 480
 
         // worker.Execute(input);
-        var enumerator = worker.StartManualSchedule(input);
+        var enumerator = worker.StartManualSchedule(input); // Total num of steps for MNV3 is 209
         int step = 0;
-        int stepsPerFrame;
-        // Total num of steps for MNV3 is 209
+        int lastFrame = -1;
+        float start = 0;
+        float maxTime = 0;
+        float lastStep = 0;
+        float lastTime = 0;
         while (enumerator.MoveNext()) {
-            stepsPerFrame = Math.Clamp(10 + 2*(Main.FPS-10), 10, 50);
-            if (++step % stepsPerFrame == 0) {
-                if (step != 208 && step != 209) yield return null; // Bandaid fix for iPhone bug
+            if (lastFrame != Time.frameCount) {
+                lastFrame = Time.frameCount;
+                start = Time.realtimeSinceStartup;
+                lastStep = step;
+                maxTime = maxTimePerFrame - Time.unscaledDeltaTime + lastTime;
+            }
+            if ((++step - lastStep) % maxStepsPerFrame == 0 || (Time.realtimeSinceStartup - start) > maxTime) {
+                if (step != 208 && step != 209) { // Bandaid fix for iPhone bug
+                    lastTime = Time.realtimeSinceStartup - start;
+                    yield return null;
+                }
             }
         }
 
