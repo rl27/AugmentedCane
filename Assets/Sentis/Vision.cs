@@ -66,7 +66,7 @@ public class Vision : MonoBehaviour
         new Color32(128, 96, 0, 255) // rail track
     };
 
-    void Start()
+    void Awake()
     {
         #if UNITY_EDITOR
             testing = true;
@@ -76,12 +76,12 @@ public class Vision : MonoBehaviour
         tts = TTSHandler.GetComponent<TTS>();
 
         model = ModelLoader.Load(modelAsset);
-
-        if (SystemInfo.supportsComputeShaders)
-            backendType = BackendType.GPUCompute;
-        else
-            backendType = BackendType.GPUPixel;
+        backendType = SystemInfo.supportsComputeShaders ? BackendType.GPUCompute : BackendType.GPUPixel;
         worker = WorkerFactory.CreateWorker(backendType, model);
+
+        // Do this at the start so the first call to this later doesn't stall
+        Texture2D temp = Texture2D.blackTexture;
+        input = TextureConverter.ToTensor(temp);
 
         resizer = new TextureResizer();
         resizeOptions = new TextureResizer.ResizeOptions()
