@@ -98,7 +98,7 @@ public class DepthImage : MonoBehaviour
     Vector2 focalLength = Vector2.zero;
     Vector2 principalPoint = Vector2.zero;
 
-    private bool showCameraImage = false;
+    private bool showCameraImage = true;
 
     // Converts local coordinates to world coordinates.
     private Matrix4x4 localToWorldTransform = Matrix4x4.identity;
@@ -177,7 +177,7 @@ public class DepthImage : MonoBehaviour
             initConfig = true;
         }
 
-        if (Vision.doSidewalkDirection && !Vision.working)
+        if (Vision.doSidewalkDirection)
             UpdateCameraImage();
 
         direction = Direction.None;
@@ -515,7 +515,7 @@ public class DepthImage : MonoBehaviour
 
         // Determine the raw image rectSize preserving the texture aspect ratio, matching the screen orientation,
         // and keeping a minimum dimension size.
-        float minDimension = 480.0f;
+        float minDimension = 720.0f;
         float maxDimension = Mathf.Round(minDimension * textureAspectRatio);
         Vector2 rectSize;
         if (isDepth) {
@@ -528,15 +528,15 @@ public class DepthImage : MonoBehaviour
                 case ScreenOrientation.PortraitUpsideDown:
                 case ScreenOrientation.Portrait:
                 default:
-                    rectSize = new Vector2(minDimension, maxDimension);
+                    rectSize = new Vector2(maxDimension, minDimension);
                     break;
             }
             rawImage.rectTransform.sizeDelta = rectSize;
 
             // Rotate the depth material to match screen orientation.
-            Quaternion rotation = Quaternion.Euler(0, 0, GetRotation());
-            Matrix4x4 rotMatrix = Matrix4x4.Rotate(rotation);
-            m_RawImage.material.SetMatrix(Shader.PropertyToID("_DisplayRotationPerFrame"), rotMatrix);
+            // Quaternion rotation = Quaternion.Euler(0, 0, GetRotation());
+            // Matrix4x4 rotMatrix = Matrix4x4.Rotate(rotation);
+            // m_RawImage.material.SetMatrix(Shader.PropertyToID("_DisplayRotationPerFrame"), rotMatrix);
         }
         else {
             rectSize = new Vector2(maxDimension, minDimension);
