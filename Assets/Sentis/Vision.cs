@@ -264,7 +264,7 @@ public class Vision : MonoBehaviour
             lastValidDirection = DateTime.Now;
 
             arrow.SetActive(true);
-            arrow.transform.eulerAngles = new Vector3(0,0,-relativeDir);
+            arrow.transform.eulerAngles = new Vector3(0,0,-relativeDir/scale);
 
             PlayAudio(curCls);
         }
