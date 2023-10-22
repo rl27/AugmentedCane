@@ -293,7 +293,7 @@ public class Vision : MonoBehaviour
 
     // Returns end coordinates of raycast w.r.t. middle of bottom of image
     // Curb, curb cut, grating, manhole are counted as walkable when raycasting
-    private const int maxSkips = 30;
+    private const int maxSkips = 60;
     private (float, float) PerformRaycast(float x, float y, ref TensorInt output, float radFromLeft)
     {
         float dx = -Mathf.Cos(radFromLeft);
