@@ -18,6 +18,9 @@ public class Vision : MonoBehaviour
     public RawImage inputView = null;
 
     [SerializeField]
+    public GameObject arrow;
+
+    [SerializeField]
     public GameObject outputViewParent;
     private AspectRatioFitter outputAspectRatioFitter;
 
@@ -154,7 +157,7 @@ public class Vision : MonoBehaviour
     }
 
     TensorFloat input;
-    const int maxStepsPerFrame = 50;
+    const int maxStepsPerFrame = 90;
     const float maxTimePerFrame = 0.1f;
     public IEnumerator Detect(Texture tex)
     {
@@ -178,10 +181,10 @@ public class Vision : MonoBehaviour
                 lastFrame = Time.frameCount;
                 start = Time.realtimeSinceStartup;
                 lastStep = step;
-                maxTime = maxTimePerFrame - Time.unscaledDeltaTime + lastTime;
+                maxTime = maxTimePerFrame - Time.smoothDeltaTime + lastTime;
             }
             if ((++step - lastStep) % maxStepsPerFrame == 0 || (Time.realtimeSinceStartup - start) > maxTime) {
-                if (step != 208 && step != 209) { // Bandaid fix for iPhone bug
+                if (step != 377 && step != 378) { // Bandaid fix for iPhone bug
                     lastTime = Time.realtimeSinceStartup - start;
                     yield return null;
                 }
@@ -208,7 +211,7 @@ public class Vision : MonoBehaviour
         SetTextures(resizedTex, output2D);*/
         
         input.Dispose();
-        // output.Dispose();
+        output.Dispose();
 
         working = false;
     }
@@ -262,12 +265,15 @@ public class Vision : MonoBehaviour
             lastValidDirection = DateTime.Now;
 
             PlayAudio(curCls);
+            arrow.transform.eulerAngles = new Vector3(0,0,-relativeDir/scale);
+            arrow.SetActive(true);
         }
         else if (curCls != 7 && curCls != 8) { // Ignore grating & manhole as these can be on either sidewalk, crosswalk, or road
             if ((DateTime.Now - lastWalkableTime).TotalSeconds > nonWalkableTime) {
                 // No longer performing raycasts to find closest sidewalk as the results don't seem useful
 
                 PlayAudio(curCls);
+                arrow.SetActive(false);
             }
         }
     }
@@ -284,11 +290,12 @@ public class Vision : MonoBehaviour
         logging = "None";
         outputView.enabled = doSidewalkDirection;
         inputView.enabled = doSidewalkDirection;
+        arrow.SetActive(doSidewalkDirection);
     }
 
     // Returns end coordinates of raycast w.r.t. middle of bottom of image
     // Curb, curb cut, grating, manhole are counted as walkable when raycasting
-    private const int maxSkips = 30;
+    private const int maxSkips = 48;
     private (float, float) PerformRaycast(float x, float y, ref TensorInt output, float radFromLeft)
     {
         float dx = -Mathf.Cos(radFromLeft);

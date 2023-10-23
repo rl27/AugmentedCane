@@ -116,7 +116,7 @@ public class DepthImage : MonoBehaviour
     int confidenceMax = 255;
 
     public static float halfPersonWidth = 0.3f; // Estimated half-width of a person
-    public static float personHeight = 1.8f; // Estimated height of a person
+    public static float personHeight = 1.8f - groundPadding; // Estimated height of a person
 
     public enum Direction { Left, Right, None }
     public static Direction direction = Direction.None;
