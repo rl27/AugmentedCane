@@ -154,7 +154,7 @@ public class Vision : MonoBehaviour
     }
 
     TensorFloat input;
-    const int maxStepsPerFrame = 100;
+    const int maxStepsPerFrame = 90;
     const float maxTimePerFrame = 0.1f;
     public IEnumerator Detect(Texture tex)
     {
@@ -181,7 +181,7 @@ public class Vision : MonoBehaviour
                 maxTime = maxTimePerFrame - Time.unscaledDeltaTime + lastTime;
             }
             if ((++step - lastStep) % maxStepsPerFrame == 0 || (Time.realtimeSinceStartup - start) > maxTime) {
-                if (step != 208 && step != 209) { // Bandaid fix for iPhone bug
+                if (step != 377 && step != 378) { // Bandaid fix for iPhone bug
                     lastTime = Time.realtimeSinceStartup - start;
                     yield return null;
                 }
