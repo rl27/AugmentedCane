@@ -19,11 +19,11 @@ public class Vision : MonoBehaviour
 
     [SerializeField]
     public GameObject outputViewParent;
-    // private AspectRatioFitter outputAspectRatioFitter;
+    private AspectRatioFitter outputAspectRatioFitter;
 
     [SerializeField]
     public GameObject inputViewParent;
-    // private AspectRatioFitter inputAspectRatioFitter;
+    private AspectRatioFitter inputAspectRatioFitter;
 
     public ModelAsset modelAsset;
     private Model model;
@@ -70,7 +70,7 @@ public class Vision : MonoBehaviour
     {
         #if UNITY_EDITOR
             testing = true;
-            testPNG = Utils.LoadPNG("Assets/TestImages/test2.png");
+            testPNG = Utils.LoadPNG("Assets/TestImages/test3.png");
         #endif
 
         tts = TTSHandler.GetComponent<TTS>();
@@ -97,10 +97,10 @@ public class Vision : MonoBehaviour
 
         toggle.onValueChanged.AddListener(delegate {ToggleSidewalkDirection();});
 
-        // outputAspectRatioFitter = outputViewParent.GetComponent<AspectRatioFitter>();
-        // inputAspectRatioFitter = inputViewParent.GetComponent<AspectRatioFitter>();
-        // outputAspectRatioFitter.aspectRatio = (float) resizeOptions.width / resizeOptions.height;
-        // inputAspectRatioFitter.aspectRatio = (float) resizeOptions.width / resizeOptions.height;
+        outputAspectRatioFitter = outputViewParent.GetComponent<AspectRatioFitter>();
+        inputAspectRatioFitter = inputViewParent.GetComponent<AspectRatioFitter>();
+        outputAspectRatioFitter.aspectRatio = (float) resizeOptions.width / resizeOptions.height;
+        inputAspectRatioFitter.aspectRatio = (float) resizeOptions.width / resizeOptions.height;
         outputView.enabled = false;
         inputView.enabled = false;
 
@@ -154,7 +154,7 @@ public class Vision : MonoBehaviour
     }
 
     TensorFloat input;
-    const int maxStepsPerFrame = 90;
+    const int maxStepsPerFrame = 50;
     const float maxTimePerFrame = 0.1f;
     public IEnumerator Detect(Texture tex)
     {
@@ -181,7 +181,7 @@ public class Vision : MonoBehaviour
                 maxTime = maxTimePerFrame - Time.unscaledDeltaTime + lastTime;
             }
             if ((++step - lastStep) % maxStepsPerFrame == 0 || (Time.realtimeSinceStartup - start) > maxTime) {
-                if (step != 377 && step != 378) { // Bandaid fix for iPhone bug
+                if (step != 208 && step != 209) { // Bandaid fix for iPhone bug
                     lastTime = Time.realtimeSinceStartup - start;
                     yield return null;
                 }
@@ -233,8 +233,6 @@ public class Vision : MonoBehaviour
     private static int numRaycasts = 31;
     private float radWidth = Mathf.PI / (numRaycasts - 1);
 
-    public GameObject arrow;
-
     private void ProcessOutput(TensorInt output)
     {
         if (!doSidewalkDirection) return;
@@ -263,15 +261,12 @@ public class Vision : MonoBehaviour
             direction = (relativeDir + SensorData.heading + 360) % 360;
             lastValidDirection = DateTime.Now;
 
-            arrow.SetActive(true);
-            arrow.transform.eulerAngles = new Vector3(0,0,-relativeDir/scale);
-
             PlayAudio(curCls);
         }
         else if (curCls != 7 && curCls != 8) { // Ignore grating & manhole as these can be on either sidewalk, crosswalk, or road
             if ((DateTime.Now - lastWalkableTime).TotalSeconds > nonWalkableTime) {
                 // No longer performing raycasts to find closest sidewalk as the results don't seem useful
-                arrow.SetActive(false);
+
                 PlayAudio(curCls);
             }
         }
@@ -293,7 +288,7 @@ public class Vision : MonoBehaviour
 
     // Returns end coordinates of raycast w.r.t. middle of bottom of image
     // Curb, curb cut, grating, manhole are counted as walkable when raycasting
-    private const int maxSkips = 60;
+    private const int maxSkips = 30;
     private (float, float) PerformRaycast(float x, float y, ref TensorInt output, float radFromLeft)
     {
         float dx = -Mathf.Cos(radFromLeft);
@@ -403,10 +398,10 @@ public class Vision : MonoBehaviour
         inputView.texture = resizedTex;
         outputView.texture = outputTex;
 
-        // outputAspectRatioFitter.aspectMode = Utils.GetMode();
-        // inputAspectRatioFitter.aspectMode = Utils.GetMode();
-        outputView.rectTransform.sizeDelta = new Vector2(720, 720);
-        inputView.rectTransform.sizeDelta = new Vector2(720, 720);
+        outputAspectRatioFitter.aspectMode = Utils.GetMode();
+        inputAspectRatioFitter.aspectMode = Utils.GetMode();
+        outputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
+        inputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
     }
 
     private RenderTexture GetResultTexture(int[] data)

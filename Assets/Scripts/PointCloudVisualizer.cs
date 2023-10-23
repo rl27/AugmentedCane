@@ -154,7 +154,7 @@ public class PointCloudVisualizer : MonoBehaviour
         for (int i = numParticles; i < prevNumParticles; i++)
             particles[i].remainingLifetime = -1f;
 
-        // particleSystem.SetParticles(particles, Math.Max(numParticles, prevNumParticles));
+        particleSystem.SetParticles(particles, Math.Max(numParticles, prevNumParticles));
         prevNumParticles = numParticles;
     }
 
