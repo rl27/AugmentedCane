@@ -69,7 +69,7 @@ public class Vision : MonoBehaviour
         new Color32(128, 96, 0, 255) // rail track
     };
 
-    void Awake()
+    void Start()
     {
         #if UNITY_EDITOR
             testing = true;
@@ -82,10 +82,10 @@ public class Vision : MonoBehaviour
         backendType = SystemInfo.supportsComputeShaders ? BackendType.GPUCompute : BackendType.GPUPixel;
         worker = WorkerFactory.CreateWorker(backendType, model);
 
-        // Do this at the start so the first call to this later doesn't stall
+        // Do this to deal with initial lag
         // The initial lag only happens once; if the app is closed and re-opened, it doesn't happen
-        Texture2D temp = Texture2D.blackTexture;
-        input = TextureConverter.ToTensor(temp);
+        // Texture2D temp = Texture2D.blackTexture;
+        // input = TextureConverter.ToTensor(temp);
 
         resizer = new TextureResizer();
         resizeOptions = new TextureResizer.ResizeOptions()
@@ -158,7 +158,7 @@ public class Vision : MonoBehaviour
 
     TensorFloat input;
     const int maxStepsPerFrame = 90;
-    const float maxTimePerFrame = 0.1f;
+    const float maxTimePerFrame = 0.066f; // Aim for 15 FPS
     public IEnumerator Detect(Texture tex)
     {
         if (working)
