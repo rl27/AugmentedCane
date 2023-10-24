@@ -169,7 +169,7 @@ public class Vision : MonoBehaviour
         input = TextureConverter.ToTensor(resizedTex); // input.shape: 1, 3, 480, 480
 
         // worker.Execute(input);
-        var enumerator = worker.StartManualSchedule(input); // Total num of steps for MNV3 is 209
+        var enumerator = worker.StartManualSchedule(input); // Total num of steps for PP-MobileSeg-tiny is 378
         int step = 0;
         int lastFrame = -1;
         float start = 0;
@@ -213,7 +213,6 @@ public class Vision : MonoBehaviour
         SetTextures(resizedTex, output2D);*/
         
         input.Dispose();
-        output.Dispose();
 
         working = false;
     }
