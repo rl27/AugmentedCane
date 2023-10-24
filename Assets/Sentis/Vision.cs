@@ -157,7 +157,7 @@ public class Vision : MonoBehaviour
     }
 
     TensorFloat input;
-    const int maxStepsPerFrame = 90;
+    const int maxStepsPerFrame = 100;
     const float maxTimePerFrame = 0.066f; // Aim for 15 FPS
     public IEnumerator Detect(Texture tex)
     {
@@ -190,6 +190,8 @@ public class Vision : MonoBehaviour
                 }
             }
         }
+
+        yield return null; // Reading the output is expensive, wait for next frame
 
         // [0, 0  , 0  ] = top left
         // [0, H-1, 0  ] = bottom left
