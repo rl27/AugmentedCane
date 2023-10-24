@@ -292,7 +292,8 @@ public class Vision : MonoBehaviour
         logging = "None";
         outputView.enabled = doSidewalkDirection;
         inputView.enabled = doSidewalkDirection;
-        arrow.SetActive(doSidewalkDirection);
+        if (!doSidewalkDirection)
+            arrow.SetActive(doSidewalkDirection);
     }
 
     // Returns end coordinates of raycast w.r.t. middle of bottom of image
