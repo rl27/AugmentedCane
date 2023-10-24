@@ -176,13 +176,15 @@ public class Vision : MonoBehaviour
         float maxTime = 0;
         float lastStep = 0;
         float lastTime = 0;
-        while (enumerator.MoveNext()) {
+        bool notDone = true;
+        while (notDone) {
             if (lastFrame != Time.frameCount) {
-                lastFrame = Time.frameCount;
                 start = Time.realtimeSinceStartup;
+                lastFrame = Time.frameCount;
                 lastStep = step;
                 maxTime = maxTimePerFrame - Time.smoothDeltaTime + lastTime;
             }
+            notDone = enumerator.MoveNext();
             if ((++step - lastStep) % maxStepsPerFrame == 0 || (Time.realtimeSinceStartup - start) > maxTime) {
                 if (step != 377 && step != 378) { // Bandaid fix for iPhone bug
                     lastTime = Time.realtimeSinceStartup - start;
@@ -191,7 +193,7 @@ public class Vision : MonoBehaviour
             }
         }
 
-        yield return null; // Reading the output is expensive, wait for next frame
+        yield return null; // Reading the output can sometimes be expensive, wait for next frame
 
         // [0, 0  , 0  ] = top left
         // [0, H-1, 0  ] = bottom left
