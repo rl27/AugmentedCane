@@ -79,7 +79,7 @@ public class Vision : MonoBehaviour
         tts = TTSHandler.GetComponent<TTS>();
 
         model = ModelLoader.Load(modelAsset);
-        backendType = SystemInfo.supportsComputeShaders ? BackendType.GPUCompute : BackendType.GPUPixel;
+        backendType = SystemInfo.supportsComputeShaders ? BackendType.GPUCompute : BackendType.CPU;
         worker = WorkerFactory.CreateWorker(backendType, model);
 
         // Do this to deal with initial lag
