@@ -144,7 +144,7 @@ public class PointCloudVisualizer : MonoBehaviour
 
         closest = Mathf.Sqrt(closest);
 
-        if (numPoints >= 3) {
+        if (numPoints >= 5) {
             float leftAvg = (leftCount == 0) ? Single.PositiveInfinity : leftSum/leftCount;
             float rightAvg = (rightCount == 0) ? Single.PositiveInfinity : rightSum/rightCount;
             pointAhead = (leftAvg > rightAvg) ? 1 : 2;

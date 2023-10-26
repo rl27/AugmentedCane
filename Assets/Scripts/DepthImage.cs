@@ -112,7 +112,7 @@ public class DepthImage : MonoBehaviour
     private bool doObstacleAvoidance = true;
     public static float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
     int collisionWindowWidth = 24; // Min. pixel gap to go through
-    public static float depthConfidenceThreshold = 0.1f;
+    public static float depthConfidenceThreshold = 0.2f;
     int confidenceMax = 255;
 
     public static float halfPersonWidth = 0.3f; // Estimated half-width of a person
@@ -339,7 +339,7 @@ public class DepthImage : MonoBehaviour
         bool hasObstacle = false;
         int len = closeTotals.Length;
         for (int i = 0; i < len; i++) {
-            if (closeTotals[i] >= 3) {
+            if (closeTotals[i] >= 5) {
                 hasObstacle = true;
                 break;
             }
