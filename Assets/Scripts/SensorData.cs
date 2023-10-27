@@ -74,6 +74,6 @@ public class SensorData : MonoBehaviour
     // Format IMU data into string
     public string IMUstring() {
         // return string.Format("Accel: {0} \nGyro: {1} \nMag: {2} \nAttitude: {3} \nHeading: {4}", accel, gyro, mag, attitude, heading);
-        return string.Format("Attitude: {0} \nHeading: {1}°, Acc: {3}", attitude, heading.ToString("F1"), headingAccuracy);
+        return string.Format("Attitude: {0} \nHeading: {1}°, Acc: {2}", attitude, heading.ToString("F1"), headingAccuracy);
     }
 }

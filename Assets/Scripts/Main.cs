@@ -59,7 +59,8 @@ public class Main : MonoBehaviour
 
     private string cmaesPath;
 
-    public static int FPS = 0;
+    public static float timeInFrame = 0;
+    private float timeAtStart = 0;
 
     void Awake()
     {
@@ -185,7 +186,8 @@ public class Main : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Application.targetFrameRate = 15; // Must be done in Update(). Doing this in Start() makes it not work for mobile devices.
+        timeAtStart = Time.realtimeSinceStartup;
+        Application.targetFrameRate = 30; // Must be done in Update(). Doing this in Start() makes it not work for mobile devices.
         // QualitySettings.vSyncCount = 0;
 
         // if ((DateTime.Now - gpsLastLog).TotalSeconds > gpsLogInterval) {
@@ -196,8 +198,7 @@ public class Main : MonoBehaviour
         // }
 
         m_StringBuilder.Clear();
-        FPS = Convert.ToInt32(1.0 / Time.unscaledDeltaTime);
-        m_StringBuilder.AppendLine($"FPS: {FPS}\n");
+        m_StringBuilder.AppendLine($"FPS: {Convert.ToInt32(1.0 / Time.unscaledDeltaTime)}\n");
 
         m_StringBuilder.AppendLine($"Sidewalk: {Vision.direction.ToString("F1")}°, {Vision.relativeDir.ToString("F1")}°, {Vision.logging}");
 
@@ -221,6 +222,11 @@ public class Main : MonoBehaviour
         m_StringBuilder.AppendLine($"Sigma: {cmaoptimizer.cma._sigma.ToString("F3")}");
 
         LogText(m_StringBuilder.ToString());
+    }
+
+    void LateUpdate()
+    {
+        timeInFrame = Time.realtimeSinceStartup - timeAtStart;
     }
 
     // Log the given text to the screen if the image info UI is set. Otherwise, log the text to debug.
