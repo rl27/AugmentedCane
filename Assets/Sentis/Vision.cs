@@ -158,7 +158,7 @@ public class Vision : MonoBehaviour
 
     TensorFloat input;
     const int maxStepsPerFrame = 100;
-    const float maxTimePerFrame = 0.095f; // Aim for 10 FPS
+    const float maxTimePerFrame = 0.08f; // Aim for 10 FPS
     public IEnumerator Detect(Texture tex)
     {
         if (working)
@@ -182,12 +182,13 @@ public class Vision : MonoBehaviour
                 start = Time.realtimeSinceStartup;
                 lastFrame = Time.frameCount;
                 lastStep = step;
-                maxTime = maxTimePerFrame - Time.smoothDeltaTime + lastTime;
+                maxTime = maxTimePerFrame - Timer.timeInFrame + lastTime;
             }
             notDone = enumerator.MoveNext();
             if ((++step - lastStep) % maxStepsPerFrame == 0 || (Time.realtimeSinceStartup - start) > maxTime) {
                 if (step != 377 && step != 378) { // Bandaid fix for iPhone bug
                     lastTime = Time.realtimeSinceStartup - start;
+                    Debug.unityLogger.Log("mytag", step);
                     yield return null;
                 }
             }
@@ -202,17 +203,17 @@ public class Vision : MonoBehaviour
         TensorInt output = worker.PeekOutput() as TensorInt; // output.shape: 1, 480, 480
         output.MakeReadable();
         ProcessOutput(output);
-        SetTextures(resizedTex, GetResultTexture(output.ToReadOnlyArray()));
+        // SetTextures(resizedTex, GetResultTexture(output.ToReadOnlyArray()));
 
         // Use this code if GetResultTexture is not working
-        /*Texture2D output2D = new Texture2D(W, H, TextureFormat.RGB24, false);
-        for (int i = 0; i < W; i++) {
-            for (int j = 0; j < H; j++) {
-                output2D.SetPixel(i, H-j, COLOR_TABLE[(int)output[0, 0, i, j]]);
+        Texture2D output2D = new Texture2D(W, H, TextureFormat.RGB24, false);
+        for (int i = 0; i < H; i++) {
+            for (int j = 0; j < W; j++) {
+                output2D.SetPixel(j, H-i, COLOR_TABLE[(int)output[0, i, j]]);
             }
         }
         output2D.Apply();
-        SetTextures(resizedTex, output2D);*/
+        SetTextures(resizedTex, output2D);
         
         input.Dispose();
 
@@ -404,7 +405,7 @@ public class Vision : MonoBehaviour
         }
     }
 
-    private void SetTextures(Texture2D resizedTex, RenderTexture outputTex)
+    private void SetTextures(Texture2D resizedTex, Texture2D outputTex)
     {
         inputView.texture = resizedTex;
         outputView.texture = outputTex;

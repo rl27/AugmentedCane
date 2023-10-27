@@ -15,14 +15,13 @@ public class SensorData : MonoBehaviour
     public static Vector3 attitude;
     public static Vector3 mag;
     public static float heading;
-    private float headingDiff;
     private float headingAccuracy;
 
     private bool dataUpdating = false;
 
     // Moving average for heading
-    private static int numHeadings = 9;
-    private float[] pastHeadingDiffs = new float[numHeadings];
+    private static int numHeadings = 7;
+    private float[] pastHeadings = new float[numHeadings];
     private int headingIndex = 0;
 
     void Awake()
@@ -57,12 +56,10 @@ public class SensorData : MonoBehaviour
 
         // https://docs.unity3d.com/ScriptReference/Compass-headingAccuracy.html
         headingAccuracy = Input.compass.headingAccuracy;
-        if (headingAccuracy != -1 || headingIndex < numHeadings - 1) {
-            headingIndex = headingIndex + 1;
-            pastHeadingDiffs[headingIndex % numHeadings] = Input.compass.trueHeading - DepthImage.rotation.y;
-            headingDiff = HeadingDiffAverage();
-        }
-        heading = (headingDiff + DepthImage.rotation.y) % 360;
+        
+        headingIndex += 1;
+        pastHeadings[headingIndex % numHeadings] = Input.compass.trueHeading;
+        heading = pastHeadings.Sum() / numHeadings;
 
         // Wait for a bit before trying to update again
         // yield return new WaitForSeconds(delay);
@@ -77,28 +74,6 @@ public class SensorData : MonoBehaviour
     // Format IMU data into string
     public string IMUstring() {
         // return string.Format("Accel: {0} \nGyro: {1} \nMag: {2} \nAttitude: {3} \nHeading: {4}", accel, gyro, mag, attitude, heading);
-        return string.Format("Attitude: {0} \nHeading: {1}°, Diff: {2}°, Acc: {3}", attitude, heading.ToString("F1"), headingDiff.ToString("F1"), headingAccuracy);
-    }
-
-    private float HeadingDiffAverage()
-    {
-        float closerToPi = 0;
-        for (int i = 0; i < numHeadings; i++) {
-            if (pastHeadingDiffs[i] > 90 && pastHeadingDiffs[i] < 270) closerToPi++;
-        }
-
-        float sum = 0;
-        if (closerToPi > numHeadings/2) { // [0,360]
-            sum = pastHeadingDiffs.Sum();
-        }
-        else { // [-180,180]
-            for (int i = 0; i < numHeadings; i++) {
-                float temp = pastHeadingDiffs[i];
-                if (temp > 180) temp -= 360;
-                sum += temp;
-            }
-            if (sum < 0) sum = (sum % 360) + 360;
-        }
-        return sum / numHeadings;
+        return string.Format("Attitude: {0} \nHeading: {1}°, Acc: {3}", attitude, heading.ToString("F1"), headingAccuracy);
     }
 }

@@ -185,7 +185,7 @@ public class Main : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Application.targetFrameRate = 30; // Must be done in Update(). Doing this in Start() makes it not work for mobile devices.
+        Application.targetFrameRate = 15; // Must be done in Update(). Doing this in Start() makes it not work for mobile devices.
         // QualitySettings.vSyncCount = 0;
 
         // if ((DateTime.Now - gpsLastLog).TotalSeconds > gpsLogInterval) {
