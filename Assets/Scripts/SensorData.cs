@@ -59,7 +59,7 @@ public class SensorData : MonoBehaviour
         
         headingIndex += 1;
         pastHeadings[headingIndex % numHeadings] = Input.compass.trueHeading;
-        heading = pastHeadings.Sum() / numHeadings;
+        heading = HeadingAverage();
 
         // Wait for a bit before trying to update again
         // yield return new WaitForSeconds(delay);
@@ -69,6 +69,28 @@ public class SensorData : MonoBehaviour
     void OnDisable() {
         Input.gyro.enabled = false;
         Input.compass.enabled = false;
+    }
+
+    private float HeadingAverage()
+    {
+        float closerToPi = 0;
+        for (int i = 0; i < numHeadings; i++) {
+            if (pastHeadings[i] > 90 && pastHeadings[i] < 270) closerToPi++;
+        }
+
+        float sum = 0;
+        if (closerToPi > numHeadings/2) { // [0,360]
+            sum = pastHeadings.Sum();
+        }
+        else { // [-180,180]
+            for (int i = 0; i < numHeadings; i++) {
+                float temp = pastHeadings[i];
+                if (temp > 180) temp -= 360;
+                sum += temp;
+            }
+            if (sum < 0) sum = (sum % 360) + 360;
+        }
+        return sum / numHeadings;
     }
 
     // Format IMU data into string
