@@ -86,6 +86,7 @@ public class Vision : MonoBehaviour
         // The initial lag only happens once; if the app is closed and re-opened, it doesn't happen
         Texture2D temp = Texture2D.blackTexture;
         input = TextureConverter.ToTensor(temp);
+        input.Dispose();
 
         resizer = new TextureResizer();
         resizeOptions = new TextureResizer.ResizeOptions()
