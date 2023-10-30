@@ -4021,6 +4021,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4d8d1a3f1032792409f8110b27129f53, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  arCoreExtensions: {fileID: 1429773242}
 --- !u!114 &1210721352
 MonoBehaviour:
   m_ObjectHideFlags: 0

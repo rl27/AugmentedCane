@@ -12,6 +12,7 @@ public class GPSData : MonoBehaviour
 {
     private bool isRemote = true; // For using Unity Remote
 
+    public ARCoreExtensions arCoreExtensions;
     private static LocationInfo gps;
     private static GeospatialPose pose;
 
@@ -49,7 +50,6 @@ public class GPSData : MonoBehaviour
         yield return vpsAvailabilityPromise;
 
         VPSavailable = (vpsAvailabilityPromise.Result == VpsAvailability.Available);
-        Debug.unityLogger.Log("mytag", vpsAvailabilityPromise.Result);
     }
 
     void Update()
@@ -57,6 +57,7 @@ public class GPSData : MonoBehaviour
         if (geospatialSupported == FeatureSupported.Unknown) {
             geospatialSupported = earthManager.IsGeospatialModeSupported(GeospatialMode.Enabled);
             if (geospatialSupported == FeatureSupported.Supported) {
+                arCoreExtensions.ARCoreExtensionsConfig.GeospatialMode = GeospatialMode.Enabled;
                 StartCoroutine(VPSAvailabilityCheck());
             }
         }
