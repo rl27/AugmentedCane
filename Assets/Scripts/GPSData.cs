@@ -1,17 +1,19 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.XR.ARSubsystems;
+using Google.XR.ARCoreExtensions;
 
 // REFERENCES
 // https://docs.unity3d.com/ScriptReference/LocationService.Start.html
 // https://nosuchstudio.medium.com/how-to-access-gps-location-in-unity-521f1371a7e3
+[RequireComponent(typeof(AREarthManager))]
 public class GPSData : MonoBehaviour
 {
     private bool isRemote = true; // For using Unity Remote
 
-    // GPS data
-    [NonSerialized]
-    public static LocationInfo gps;
+    private static LocationInfo gps;
+    private static GeospatialPose pose;
 
     private float desiredAccuracyInMeters = 1f;
     private float updateDistanceInMeters = 3f;
@@ -26,8 +28,38 @@ public class GPSData : MonoBehaviour
 
     public static double degreeToMeter = 111139;
 
+    private AREarthManager earthManager;
+    FeatureSupported geospatialSupported = FeatureSupported.Unknown;
+    bool checkingVPS = false;
+    bool VPSavailable = false;
+
+    void Start()
+    {
+        earthManager = GetComponent<AREarthManager>();
+    }
+
+    private IEnumerator VPSAvailabilityCheck()
+    {
+        if (checkingVPS) yield break;
+        checkingVPS = true;
+
+        while (gps.latitude == 0 && gps.longitude == 0) yield return null;
+
+        var vpsAvailabilityPromise = AREarthManager.CheckVpsAvailabilityAsync(gps.latitude, gps.longitude);
+        yield return vpsAvailabilityPromise;
+
+        VPSavailable = (vpsAvailabilityPromise.Result == VpsAvailability.Available);
+        Debug.unityLogger.Log("mytag", vpsAvailabilityPromise.Result);
+    }
+
     void Update()
     {
+        if (geospatialSupported == FeatureSupported.Unknown) {
+            geospatialSupported = earthManager.IsGeospatialModeSupported(GeospatialMode.Enabled);
+            if (geospatialSupported == FeatureSupported.Supported) {
+                StartCoroutine(VPSAvailabilityCheck());
+            }
+        }
         StartCoroutine(UpdateData());
     }
 
@@ -36,8 +68,14 @@ public class GPSData : MonoBehaviour
         // Exit if already updating the data
         if (dataUpdating)
             yield break;
-
         dataUpdating = true;
+
+        Debug.unityLogger.Log("mytag", earthManager.EarthTrackingState);
+        if (VPSavailable && earthManager.EarthTrackingState == TrackingState.Tracking) {
+            pose = earthManager.CameraGeospatialPose;
+            Debug.unityLogger.Log("mytag", pose.Heading);
+            Debug.unityLogger.Log("mytag", pose.EunRotation);
+        }
         if (Input.location.status == LocationServiceStatus.Running) {
             gps = Input.location.lastData;
             if (lastUpdated != gps.timestamp) {
