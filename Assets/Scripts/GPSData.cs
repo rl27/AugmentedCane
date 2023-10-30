@@ -14,18 +14,19 @@ public class GPSData : MonoBehaviour
 
     public ARCoreExtensions arCoreExtensions;
     private static LocationInfo gps;
-    private static GeospatialPose pose;
+    public static GeospatialPose pose;
 
     private float desiredAccuracyInMeters = 1f;
     private float updateDistanceInMeters = 3f;
 
-    private float delay = 0.5f;
+    private float delay = 5f;
 
     private bool isStarting = false;
     private bool dataUpdating = false;
 
     private double lastUpdated = 0;
     private static Vector3 posAtLastUpdated;
+    public static float headingAtLastUpdated;
 
     public static double degreeToMeter = 111139;
 
@@ -33,6 +34,7 @@ public class GPSData : MonoBehaviour
     FeatureSupported geospatialSupported = FeatureSupported.Unknown;
     bool checkingVPS = false;
     bool VPSavailable = false;
+    public static bool geospatial = false;
 
     void Start()
     {
@@ -71,18 +73,19 @@ public class GPSData : MonoBehaviour
             yield break;
         dataUpdating = true;
 
-        Debug.unityLogger.Log("mytag", earthManager.EarthTrackingState);
         if (VPSavailable && earthManager.EarthTrackingState == TrackingState.Tracking) {
             pose = earthManager.CameraGeospatialPose;
-            Debug.unityLogger.Log("mytag", pose.Heading);
-            Debug.unityLogger.Log("mytag", pose.EunRotation);
+            posAtLastUpdated = DepthImage.position;
+            headingAtLastUpdated = DepthImage.rotation.y;
+            geospatial = true;
         }
-        if (Input.location.status == LocationServiceStatus.Running) {
+        else if (Input.location.status == LocationServiceStatus.Running) {
             gps = Input.location.lastData;
             if (lastUpdated != gps.timestamp) {
                 lastUpdated = gps.timestamp;
                 posAtLastUpdated = DepthImage.position;
             }
+            geospatial = false;
         }
         else
             StartCoroutine(LocationStart());
@@ -96,16 +99,18 @@ public class GPSData : MonoBehaviour
     // Replace with geospatial?
     public static Navigation.Point EstimatedUserLocation()
     {
+        double lat = geospatial ? pose.Latitude : Convert.ToDouble(gps.latitude.ToString("R"));
+        double lng = geospatial ? pose.Longitude : Convert.ToDouble(gps.longitude.ToString("R"));
         Vector3 posDiff = DepthImage.position - posAtLastUpdated;
         float rot = DepthImage.rotation.y;
-        float heading = SensorData.heading;
+        float heading = geospatial ? (float) pose.Heading : SensorData.heading;
         float angleDiff = (heading - rot) * Mathf.Deg2Rad;
         float sin = Mathf.Sin(angleDiff);
         float cos = Mathf.Cos(angleDiff);
         // This ToString("R") thing is magic. Summons extra precision out of nowhere.
         // https://forum.unity.com/threads/precision-of-location-longitude-is-worse-when-longitude-is-beyond-100-degrees.133192/
-        return new Navigation.Point(Convert.ToDouble(gps.latitude.ToString("R")) + (posDiff.z * cos - posDiff.x * sin) / degreeToMeter,
-                                    Convert.ToDouble(gps.longitude.ToString("R")) + (posDiff.z * sin + posDiff.x * cos) / degreeToMeter);
+        return new Navigation.Point(lat + (posDiff.z * cos - posDiff.x * sin) / degreeToMeter,
+                                    lng + (posDiff.z * sin + posDiff.x * cos) / degreeToMeter);
     }
 
     // Start location services
@@ -183,10 +188,7 @@ public class GPSData : MonoBehaviour
 
     // Format GPS data into string
     public string GPSstring() {
-        // return string.Format("Latitude: {0} \nLongitude: {1} \nAltitude: {2} \nHorizontal accuracy: {3} \nTimestamp: {4}", gps.latitude, gps.longitude, gps.altitude, gps.horizontalAccuracy, DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp));
-        // return string.Format("GPS last update: {0} \nLatitude: {1} \nLongitude: {2} \nHorizontal accuracy: {3}",
-        //     DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp).LocalDateTime.TimeOfDay, gps.latitude.ToString("R"), gps.longitude.ToString("R"), gps.horizontalAccuracy);
-        return string.Format("GPS last updated: {0} \nAccuracy: {1}m \nLat/Lng: {2}, {3} \nEst. loc: {4}\n",
-            DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp).LocalDateTime.TimeOfDay, gps.horizontalAccuracy.ToString("F2"), gps.latitude.ToString("R"), gps.longitude.ToString("R"), EstimatedUserLocation());
+        return string.Format("GPS last updated: {0} \nAccuracy: {1}m \nLat/Lng: {2}, {3} \nEst. loc: {4}\n Accuracy: {5}\n Lat/Lng: {6}, {7}\n Heading: {8}\n Heading acc: {9}\n",
+            DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp).LocalDateTime.TimeOfDay, gps.horizontalAccuracy.ToString("F2"), gps.latitude.ToString("R"), gps.longitude.ToString("R"), EstimatedUserLocation(), pose.HorizontalAccuracy.ToString("F2"), pose.Latitude.ToString("F7"), pose.Longitude.ToString("F7"), pose.Heading.ToString("F2"), pose.HeadingAccuracy.ToString("F2"));
     }
 }

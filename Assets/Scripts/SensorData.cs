@@ -61,6 +61,9 @@ public class SensorData : MonoBehaviour
         pastHeadings[headingIndex % numHeadings] = Input.compass.trueHeading;
         heading = HeadingAverage();
 
+        if (GPSData.geospatial)
+            heading = (float) ((GPSData.pose.Heading + DepthImage.rotation.y - GPSData.headingAtLastUpdated + 720) % 360);
+
         // Wait for a bit before trying to update again
         // yield return new WaitForSeconds(delay);
         dataUpdating = false;
