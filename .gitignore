@@ -11,6 +11,7 @@
 /[Uu]ser[Ss]ettings/
 /.utmp*
 /Assets/XR/Temp*
+/Assets/Plugins
 apikey.txt
 apikey.txt.meta
 
