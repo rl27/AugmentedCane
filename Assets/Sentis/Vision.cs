@@ -162,8 +162,7 @@ public class Vision : MonoBehaviour
     const float maxTimePerFrame = 0.08f; // Aim for minimum 10 FPS
     public IEnumerator Detect(Texture tex)
     {
-        if (working)
-            yield break;
+        if (working) yield break;
         working = true;
 
         Texture2D resizedTex = ResizeTexture(tex);

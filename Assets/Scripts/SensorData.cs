@@ -39,9 +39,7 @@ public class SensorData : MonoBehaviour
     // Update IMU data
     public IEnumerator UpdateData() {
         // Exit if already updating the data
-        if (dataUpdating)
-            yield break;
-
+        if (dataUpdating) yield break;
         dataUpdating = true;
 
         accel.x = -Input.acceleration.y;
