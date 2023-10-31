@@ -53,7 +53,8 @@ public class Navigation : MonoBehaviour
 
     private float minPitch = 0.5f; // Minimum pitch to apply to audio
 
-    // private bool reachedFirstWaypoint = false;
+    // Track if user is at or after first waypoint
+    private bool reachedFirstWaypoint = false;
 
     private List<Intersection> intersections = new List<Intersection>();
     private Point lastIntersectionCenter = new Point(0, 0);
@@ -234,7 +235,7 @@ public class Navigation : MonoBehaviour
                     stepStartIndices.Add(index);
                 }
                 initialized = true;
-                // reachedFirstWaypoint = false;
+                reachedFirstWaypoint = false;
             })
         );
     }
@@ -310,7 +311,7 @@ public class Navigation : MonoBehaviour
 
         // Use segmentation direction if info is not too old & it's close enough to waypoint direction
         // Don't use if haven't reached first waypoint
-        if (bestWaypoint > 0 && (DateTime.Now - Vision.lastValidDirection).TotalSeconds < Vision.validDuration) {
+        if (reachedFirstWaypoint && (DateTime.Now - Vision.lastValidDirection).TotalSeconds < Vision.validDuration) {
             double visionDiff = (Vision.direction - ori + 360) % 360;
             if (visionDiff > 180) visionDiff -= 360;
             if (Math.Abs(visionDiff) < Vision.maxDisparity) {
@@ -401,14 +402,25 @@ public class Navigation : MonoBehaviour
         }
 
         // If very close to a waypoint, use that point
-        if (latestClose != -1)
+        if (latestClose != -1) {
+            reachedFirstWaypoint = true;
             return (latestClose, true);
+        }
         // Otherwise, if close enough to closest line segment, use that
-        if (minOrthoDist < farLineDist)
+        if (minOrthoDist < farLineDist) {
+            reachedFirstWaypoint = true;
             return (orthoIndex, false);
+        }
         // Otherwise, if close enough to waypoint, use that point
-        if (minPointDist < farRadius)
+        if (minPointDist < farRadius) {
+            reachedFirstWaypoint = true;
             return (pointIndex - 1, false);
+        }
+        // Might be too far away from the first waypoint when starting out
+        // If this is not handled, app will continually recalculate
+        if (!reachedFirstWaypoint) {
+            return (-1, false);
+        }
         // Otherwise, should recalculate
         return (-2, false);
     }
