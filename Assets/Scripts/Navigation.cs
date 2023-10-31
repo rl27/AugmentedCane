@@ -53,7 +53,7 @@ public class Navigation : MonoBehaviour
 
     private float minPitch = 0.5f; // Minimum pitch to apply to audio
 
-    private bool reachedFirstWaypoint = false;
+    // private bool reachedFirstWaypoint = false;
 
     private List<Intersection> intersections = new List<Intersection>();
     private Point lastIntersectionCenter = new Point(0, 0);
@@ -234,7 +234,7 @@ public class Navigation : MonoBehaviour
                     stepStartIndices.Add(index);
                 }
                 initialized = true;
-                reachedFirstWaypoint = false;
+                // reachedFirstWaypoint = false;
             })
         );
     }
@@ -310,7 +310,7 @@ public class Navigation : MonoBehaviour
 
         // Use segmentation direction if info is not too old & it's close enough to waypoint direction
         // Don't use if haven't reached first waypoint
-        if (reachedFirstWaypoint && (DateTime.Now - Vision.lastValidDirection).TotalSeconds < Vision.validDuration) {
+        if (bestWaypoint > 0 && (DateTime.Now - Vision.lastValidDirection).TotalSeconds < Vision.validDuration) {
             double visionDiff = (Vision.direction - ori + 360) % 360;
             if (visionDiff > 180) visionDiff -= 360;
             if (Math.Abs(visionDiff) < Vision.maxDisparity) {
@@ -364,13 +364,13 @@ public class Navigation : MonoBehaviour
     private (int, bool) FindBestWaypoint(Point loc)
     {
         // Guide user to first waypoint before doing all the other navigation stuff
-        if (!reachedFirstWaypoint) {
-            if (Dist(loc, allPoints[0]) < closeRadius) {
-                reachedFirstWaypoint = true;
-                return (0, true);
-            }
-            return (-1, false);
-        }
+        // if (!reachedFirstWaypoint) {
+        //     if (Dist(loc, allPoints[0]) < closeRadius) {
+        //         reachedFirstWaypoint = true;
+        //         return (0, true);
+        //     }
+        //     return (-1, false);
+        // }
 
         // Check if reached final waypoint
         if (Dist(loc, allPoints[allPoints.Count - 1]) < closeRadius) {
