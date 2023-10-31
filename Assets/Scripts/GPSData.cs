@@ -33,7 +33,7 @@ public class GPSData : MonoBehaviour
     FeatureSupported geospatialSupported = FeatureSupported.Unknown;
     bool checkingVPS = false;
     bool vpsAvailable = false;
-    bool recheckVps = false;
+    VpsAvailability vpsAvailability;
     public static bool geospatial = false;
 
     void Start()
@@ -48,18 +48,22 @@ public class GPSData : MonoBehaviour
 
         while (gps.latitude == 0 && gps.longitude == 0) yield return null;
 
-        var promise = AREarthManager.CheckVpsAvailabilityAsync(gps.latitude, gps.longitude);
-        yield return promise;
+        bool recheckVps = false;
+        do {
+            var promise = AREarthManager.CheckVpsAvailabilityAsync(gps.latitude, gps.longitude);
+            yield return promise;
 
-        // https://developers.google.com/ar/reference/unity-arf/namespace/Google/XR/ARCoreExtensions#vpsavailability
-        vpsAvailable = false;
-        recheckVps = false;
-        if (promise.Result == VpsAvailability.Available)
-            vpsAvailable = true;
-        else if (promise.Result == VpsAvailability.Unknown ||
-                 promise.Result == VpsAvailability.ErrorNetworkConnection ||
-                 promise.Result == VpsAvailability.ErrorInternal)
-            recheckVps = true;
+            // https://developers.google.com/ar/reference/unity-arf/namespace/Google/XR/ARCoreExtensions#vpsavailability
+            vpsAvailable = false;
+            vpsAvailability = promise.Result;
+            if (promise.Result == VpsAvailability.Available)
+                vpsAvailable = true;
+            else if (promise.Result == VpsAvailability.Unknown ||
+                     promise.Result == VpsAvailability.ErrorNetworkConnection ||
+                     promise.Result == VpsAvailability.ErrorInternal)
+                recheckVps = true;
+        }
+        while (recheckVps);
 
         checkingVPS = false;
     }
@@ -72,9 +76,6 @@ public class GPSData : MonoBehaviour
                 arCoreExtensions.ARCoreExtensionsConfig.GeospatialMode = GeospatialMode.Enabled;
                 StartCoroutine(VPSAvailabilityCheck());
             }
-        }
-        if (recheckVps) {
-            StartCoroutine(VPSAvailabilityCheck());
         }
         StartCoroutine(UpdateData());
     }
@@ -136,27 +137,24 @@ public class GPSData : MonoBehaviour
         if (isStarting) yield break;
         isStarting = true;
 
-#if UNITY_EDITOR
-        // Uncomment if using Unity Remote
-        // yield return new WaitForSecondsRealtime(5f); // Need to add delay for Unity Remote to work
-        // yield return new WaitWhile(() => !UnityEditor.EditorApplication.isRemoteConnected);
-#elif UNITY_ANDROID
-        // https://forum.unity.com/threads/runtime-permissions-do-not-work-for-gps-location-first-two-runs.1005001
-        if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.FineLocation))
-            UnityEngine.Android.Permission.RequestUserPermission(UnityEngine.Android.Permission.FineLocation);
+        // Request GPS permissions
+        #if UNITY_ANDROID
+            // https://forum.unity.com/threads/runtime-permissions-do-not-work-for-gps-location-first-two-runs.1005001
+            if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.FineLocation))
+                UnityEngine.Android.Permission.RequestUserPermission(UnityEngine.Android.Permission.FineLocation);
 
-        if (!Input.location.isEnabledByUser) {
-            Debug.LogFormat("Android location not enabled");
-            isStarting = false;
-            yield break;
-        }
-#elif UNITY_IOS
-        if (!Input.location.isEnabledByUser) {
-            Debug.LogFormat("iOS location not enabled");
-            isStarting = false;
-            yield break;
-        }
-#endif
+            if (!Input.location.isEnabledByUser) {
+                Debug.LogFormat("Android location not enabled");
+                isStarting = false;
+                yield break;
+            }
+        #elif UNITY_IOS
+            if (!Input.location.isEnabledByUser) {
+                Debug.LogFormat("iOS location not enabled");
+                isStarting = false;
+                yield break;
+            }
+        #endif
 
         // Start service before querying location
         // Start(desiredAccuracyInMeters, updateDistanceInMeters)
@@ -169,15 +167,6 @@ public class GPSData : MonoBehaviour
             yield return new WaitForSecondsRealtime(1);
             maxWait--;
         }
-
-        // Editor has a bug which doesn't set the service status to Initializing. So extra wait in Editor.
-#if UNITY_EDITOR
-        int editorMaxWait = 15;
-        while (Input.location.status == LocationServiceStatus.Stopped && editorMaxWait > 0) {
-            yield return new WaitForSecondsRealtime(1);
-            editorMaxWait--;
-        }
-#endif
 
         // Service didn't initialize in 15 seconds
         if (maxWait < 1) {
@@ -196,14 +185,13 @@ public class GPSData : MonoBehaviour
     }
 
     // Stop location services
-    public IEnumerator LocationStop() {
+    public void LocationStop() {
         Input.location.Stop();
-        yield return null;
     }
 
     // Format GPS data into string
     public string GPSstring() {
-        return string.Format("Geospatial: {0} \nVPS available: {1} \nUsing geo: {2} \nAcc: {3} \n", geospatialSupported.ToString(), vpsAvailable, geospatial, geospatial ? pose.HorizontalAccuracy.ToString("F2") : gps.horizontalAccuracy.ToString("F2"));
+        return string.Format("Geospatial: {0} \nTracking state: {1} \nVPS availability: {2} \nUsing geo: {3} \nAcc: {4} \n", geospatialSupported, earthManager.EarthTrackingState, vpsAvailability, geospatial, geospatial ? pose.HorizontalAccuracy.ToString("F2") : gps.horizontalAccuracy.ToString("F2"));
         // return string.Format("GPS last updated: {0} \nAccuracy: {1}m \nLat/Lng: {2}, {3} \nEst. loc: {4}\n Accuracy: {5}\n Lat/Lng: {6}, {7}\n Heading: {8}\n Heading acc: {9}\n",
         //     DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp).LocalDateTime.TimeOfDay, gps.horizontalAccuracy.ToString("F2"), gps.latitude.ToString("R"), gps.longitude.ToString("R"), EstimatedUserLocation(), pose.HorizontalAccuracy.ToString("F2"), pose.Latitude.ToString("F7"), pose.Longitude.ToString("F7"), pose.Heading.ToString("F2"), pose.OrientationYawAccuracy.ToString("F2"));
     }
