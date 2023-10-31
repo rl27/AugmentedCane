@@ -86,17 +86,15 @@ public class GPSData : MonoBehaviour
         dataUpdating = true;
 
         // Only do VPS if navigating
-        if (Navigation.initialized && vpsAvailable) {
-            if (earthManager.EarthTrackingState == TrackingState.Tracking) {
-                pose = earthManager.CameraGeospatialPose;
-                Quaternion q = pose.EunRotation;
-                eunHeading = Mathf.Atan2(2*(q.y*q.w-q.x*q.z), 1-2*(q.y*q.y+q.z*q.z)) * Mathf.Rad2Deg;
+        if (Navigation.initialized && earthManager.EarthTrackingState == TrackingState.Tracking) { // && vpsAvailable) {
+            pose = earthManager.CameraGeospatialPose;
+            Quaternion q = pose.EunRotation;
+            eunHeading = Mathf.Atan2(2*(q.y*q.w-q.x*q.z), 1-2*(q.y*q.y+q.z*q.z)) * Mathf.Rad2Deg;
 
-                posAtLastUpdated = DepthImage.position;
-                headingAtLastUpdated = DepthImage.rotation.y;
-                geospatial = true;
-                delay = 5f;
-            }
+            posAtLastUpdated = DepthImage.position;
+            headingAtLastUpdated = DepthImage.rotation.y;
+            geospatial = true;
+            delay = 5f;
         }
         else if (Input.location.status == LocationServiceStatus.Running) {
             gps = Input.location.lastData;
