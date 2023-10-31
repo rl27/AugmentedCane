@@ -274,11 +274,11 @@ public class DepthImage : MonoBehaviour
 
     private void ProcessDepthImages()
     {
-        m_StringBuilder.AppendLine($"Depth dims: {depthWidth} {depthHeight}");
-        if (m_CameraManager.subsystem.currentConfiguration != null) {
-            var cfg = (XRCameraConfiguration) m_CameraManager.subsystem.currentConfiguration;
-            m_StringBuilder.AppendLine($"Img dims: {cfg.width} {cfg.height} {cfg.framerate}FPS");
-        }
+        // m_StringBuilder.AppendLine($"Depth dims: {depthWidth} {depthHeight}");
+        // if (m_CameraManager.subsystem.currentConfiguration != null) {
+        //     var cfg = (XRCameraConfiguration) m_CameraManager.subsystem.currentConfiguration;
+        //     m_StringBuilder.AppendLine($"Img dims: {cfg.width} {cfg.height} {cfg.framerate}FPS");
+        // }
 
         // In portrait mode, (0.1, 0.1) is top right, (0.5, 0.5) is middle, (0.9, 0.9) is bottom left.
         // Screen orientation does not change coordinate locations on the screen.
@@ -292,7 +292,7 @@ public class DepthImage : MonoBehaviour
         // m_StringBuilder.AppendLine($"(0.5,0.5): {GetConfidence(new Vector2(0.5f, 0.5f))}");
         // m_StringBuilder.AppendLine($"(0.9,0.9): {GetConfidence(new Vector2(0.9f, 0.9f))}");
 
-        int numLow = 0;
+        /*int numLow = 0;
         int numMed = 0;
         int numHigh = 0;
         #if UNITY_ANDROID
@@ -322,7 +322,7 @@ public class DepthImage : MonoBehaviour
         #endif
         int numPixels = depthWidth * depthHeight;
         m_StringBuilder.AppendLine("Confidence proportions:");
-        m_StringBuilder.AppendLine($"  Low {((float) numLow / numPixels).ToString("F3")}; Med {((float) numMed / numPixels).ToString("F3")}; High {((float) numHigh / numPixels).ToString("F3")}");
+        m_StringBuilder.AppendLine($"  Low {((float) numLow / numPixels).ToString("F3")}; Med {((float) numMed / numPixels).ToString("F3")}; High {((float) numHigh / numPixels).ToString("F3")}");*/
 
         // Update floor grid
         ground = Mathf.Min(-0.5f, GetFloor());

@@ -32,7 +32,6 @@ public class GPSData : MonoBehaviour
     private AREarthManager earthManager;
     FeatureSupported geospatialSupported = FeatureSupported.Unknown;
     bool checkingVPS = false;
-    bool vpsAvailable = false;
     VpsAvailability vpsAvailability;
     public static bool geospatial = false;
 
@@ -54,13 +53,10 @@ public class GPSData : MonoBehaviour
             yield return promise;
 
             // https://developers.google.com/ar/reference/unity-arf/namespace/Google/XR/ARCoreExtensions#vpsavailability
-            vpsAvailable = false;
             vpsAvailability = promise.Result;
-            if (promise.Result == VpsAvailability.Available)
-                vpsAvailable = true;
-            else if (promise.Result == VpsAvailability.Unknown ||
-                     promise.Result == VpsAvailability.ErrorNetworkConnection ||
-                     promise.Result == VpsAvailability.ErrorInternal)
+            if (vpsAvailability == VpsAvailability.Unknown ||
+                vpsAvailability == VpsAvailability.ErrorNetworkConnection ||
+                vpsAvailability == VpsAvailability.ErrorInternal)
                 recheckVps = true;
         }
         while (recheckVps);
@@ -87,7 +83,7 @@ public class GPSData : MonoBehaviour
         dataUpdating = true;
 
         // Only do VPS if navigating
-        if (Navigation.initialized && earthManager.EarthTrackingState == TrackingState.Tracking) { // && vpsAvailable) {
+        if (Navigation.initialized && earthManager.EarthTrackingState == TrackingState.Tracking) { // && vpsAvailability == VpsAvailability.Available) {
             pose = earthManager.CameraGeospatialPose;
             Quaternion q = pose.EunRotation;
             eunHeading = Mathf.Atan2(2*(q.y*q.w-q.x*q.z), 1-2*(q.y*q.y+q.z*q.z)) * Mathf.Rad2Deg;
