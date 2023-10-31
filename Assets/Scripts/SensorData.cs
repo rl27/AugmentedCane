@@ -59,8 +59,10 @@ public class SensorData : MonoBehaviour
         pastHeadings[headingIndex % numHeadings] = Input.compass.trueHeading;
         heading = HeadingAverage();
 
-        if (GPSData.geospatial)
-            heading = (float) ((GPSData.pose.Heading + DepthImage.rotation.y - GPSData.headingAtLastUpdated + 720) % 360);
+        if (GPSData.geospatial) {
+            heading = (float) ((GPSData.eunHeading + DepthImage.rotation.y - GPSData.headingAtLastUpdated + 720) % 360);
+            headingAccuracy = (float) GPSData.pose.OrientationYawAccuracy;
+        }
 
         // Wait for a bit before trying to update again
         // yield return new WaitForSeconds(delay);
@@ -97,6 +99,7 @@ public class SensorData : MonoBehaviour
     // Format IMU data into string
     public string IMUstring() {
         // return string.Format("Accel: {0} \nGyro: {1} \nMag: {2} \nAttitude: {3} \nHeading: {4}", accel, gyro, mag, attitude, heading);
-        return string.Format("Attitude: {0} \nHeading: {1}°, Acc: {2}", attitude, heading.ToString("F1"), headingAccuracy);
+        // return string.Format("Attitude: {0} \nHeading: {1}°, Acc: {2}", attitude, heading.ToString("F1"), headingAccuracy.ToString("F2"));
+        return string.Format("Heading: {0}°, Acc: {1}", heading.ToString("F1"), headingAccuracy.ToString("F2"));
     }
 }

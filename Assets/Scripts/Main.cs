@@ -200,7 +200,8 @@ public class Main : MonoBehaviour
         m_StringBuilder.Clear();
         m_StringBuilder.AppendLine($"FPS: {Convert.ToInt32(1.0 / Time.unscaledDeltaTime)}\n");
 
-        m_StringBuilder.AppendLine($"Sidewalk: {Vision.direction.ToString("F1")}°, {Vision.relativeDir.ToString("F1")}°, {Vision.logging}");
+        if (Vision.doSidewalkDirection)
+            m_StringBuilder.AppendLine($"Sidewalk: {Vision.direction.ToString("F1")}°, {Vision.relativeDir.ToString("F1")}°, {Vision.logging}");
 
         if (GPSActive) {
             m_StringBuilder.AppendLine($"{gps.GPSstring()}");

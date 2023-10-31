@@ -10,13 +10,12 @@ using Google.XR.ARCoreExtensions;
 [RequireComponent(typeof(AREarthManager))]
 public class GPSData : MonoBehaviour
 {
-    private bool isRemote = true; // For using Unity Remote
-
     public ARCoreExtensions arCoreExtensions;
     private static LocationInfo gps;
     public static GeospatialPose pose;
+    public static float eunHeading;
 
-    private float desiredAccuracyInMeters = 1f;
+    private float desiredAccuracyInMeters = 3f;
     private float updateDistanceInMeters = 3f;
 
     private float delay = 0.5f;
@@ -90,8 +89,9 @@ public class GPSData : MonoBehaviour
         if (Navigation.initialized && vpsAvailable) {
             if (earthManager.EarthTrackingState == TrackingState.Tracking) {
                 pose = earthManager.CameraGeospatialPose;
-                Debug.unityLogger.Log("mytag", pose.Heading);
-                Debug.unityLogger.Log("mytag", pose.EunRotation.eulerAngles);
+                Quaternion q = pose.EunRotation;
+                eunHeading = Mathf.Atan2(2*(q.y*q.w-q.x*q.z), 1-2*(q.y*q.y+q.z*q.z)) * Mathf.Rad2Deg;
+
                 posAtLastUpdated = DepthImage.position;
                 headingAtLastUpdated = DepthImage.rotation.y;
                 geospatial = true;
@@ -123,7 +123,7 @@ public class GPSData : MonoBehaviour
         double lng = geospatial ? pose.Longitude : Convert.ToDouble(gps.longitude.ToString("R"));
         Vector3 posDiff = DepthImage.position - posAtLastUpdated;
         float rot = DepthImage.rotation.y;
-        float heading = geospatial ? (float) pose.Heading : SensorData.heading;
+        float heading = SensorData.heading;
         float angleDiff = (heading - rot) * Mathf.Deg2Rad;
         float sin = Mathf.Sin(angleDiff);
         float cos = Mathf.Cos(angleDiff);
@@ -139,10 +139,9 @@ public class GPSData : MonoBehaviour
         isStarting = true;
 
 #if UNITY_EDITOR
-        if (isRemote) {
-            yield return new WaitForSecondsRealtime(5f); // Need to add delay for Unity Remote to work
-            yield return new WaitWhile(() => !UnityEditor.EditorApplication.isRemoteConnected);
-        }
+        // Uncomment if using Unity Remote
+        // yield return new WaitForSecondsRealtime(5f); // Need to add delay for Unity Remote to work
+        // yield return new WaitWhile(() => !UnityEditor.EditorApplication.isRemoteConnected);
 #elif UNITY_ANDROID
         // https://forum.unity.com/threads/runtime-permissions-do-not-work-for-gps-location-first-two-runs.1005001
         if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.FineLocation))
@@ -206,7 +205,8 @@ public class GPSData : MonoBehaviour
 
     // Format GPS data into string
     public string GPSstring() {
-        return string.Format("GPS last updated: {0} \nAccuracy: {1}m \nLat/Lng: {2}, {3} \nEst. loc: {4}\n Accuracy: {5}\n Lat/Lng: {6}, {7}\n Heading: {8}\n Heading acc: {9}\n",
-            DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp).LocalDateTime.TimeOfDay, gps.horizontalAccuracy.ToString("F2"), gps.latitude.ToString("R"), gps.longitude.ToString("R"), EstimatedUserLocation(), pose.HorizontalAccuracy.ToString("F2"), pose.Latitude.ToString("F7"), pose.Longitude.ToString("F7"), pose.Heading.ToString("F2"), pose.HeadingAccuracy.ToString("F2"));
+        return string.Format("Geospatial: {0} \nVPS available: {1} \nUsing geo: {2} \nAcc: {3} \n", geospatialSupported.ToString(), vpsAvailable, geospatial, geospatial ? pose.HorizontalAccuracy.ToString("F2") : gps.horizontalAccuracy.ToString("F2"));
+        // return string.Format("GPS last updated: {0} \nAccuracy: {1}m \nLat/Lng: {2}, {3} \nEst. loc: {4}\n Accuracy: {5}\n Lat/Lng: {6}, {7}\n Heading: {8}\n Heading acc: {9}\n",
+        //     DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp).LocalDateTime.TimeOfDay, gps.horizontalAccuracy.ToString("F2"), gps.latitude.ToString("R"), gps.longitude.ToString("R"), EstimatedUserLocation(), pose.HorizontalAccuracy.ToString("F2"), pose.Latitude.ToString("F7"), pose.Longitude.ToString("F7"), pose.Heading.ToString("F2"), pose.OrientationYawAccuracy.ToString("F2"));
     }
 }
