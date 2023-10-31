@@ -298,10 +298,11 @@ public class Navigation : MonoBehaviour
         // Calculate orientation & distance to next waypoint
         int targetWaypoint = curWaypoint + 1;
         double ori;
-        if (curWaypoint != -1)
-            ori = Orientation(allPoints[curWaypoint], allPoints[targetWaypoint]); // Parallel direction towards target waypoint
-        else
-            ori = Orientation(loc, allPoints[targetWaypoint]); // Absolute direction towards target waypoint
+        ori = Orientation(loc, allPoints[targetWaypoint]); // Absolute direction towards target waypoint
+        // if (curWaypoint != -1)
+        //     ori = Orientation(allPoints[curWaypoint], allPoints[targetWaypoint]); // Parallel direction towards target waypoint
+        // else
+        //     ori = Orientation(loc, allPoints[targetWaypoint]); // Absolute direction towards target waypoint
         double dist = GPSData.degreeToMeter * Dist(loc, allPoints[targetWaypoint]);
         info = String.Format("WP {0}, {1}°, {2} m", targetWaypoint, ori.ToString("F0"), dist.ToString("F2"));
 
