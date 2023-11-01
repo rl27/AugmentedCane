@@ -19,11 +19,14 @@ For Geospatial to work, in the Unity editor go to Edit > Project Settings > XR P
 
 ARCore Extensions will cause dependency problems when trying to build the project in Xcode. Follow these steps:
 
-* After building the Xcode project from Unity, open a terminal and run `pod install` in the project folder.
+- If you have a previous Unity build folder, either delete it or make sure you replace the folder instead of appending to it.
 
-* After that, use `.xcworkspace` file instead of `.xcodeproj` to open the project in Xcode. Do not use `.xcodeproj`. In the Unity editor, under Assets > External Dependency Manager > iOS Resolver > Settings, the setting for "Cocoapods Integration" should be set to `Xcode Workspace - Add Cocoapods to the Xcode workspace`.
+- After building in Unity, open a terminal and run `pod install` in the new build folder.
 
-* When building the app in Xcode you may also get an error that a file "has been modified since the precompiled header". If this happens, do `Product > Clean Build Folder`.
+- Then use the `.xcworkspace` file to open the project in Xcode. Do not use `.xcodeproj`.
+  - In the Unity editor, under Assets > External Dependency Manager > iOS Resolver > Settings, the setting for "Cocoapods Integration" should be set to `Xcode Workspace - Add Cocoapods to the Xcode workspace`.
+
+- When building the app in Xcode you may also get an error that a file "has been modified since the precompiled header". If this happens, do `Product > Clean Build Folder`.
 
 Here is a [useful reference](https://shobhitsamaria.com/cocoapods-installation-failure-while-building-unity-project-for-ios/).
 
