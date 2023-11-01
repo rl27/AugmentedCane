@@ -12,6 +12,7 @@
 /.utmp*
 /Assets/XR/Temp*
 /Assets/Plugins
+/Assets/Plugins.meta
 /ProjectSettings/ARCoreExtensionsProjectSettings.json
 apikey.txt
 apikey.txt.meta
