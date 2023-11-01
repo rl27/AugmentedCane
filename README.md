@@ -13,6 +13,6 @@ Having ARCore Extensions causes problems when trying to build the project in Xco
 
 For iOS, after building the Xcode project, open a terminal and run `pod install` in the project folder.
 
-Then use the `.xcworkspace` file instead of `.xcodeproj` to open the project in Xcode. If you want to use `.xcodeproj`, in Unity go to Assets > External Dependency Manager > iOS Resolver > Settings, then change the Cocoapods Integration type.
+Then use the `.xcworkspace` file instead of `.xcodeproj` to open the project in Xcode. If you want to try using `.xcodeproj` (can't guarantee that it will work), in Unity go to Assets > External Dependency Manager > iOS Resolver > Settings, then change the Cocoapods Integration type.
 
 Here is a [useful reference](https://shobhitsamaria.com/cocoapods-installation-failure-while-building-unity-project-for-ios/).
