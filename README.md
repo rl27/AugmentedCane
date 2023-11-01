@@ -7,7 +7,7 @@ To use GPS navigation and TTS, you will need a Google Cloud API key. You will ne
 
 ## ARCore Extensions & Geospatial
 
-For Geospatial to work, go to Edit > Project Settings > XR Plug-in Management > ARCore Extensions. Then check Geospatial (and check iOS Support Enabled if building for iOS) and set up authorization. Follow the instructions in [this link](https://developers.google.com/ar/develop/unity-arf/geospatial/enable-android) for Android authentication or follow [this link](https://developers.google.com/ar/develop/unity-arf/geospatial/enable-ios) for iOS authentication.
+For Geospatial to work, go to Edit > Project Settings > XR Plug-in Management > ARCore Extensions. Then check Geospatial (and check iOS Support Enabled if building for iOS) and set up authorization. Follow the instructions in [this link](https://developers.google.com/ar/develop/unity-arf/geospatial/enable-android) for Android authentication or follow [this link](https://developers.google.com/ar/develop/unity-arf/geospatial/enable-ios) for iOS authentication. The easiest method for me was to use the previously mentioned API key for authentication, but be warned that your API key will be saved in `/ProjectSettings/ARCoreExtensionsProjectSettings.json` (this file is already in the .gitignore).
 
 Having ARCore Extensions causes problems when trying to build the project in Xcode. Take the following steps.
 
