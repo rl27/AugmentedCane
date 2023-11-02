@@ -134,7 +134,11 @@ public class GPSData : MonoBehaviour
         isStarting = true;
 
         // Request GPS permissions
-        #if UNITY_ANDROID
+        #if UNITY_EDITOR
+            // Uncomment if using Unity Remote
+            // yield return new WaitForSecondsRealtime(5f); // Need to add delay for Unity Remote to work
+            // yield return new WaitWhile(() => !UnityEditor.EditorApplication.isRemoteConnected);
+        #elif UNITY_ANDROID
             // https://forum.unity.com/threads/runtime-permissions-do-not-work-for-gps-location-first-two-runs.1005001
             if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.FineLocation))
                 UnityEngine.Android.Permission.RequestUserPermission(UnityEngine.Android.Permission.FineLocation);
@@ -163,6 +167,15 @@ public class GPSData : MonoBehaviour
             yield return new WaitForSecondsRealtime(1);
             maxWait--;
         }
+
+        // Editor has a bug which doesn't set the service status to Initializing; extra wait
+        #if UNITY_EDITOR
+            int editorMaxWait = 15;
+            while (Input.location.status == LocationServiceStatus.Stopped && editorMaxWait > 0) {
+                yield return new WaitForSecondsRealtime(1);
+                editorMaxWait--;
+            }
+        #endif
 
         // Service didn't initialize in 15 seconds
         if (maxWait < 1) {
