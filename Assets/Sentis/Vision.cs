@@ -55,7 +55,7 @@ public class Vision : MonoBehaviour
 
     private Unity.Sentis.BackendType backendType;
 
-    public static readonly Color32[] COLOR_TABLE = new Color32[]
+    public static readonly Color32[] COLOR_TABLE_10 = new Color32[]
     {
         new Color32(0, 0, 0, 255), // background
         new Color32(0, 0, 255, 255), // road
@@ -67,6 +67,25 @@ public class Vision : MonoBehaviour
         new Color32(255, 0, 0, 255), // grating
         new Color32(255, 0, 0, 255), // manhole
         new Color32(128, 96, 0, 255) // rail track
+    };
+
+    public static readonly Color32[] COLOR_TABLE = new Color32[]
+    {
+        new Color32(0, 0, 255, 255), // road
+        new Color32(255, 0, 255, 255), // crosswalk
+        new Color32(0, 255, 0, 255), // sidewalk
+        new Color32(255, 255, 0, 255), // curb
+        new Color32(255, 0, 0, 255), // covering
+        new Color32(150, 150, 150, 255), // barrier
+        new Color32(70, 70, 70, 255), // structure
+        new Color32(153, 0, 204, 255), // person
+        new Color32(255, 102, 0, 255), // vehicle
+        new Color32(128, 96, 0, 255), // objects
+        new Color32(0, 150, 0, 255), // terrain
+        new Color32(0, 70, 0, 255), // tree
+        new Color32(0, 0, 150, 255), // water
+        new Color32(0, 255, 255, 255), // background
+        new Color32(0, 0, 0, 255) // void
     };
 
     void Start()
