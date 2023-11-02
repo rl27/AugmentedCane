@@ -40,8 +40,8 @@ public class Navigation : MonoBehaviour
 
     // Rough conversion: 0.00001 = 1.1 meters
     private double closeRadius = 0.00005;
-    private double farRadius = 0.00020;
-    private double farLineDist = 0.00020;
+    private double farRadius = 0.00015;
+    private double farLineDist = 0.00015;
 
     public static bool initialized = false; // Tracks whether RequestWaypoints has been called & completed
 

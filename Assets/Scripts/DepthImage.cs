@@ -117,6 +117,7 @@ public class DepthImage : MonoBehaviour
 
     public static float halfPersonWidth = 0.3f; // Estimated half-width of a person
     public static float personHeight = 1.8f - groundPadding; // Estimated height of a person
+    private Vector2 currentGridCell = Vector2.zero;
 
     public enum Direction { Left, Right, None }
     public static Direction direction = Direction.None;
@@ -325,8 +326,12 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"  Low {((float) numLow / numPixels).ToString("F3")}; Med {((float) numMed / numPixels).ToString("F3")}; High {((float) numHigh / numPixels).ToString("F3")}");*/
 
         // Update floor grid
-        ground = Mathf.Min(-0.5f, GetFloor());
-        CleanupDict();
+        Vector2 cell;
+        (ground, cell) = GetFloor();
+        if (currentGridCell != cell) {
+            currentGridCell = cell;
+            CleanupDict();
+        }
         // m_StringBuilder.AppendLine($"Num cells: {grid.Count}");
         // Vector2 gridPt = SnapToGrid(position);
         // if (grid.ContainsKey(gridPt))
@@ -725,7 +730,8 @@ public class DepthImage : MonoBehaviour
     private int floorIndex = 0;
 
     // Get elevation of floor relative to device
-    private float GetFloor()
+    // Second return value is current grid point
+    private (float, Vector2) GetFloor()
     {
         Vector2 gridPt = SnapToGrid(position);
         if (grid.ContainsKey(gridPt)) {
@@ -737,7 +743,7 @@ public class DepthImage : MonoBehaviour
                 floorIndex = (floorIndex + 1) % numFloors;
             }
         }
-        return pastFloors.Average() + groundPadding - position.y;
+        return (Mathf.Min(-0.5f, pastFloors.Average() + groundPadding - position.y), gridPt);
     }
 
     // Delete any cells that are too far from user location

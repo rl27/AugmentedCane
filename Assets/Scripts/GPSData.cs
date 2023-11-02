@@ -114,6 +114,8 @@ public class GPSData : MonoBehaviour
     // Replace with geospatial?
     public static Navigation.Point EstimatedUserLocation()
     {
+        // This ToString("R") thing is magic. Summons extra precision out of nowhere.
+        // https://forum.unity.com/threads/precision-of-location-longitude-is-worse-when-longitude-is-beyond-100-degrees.133192/
         double lat = geospatial ? pose.Latitude : Convert.ToDouble(gps.latitude.ToString("R"));
         double lng = geospatial ? pose.Longitude : Convert.ToDouble(gps.longitude.ToString("R"));
         Vector3 posDiff = DepthImage.position - posAtLastUpdated;
@@ -122,8 +124,6 @@ public class GPSData : MonoBehaviour
         float angleDiff = (heading - rot) * Mathf.Deg2Rad;
         float sin = Mathf.Sin(angleDiff);
         float cos = Mathf.Cos(angleDiff);
-        // This ToString("R") thing is magic. Summons extra precision out of nowhere.
-        // https://forum.unity.com/threads/precision-of-location-longitude-is-worse-when-longitude-is-beyond-100-degrees.133192/
         return new Navigation.Point(lat + (posDiff.z * cos - posDiff.x * sin) / degreeToMeter,
                                     lng + (posDiff.z * sin + posDiff.x * cos) / degreeToMeter);
     }
@@ -200,7 +200,7 @@ public class GPSData : MonoBehaviour
 
     // Format GPS data into string
     public string GPSstring() {
-        return string.Format("Geospatial: {0} \nTracking state: {1} \nVPS availability: {2} \nUsing geo: {3} \nAcc: {4} \n", geospatialSupported, earthManager.EarthTrackingState, vpsAvailability, geospatial, geospatial ? pose.HorizontalAccuracy.ToString("F2") : gps.horizontalAccuracy.ToString("F2"));
+        return string.Format("Geospatial: {0} \nTracking state: {1} \nVPS availability: {2} \nUsing geospatial: {3} \nAcc: {4} \n", geospatialSupported, earthManager.EarthTrackingState, vpsAvailability, geospatial, geospatial ? pose.HorizontalAccuracy.ToString("F2") : gps.horizontalAccuracy.ToString("F2"));
         // return string.Format("GPS last updated: {0} \nAccuracy: {1}m \nLat/Lng: {2}, {3} \nEst. loc: {4}\n Accuracy: {5}\n Lat/Lng: {6}, {7}\n Heading: {8}\n Heading acc: {9}\n",
         //     DateTimeOffset.FromUnixTimeSeconds((long) gps.timestamp).LocalDateTime.TimeOfDay, gps.horizontalAccuracy.ToString("F2"), gps.latitude.ToString("R"), gps.longitude.ToString("R"), EstimatedUserLocation(), pose.HorizontalAccuracy.ToString("F2"), pose.Latitude.ToString("F7"), pose.Longitude.ToString("F7"), pose.Heading.ToString("F2"), pose.OrientationYawAccuracy.ToString("F2"));
     }
