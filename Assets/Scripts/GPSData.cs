@@ -54,10 +54,10 @@ public class GPSData : MonoBehaviour
 
             // https://developers.google.com/ar/reference/unity-arf/namespace/Google/XR/ARCoreExtensions#vpsavailability
             vpsAvailability = promise.Result;
-            if (vpsAvailability == VpsAvailability.Unknown ||
-                vpsAvailability == VpsAvailability.ErrorNetworkConnection ||
-                vpsAvailability == VpsAvailability.ErrorInternal)
+            if (vpsAvailability == VpsAvailability.Unknown) { // VpsAvailability.ErrorNetworkConnection, VpsAvailability.ErrorInternal
                 recheckVps = true;
+                yield return new WaitForSeconds(3f);
+            }
         }
         while (recheckVps);
 
