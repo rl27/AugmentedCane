@@ -75,6 +75,7 @@ public class DepthImage : MonoBehaviour
     }
     [SerializeField]
     Material m_DepthMaterial;
+    private Matrix4x4 displayMatrix = Matrix4x4.identity;
 
     [SerializeField]
     GameObject VisionHandler;
@@ -171,7 +172,7 @@ public class DepthImage : MonoBehaviour
     }
 
     bool initConfig = false;
-    void OnCameraFrameReceived(ARCameraFrameEventArgs eventArgs)
+    void OnCameraFrameReceived(ARCameraFrameEventArgs args)
     {
         if (!initConfig) {
             SetXRCameraConfiguration();
@@ -183,6 +184,13 @@ public class DepthImage : MonoBehaviour
 
         direction = Direction.None;
         if (doObstacleAvoidance) {
+            if (args.displayMatrix.HasValue) {
+                #if UNITY_IOS
+                    displayMatrix = args.displayMatrix.Value;
+                #else
+                    displayMatrix = args.displayMatrix.Value.transpose;
+                #endif
+            }
             UpdateDepthImages();
             ProcessDepthImages();
         }
@@ -237,6 +245,9 @@ public class DepthImage : MonoBehaviour
         if (occlusionManager.TryAcquireEnvironmentDepthCpuImage(out XRCpuImage image)) {
             using (image) {
                 UpdateRawImage(m_RawImage, image, image.format.AsTextureFormat(), true);
+
+                m_RawImage.material.SetTexture("_DepthTex", occlusionManager.environmentDepthTexture);
+                m_RawImage.material.SetMatrix("_DisplayMat", displayMatrix);
 
                 // Get distance data into depthArray
                 // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/Common/Scripts/MotionStereoDepthDataSource.cs#L250
@@ -541,7 +552,7 @@ public class DepthImage : MonoBehaviour
             // Rotate the depth material to match screen orientation.
             Quaternion rotation = Quaternion.Euler(0, 0, GetRotation());
             Matrix4x4 rotMatrix = Matrix4x4.Rotate(rotation);
-            m_RawImage.material.SetMatrix(Shader.PropertyToID("_DisplayRotationPerFrame"), rotMatrix);
+            // m_RawImage.material.SetMatrix(Shader.PropertyToID("_DisplayRotationPerFrame"), rotMatrix);
         }
         else {
             rectSize = new Vector2(maxDimension, minDimension);
@@ -793,7 +804,7 @@ public class DepthImage : MonoBehaviour
         for (int y = 0; y < depthHeight; y++) {
             for (int x = 0; x < depthWidth; x++) {
                 float conf = GetConfidence(x, y);
-                if (conf / confidenceMax < depthConfidenceThreshold) continue;
+                // if (conf / confidenceMax < depthConfidenceThreshold) continue;
 
                 float dist = GetDepth(x, y);
                 Vector3 pos = TransformLocalToWorld(ComputeVertex(x, y, dist));
@@ -821,12 +832,10 @@ public class DepthImage : MonoBehaviour
             }
         }
 
-        closest = Mathf.Sqrt(closest);
-
         float leftAvg = (leftCount == 0) ? Single.PositiveInfinity : leftSum/leftCount;
         float rightAvg = (rightCount == 0) ? Single.PositiveInfinity : rightSum/rightCount;
         bool avgGoLeft = leftAvg > rightAvg;
 
-        return (output, avgGoLeft, closest);
+        return (output, avgGoLeft, Mathf.Sqrt(closest));
     }
 }
