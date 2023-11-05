@@ -517,6 +517,7 @@ public class DepthImage : MonoBehaviour
     public void ToggleSmoothing()
     {
         m_OcclusionManager.environmentDepthTemporalSmoothingRequested = smoothingToggle.isOn;
+        Vision.modelToggle = smoothingToggle.isOn;
     }
 
     private void UpdateRawImage(RawImage rawImage, XRCpuImage cpuImage, TextureFormat format, bool isDepth)
