@@ -7,12 +7,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
-using Google.XR.ARCoreExtensions;
 
 // ARFoundation references:
 // https://github.com/Unity-Technologies/arfoundation-samples/blob/main/Assets/Scripts/Runtime/DisplayDepthImage.cs
 // https://github.com/Unity-Technologies/arfoundation-samples/blob/main/Assets/Scripts/Runtime/CpuImageSample.cs
-[RequireComponent(typeof(ARSemanticManager))]
 public class DepthImage : MonoBehaviour
 {
     // For logging
@@ -100,7 +98,7 @@ public class DepthImage : MonoBehaviour
     Vector2 focalLength = Vector2.zero;
     Vector2 principalPoint = Vector2.zero;
 
-    private bool showCameraImage = true;
+    private bool showCameraImage = false;
 
     // Converts local coordinates to world coordinates.
     private Matrix4x4 localToWorldTransform = Matrix4x4.identity;
@@ -130,12 +128,8 @@ public class DepthImage : MonoBehaviour
     double curTime = 0;
     double lastDSP = 0;
 
-    private ARSemanticManager semanticManager;
-
     void Awake()
     {
-        semanticManager = GetComponent<ARSemanticManager>();
-
         camera = m_CameraManager.GetComponent<Camera>();
 
         // if (m_OcclusionManager == null) {
@@ -176,23 +170,6 @@ public class DepthImage : MonoBehaviour
         collisionAudioMaxRate = 1 / (float)audioDuration;
     }
 
-    public static readonly Color32[] COLOR_TABLE = new Color32[]
-    {
-        new Color32(0, 0, 0, 255), // unlabeled
-        new Color32(0, 255, 255, 255), // sky
-        new Color32(70, 70, 70, 255), // building
-        new Color32(0, 70, 0, 255), // tree
-        new Color32(0, 0, 255, 255), // road
-        new Color32(0, 255, 0, 255), // sidewalk
-        new Color32(0, 150, 0, 255), // terrain
-        new Color32(70, 70, 70, 255), // structure
-        new Color32(128, 96, 0, 255), // object
-        new Color32(255, 102, 0, 255), // vehicle
-        new Color32(153, 0, 204, 255), // person
-        new Color32(0, 0, 150, 255), // water
-        
-    };
-
     bool initConfig = false;
     void OnCameraFrameReceived(ARCameraFrameEventArgs eventArgs)
     {
@@ -209,20 +186,6 @@ public class DepthImage : MonoBehaviour
             UpdateDepthImages();
             ProcessDepthImages();
         }
-
-        Texture2D semanticImage = Texture2D.blackTexture;
-        if (semanticManager.TryGetSemanticTexture(ref semanticImage))
-        {
-            byte[] pixelsR8 = semanticImage.GetRawTextureData();
-            Texture2D textureRGBA32 = new Texture2D(144, 256);
-            for(int i = 0; i < pixelsR8.Length; i++)
-                textureRGBA32.SetPixel(144 - (int) i / 256, 256 - i % 256, COLOR_TABLE[pixelsR8[i]]);
-            // textureRGBA32.SetPixels32( pixelsRGBA32 );
-            textureRGBA32.Apply();
-            m_RawCameraImage.texture = textureRGBA32;
-            m_RawCameraImage.rectTransform.sizeDelta = new Vector2(720, 1280);
-        }
-
     }
 
     // This is called every frame
@@ -517,7 +480,6 @@ public class DepthImage : MonoBehaviour
     public void ToggleSmoothing()
     {
         m_OcclusionManager.environmentDepthTemporalSmoothingRequested = smoothingToggle.isOn;
-        Vision.modelToggle = smoothingToggle.isOn;
     }
 
     private void UpdateRawImage(RawImage rawImage, XRCpuImage cpuImage, TextureFormat format, bool isDepth)

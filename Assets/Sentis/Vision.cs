@@ -31,9 +31,6 @@ public class Vision : MonoBehaviour
     public ModelAsset modelAsset;
     private IWorker worker;
 
-    public ModelAsset modelAsset2;
-    private IWorker worker2;
-
     TextureResizer resizer;
     TextureResizer.ResizeOptions resizeOptions;
 
@@ -56,9 +53,8 @@ public class Vision : MonoBehaviour
     public AudioClip road;
 
     private Unity.Sentis.BackendType backendType;
-    public static bool modelToggle = false;
 
-    public static readonly Color32[] COLOR_TABLE_10 = new Color32[]
+    public static readonly Color32[] COLOR_TABLE = new Color32[]
     {
         new Color32(0, 0, 0, 255), // background
         new Color32(0, 0, 255, 255), // road
@@ -70,30 +66,6 @@ public class Vision : MonoBehaviour
         new Color32(255, 0, 0, 255), // grating
         new Color32(255, 0, 0, 255), // manhole
         new Color32(0, 0, 255, 255), // rail track
-        new Color32(0, 0, 0, 255), // background
-        new Color32(0, 0, 0, 255), // background
-        new Color32(0, 0, 0, 255), // background
-        new Color32(0, 0, 0, 255), // background
-        new Color32(0, 0, 0, 255), // background
-    };
-
-    public static readonly Color32[] COLOR_TABLE = new Color32[]
-    {
-        new Color32(0, 0, 255, 255), // road
-        new Color32(255, 0, 255, 255), // crosswalk
-        new Color32(0, 255, 0, 255), // sidewalk
-        new Color32(255, 255, 0, 255), // curb
-        new Color32(255, 0, 0, 255), // covering
-        new Color32(0, 0, 0, 255), // void
-        new Color32(0, 0, 0, 255), // void
-        new Color32(0, 0, 0, 255), // void
-        new Color32(0, 0, 0, 255), // void
-        new Color32(0, 0, 0, 255), // void
-        new Color32(0, 0, 0, 255), // void
-        new Color32(0, 0, 0, 255), // void
-        new Color32(0, 0, 0, 255), // void
-        new Color32(0, 0, 0, 255), // void
-        new Color32(0, 0, 0, 255), // void
     };
 
     void Start()
@@ -107,7 +79,6 @@ public class Vision : MonoBehaviour
 
         backendType = SystemInfo.supportsComputeShaders ? BackendType.GPUCompute : BackendType.CPU;
         worker = WorkerFactory.CreateWorker(backendType, ModelLoader.Load(modelAsset));
-        worker2 = WorkerFactory.CreateWorker(backendType, ModelLoader.Load(modelAsset2));
 
         // Do this to deal with initial lag
         // The initial lag only happens once; if the app is closed and re-opened, it doesn't happen
@@ -187,7 +158,6 @@ public class Vision : MonoBehaviour
     TensorFloat input;
     const int maxStepsPerFrame = 100; // At fastest speed, run model in 4 frames
     const float maxTimePerFrame = 0.08f; // Aim for minimum 10 FPS
-    bool m_toggle;
     public IEnumerator Detect(Texture tex)
     {
         if (working) yield break;
@@ -196,11 +166,8 @@ public class Vision : MonoBehaviour
         Texture2D resizedTex = ResizeTexture(tex);
         input = TextureConverter.ToTensor(resizedTex); // input.shape: 1, 3, 480, 480
 
-        m_toggle = modelToggle;
-
-        IEnumerator enumerator;
-        if (m_toggle) enumerator = worker.StartManualSchedule(input); // Total num of steps for PP-MobileSeg-tiny is 378
-        else enumerator = worker2.StartManualSchedule(input); // Total num of steps for PP-MobileSeg-tiny is 378
+        // worker.Execute(input);
+        var enumerator = worker.StartManualSchedule(input); // Total num of steps for PP-MobileSeg-tiny is 378
         int step = 0;
         int lastFrame = -1;
         float start = 0;
@@ -230,9 +197,7 @@ public class Vision : MonoBehaviour
         // [0, H-1, 0  ] = bottom left
         // [0, 0,   W-1] = top right
         // [0, H-1, W-1] = bottom right
-        TensorInt output;
-        if (m_toggle) output = worker.PeekOutput() as TensorInt; // output.shape: 1, 480, 480
-        else output = worker2.PeekOutput() as TensorInt; // output.shape: 1, 480, 480
+        TensorInt output = worker.PeekOutput() as TensorInt; // output.shape: 1, 480, 480
         output.MakeReadable();
         ProcessOutput(output);
         SetTextures(resizedTex, GetResultTexture(output.ToReadOnlyArray()));
@@ -439,8 +404,6 @@ public class Vision : MonoBehaviour
 
     private void SetTextures(Texture2D resizedTex, RenderTexture outputTex)
     {
-
-
         inputView.texture = resizedTex;
         outputView.texture = outputTex;
 
@@ -452,9 +415,6 @@ public class Vision : MonoBehaviour
 
     private RenderTexture GetResultTexture(int[] data)
     {
-        if (m_toggle)
-        colorTableBuffer.SetData(COLOR_TABLE.Select(c => (Color)c).ToArray());
-        else colorTableBuffer.SetData(COLOR_TABLE_10.Select(c => (Color)c).ToArray());
         labelBuffer.SetData(data);
         compute.SetBuffer(labelToTexKernel, "LabelBuffer", labelBuffer);
         compute.SetBuffer(labelToTexKernel, "ColorTable", colorTableBuffer);
