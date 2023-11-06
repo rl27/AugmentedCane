@@ -147,6 +147,7 @@ public class DepthImage : MonoBehaviour
         // }
 
         m_CameraManager.frameReceived += OnCameraFrameReceived;
+        // smoothingToggle.enabled = (m_OcclusionManager.descriptor.environmentDepthTemporalSmoothingSupported == Supported.Supported);
 
         #if UNITY_ANDROID
             confidenceMax = 255;
@@ -242,11 +243,11 @@ public class DepthImage : MonoBehaviour
     private void UpdateDepthImages()
     {
         // Acquire a depth image and update the corresponding raw image.
-        if (occlusionManager.TryAcquireEnvironmentDepthCpuImage(out XRCpuImage image)) {
+        if (m_OcclusionManager.TryAcquireEnvironmentDepthCpuImage(out XRCpuImage image)) {
             using (image) {
                 UpdateRawImage(m_RawImage, image, image.format.AsTextureFormat(), true);
 
-                m_RawImage.material.SetTexture("_DepthTex", occlusionManager.environmentDepthTexture);
+                m_RawImage.material.SetTexture("_DepthTex", m_OcclusionManager.environmentDepthTexture);
                 m_RawImage.material.SetMatrix("_DisplayMat", displayMatrix);
 
                 // Get distance data into depthArray
@@ -266,7 +267,7 @@ public class DepthImage : MonoBehaviour
         }
 
         // Acquire a depth confidence image.
-        if (occlusionManager.TryAcquireEnvironmentDepthConfidenceCpuImage(out XRCpuImage confidenceImage)) {
+        if (m_OcclusionManager.TryAcquireEnvironmentDepthConfidenceCpuImage(out XRCpuImage confidenceImage)) {
             using (confidenceImage) {
                 if (confidenceImage.width != depthWidth || confidenceImage.height != depthHeight) {
                     LogDepth("Confidence dimensions don't match");
