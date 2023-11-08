@@ -483,6 +483,7 @@ public class DepthImage : MonoBehaviour
     public void ToggleObstacleAvoidance()
     {
         doObstacleAvoidance = depthToggle.isOn;
+        m_OcclusionManager.enabled = depthToggle.isOn;
         #if !UNITY_EDITOR
             pc.enabled = doObstacleAvoidance;
             XR.GetComponent<ARPointCloudManager>().enabled = doObstacleAvoidance;
