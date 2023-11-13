@@ -285,6 +285,7 @@ public class DepthImage : MonoBehaviour
         }
     }
 
+    List<float> consecutiveClosestDistances = new List<float>();
     private void ProcessDepthImages()
     {
         // m_StringBuilder.AppendLine($"Depth dims: {depthWidth} {depthHeight}");
@@ -353,73 +354,63 @@ public class DepthImage : MonoBehaviour
 
         // Check for obstacles using depth image
         (int[] closeTotals, bool avgGoLeft, float closest) = ProcessDepthImage(); // In portrait mode, index 0 = right side, max index = left side
-        bool hasObstacle = false;
+        if (closest > 100) {
+            consecutiveClosestDistances.Clear();
+            return;
+        }
+        else {
+            consecutiveClosestDistances.Add(closest);
+            if (consecutiveClosestDistances.Count < 3)
+                return;
+            if (consecutiveClosestDistances.Count > 3)
+                consecutiveClosestDistances.RemoveAt(0);
+        }
+        // Obstacle detected in for consecutive frames
+        m_StringBuilder.AppendLine("Obstacle ahead");
+
+        closest = consecutiveClosestDistances.Average();
         int len = closeTotals.Length;
-        for (int i = 0; i < len; i++) {
-            if (closeTotals[i] >= 5) {
-                hasObstacle = true;
-                break;
-            }
-        }
-        // Obstacle detected in depth image
-        if (hasObstacle) {
-            m_StringBuilder.AppendLine("Obstacle ahead");
-
-            // Search for longest gap
-            int start = 0, end = 0, temp = 0;
-            bool open = false;
-            for (int i = 0; i < len-1; i++) {
-                if (closeTotals[i] > 0) { // No gap
-                    if (open) { // End gap
-                        if (end - start < i - temp)
-                            (start, end) = (temp, i);
-                        open = false;
-                    }
-                }
-                else { // Gap
-                    if (!open)  { // Start gap
-                        temp = i;
-                        open = true;
-                    }
+        // Search for longest gap
+        int start = 0, end = 0, temp = 0;
+        bool open = false;
+        for (int i = 0; i < len-1; i++) {
+            if (closeTotals[i] > 0) { // No gap
+                if (open) { // End gap
+                    if (end - start < i - temp)
+                        (start, end) = (temp, i);
+                    open = false;
                 }
             }
-            // If there's an open gap at the last index, close it
-            if (open && end - start < len-1 - temp)
-                (start, end) = (temp, len-1);
-
-            bool goLeft;
-            // If longest gap is long enough, go towards that gap
-            // Sides/indices will be flipped depending on screen orientation
-            if (end - start > collisionWindowWidth) {
-                goLeft = (start+end)/2 > len/2;
-                if (Screen.orientation == ScreenOrientation.PortraitUpsideDown || Screen.orientation == ScreenOrientation.LandscapeLeft)
-                    goLeft = !goLeft;
+            else { // Gap
+                if (!open)  { // Start gap
+                    temp = i;
+                    open = true;
+                }
             }
-            else { // Longest gap isn't long enough; take side with higher avg distance
-                goLeft = avgGoLeft;
-            }
-            
-            direction = goLeft ? Direction.Left : Direction.Right;
-            float rate = (closest - collisionAudioCapDistance) / (distanceToObstacle - collisionAudioCapDistance);
-            rate = Mathf.Lerp(collisionAudioMaxRate, collisionAudioMinRate, rate);
-            PlayCollision(goLeft ? -1 : 1, 1/rate - audioDuration);
-
-            m_StringBuilder.AppendLine(goLeft ? " Dir: Left" : "Dir: Right");
-            m_StringBuilder.AppendLine($" Closest {closest.ToString("F2")}m; Beep rate {rate.ToString("F2")}");
         }
-        // If depth image detects no obstacle, check if point cloud detects obstacle
-        else if (PointCloudVisualizer.pointAhead != 0) {
-            m_StringBuilder.AppendLine("Point Obstacle ahead");
-            bool goLeft = (PointCloudVisualizer.pointAhead == 1);
-            direction = goLeft ? Direction.Left : Direction.Right;
-            float rate = (PointCloudVisualizer.closest - collisionAudioCapDistance) / (distanceToObstacle - collisionAudioCapDistance);
-            rate = Mathf.Lerp(collisionAudioMaxRate, collisionAudioMinRate, rate);
-            PlayCollision(goLeft ? -1 : 1, 1/rate - audioDuration);
+        // If there's an open gap at the last index, close it
+        if (open && end - start < len-1 - temp)
+            (start, end) = (temp, len-1);
 
-            m_StringBuilder.AppendLine(goLeft ? " Dir: Left" : "Dir: Right");
-            m_StringBuilder.AppendLine($" Closest {PointCloudVisualizer.closest.ToString("F2")}m; Beep rate {rate.ToString("F2")}");
+        bool goLeft;
+        // If longest gap is long enough, go towards that gap
+        // Sides/indices will be flipped depending on screen orientation
+        if (end - start > collisionWindowWidth) {
+            goLeft = (start+end)/2 > len/2;
+            if (Screen.orientation == ScreenOrientation.PortraitUpsideDown || Screen.orientation == ScreenOrientation.LandscapeLeft)
+                goLeft = !goLeft;
         }
-        // else m_StringBuilder.AppendLine("Obstacle: No");
+        else { // Longest gap isn't long enough; take side with higher avg distance
+            goLeft = avgGoLeft;
+        }
+        
+        direction = goLeft ? Direction.Left : Direction.Right;
+        float rate = (closest - collisionAudioCapDistance) / (distanceToObstacle - collisionAudioCapDistance);
+        rate = Mathf.Lerp(collisionAudioMaxRate, collisionAudioMinRate, rate);
+        PlayCollision(goLeft ? -1 : 1, 1/rate - audioDuration);
+
+        m_StringBuilder.AppendLine(goLeft ? " Dir: Left" : "Dir: Right");
+        m_StringBuilder.AppendLine($" Closest {closest.ToString("F2")}m; Beep rate {rate.ToString("F2")}");
     }
 
     // mag = -1 for left, mag = 1 for right
@@ -760,7 +751,7 @@ public class DepthImage : MonoBehaviour
     }
 
     // Delete any cells that are too far from user location
-    private float cellDeletionRange = 6f;
+    private float cellDeletionRange = 5f;
     private List<Vector2> pointsToRemove = new List<Vector2>();
     private void CleanupDict()
     {
@@ -800,9 +791,8 @@ public class DepthImage : MonoBehaviour
         float leftCount = 0;
         float rightSum = 0;
         float rightCount = 0;
-
-        float closest = 999f;
-
+        List<float> dists = new List<float>();
+        const int maxClosestPoints = 10;
         for (int y = 0; y < depthHeight; y++) {
             for (int x = 0; x < depthWidth; x++) {
                 float conf = GetConfidence(x, y);
@@ -818,7 +808,15 @@ public class DepthImage : MonoBehaviour
                     if (rZ > 0 && rZ < distanceToObstacle && rX > -halfPersonWidth && rX < halfPersonWidth) {
                         output[portrait ? y : x] += 1;
                         float t = rX*rX+rZ*rZ;
-                        if (t < closest) closest = t;
+                        if (dists.Count < maxClosestPoints) {
+                            if (dists.Count == 0)
+                                dists.Add(t);
+                            else
+                                Insert(dists, t, false);
+                        }
+                        else if (t < dists[maxClosestPoints - 1]) {
+                            Insert(dists, t, true);
+                        }
                     }
 
                     // Weighted depth averages using points that pass the height check
@@ -831,13 +829,36 @@ public class DepthImage : MonoBehaviour
                         leftCount += conf;
                     }
                 }
+
+                if (translated.y < 0)
+                    AddToGrid(pos);
             }
+        }
+
+        float closest = 999f;
+        if (dists.Count == maxClosestPoints) {
+            closest = 0;
+            foreach (var d in dists) {
+                closest += Mathf.Sqrt(d);
+            }
+            closest /= maxClosestPoints;
         }
 
         float leftAvg = (leftCount == 0) ? Single.PositiveInfinity : leftSum/leftCount;
         float rightAvg = (rightCount == 0) ? Single.PositiveInfinity : rightSum/rightCount;
         bool avgGoLeft = leftAvg > rightAvg;
 
-        return (output, avgGoLeft, Mathf.Sqrt(closest));
+        return (output, avgGoLeft, closest);
+    }
+
+    private void Insert(List<float> list, float f, bool remove) {
+        for (int i = 0; i < list.Count; i++) {
+            if (f < list[i]) {
+                list.Insert(i, f);
+                if (remove)
+                    list.RemoveAt(i + 1);
+                return;
+            }
+        }
     }
 }

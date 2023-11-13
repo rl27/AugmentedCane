@@ -58,6 +58,7 @@ public class PointCloudVisualizer : MonoBehaviour
 
     void OnPointCloudUpdated(ARPointCloudUpdatedEventArgs eventArgs)
     {
+        return;
         /** UPDATE POINTS **/
         if (!pointCloud.positions.HasValue || !pointCloud.identifiers.HasValue)
             return;
