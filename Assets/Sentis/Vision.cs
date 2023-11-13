@@ -63,9 +63,7 @@ public class Vision : MonoBehaviour
         new Color32(0, 255, 0, 255), // sidewalk
         new Color32(255, 0, 255, 255), // plain crosswalk
         new Color32(255, 0, 255, 255), // zebra crosswalk
-        new Color32(255, 0, 0, 255), // grating
-        new Color32(255, 0, 0, 255), // manhole
-        new Color32(0, 0, 255, 255), // rail track
+        new Color32(255, 0, 0, 255), // covering
     };
 
     // Sidewalk or crosswalk
@@ -74,7 +72,7 @@ public class Vision : MonoBehaviour
     }
     // Sidewalk, crosswalk, curb, covering
     private bool LaxWalkable(int cls) {
-        return (cls >= 2 && cls <= 8);
+        return (cls >= 2 && cls <= 7);
     }
 
     void Start()

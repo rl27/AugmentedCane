@@ -375,7 +375,6 @@ MonoBehaviour:
   DepthHandler: {fileID: 975916385}
   SensorHandler: {fileID: 1310236898}
   GPSHandler: {fileID: 1210721349}
-  XR: {fileID: 984716422}
 --- !u!1 &173466569
 GameObject:
   m_ObjectHideFlags: 0
@@ -3366,7 +3365,6 @@ MonoBehaviour:
   VisionHandler: {fileID: 1168124737}
   depthToggle: {fileID: 308117052}
   smoothingToggle: {fileID: 300118945}
-  XR: {fileID: 984716422}
 --- !u!4 &975916387
 Transform:
   m_ObjectHideFlags: 0
@@ -4039,7 +4037,7 @@ MonoBehaviour:
   arrow: {fileID: 1824169404}
   outputViewParent: {fileID: 2000448425}
   inputViewParent: {fileID: 630529194}
-  modelAsset: {fileID: 5022602860645237092, guid: 64245bb0c9bd2904b93e75080c5646ac, type: 3}
+  modelAsset: {fileID: 5022602860645237092, guid: 5edc93d7bfacd0d4d9c2630d9784b4b3, type: 3}
   compute: {fileID: 7200000, guid: f07148396908444429733077acb4ee0c, type: 3}
   sidewalk: {fileID: 8300000, guid: 1d39abad520b48b4fa36806012d16920, type: 3}
   crosswalk: {fileID: 8300000, guid: 5cb35b1523c46544d9cf7a307749d22f, type: 3}
