@@ -792,57 +792,26 @@ public class DepthImage : MonoBehaviour
         float rightSum = 0;
         float rightCount = 0;
         List<float> dists = new List<float>();
-        const int maxClosestPoints = 10;
-        for (int y = 0; y < depthHeight; y++) {
-            for (int x = 0; x < depthWidth; x++) {
-                float conf = GetConfidence(x, y);
-                // if (conf / confidenceMax < depthConfidenceThreshold) continue;
-
-                float dist = GetDepth(x, y);
-                Vector3 pos = TransformLocalToWorld(ComputeVertex(x, y, dist));
-                Vector3 translated = pos - position;
-                if (translated.y > ground && translated.y < (ground + personHeight)) { // Height check
-                    float rX = cos*translated.x - sin*translated.z;
-                    float rZ = sin*translated.x + cos*translated.z;
-                    // Distance & width check
-                    if (rZ > 0 && rZ < distanceToObstacle && rX > -halfPersonWidth && rX < halfPersonWidth) {
-                        output[portrait ? y : x] += 1;
-                        float t = rX*rX+rZ*rZ;
-                        if (dists.Count < maxClosestPoints) {
-                            if (dists.Count == 0)
-                                dists.Add(t);
-                            else
-                                Insert(dists, t, false);
-                        }
-                        else if (t < dists[maxClosestPoints - 1]) {
-                            Insert(dists, t, true);
-                        }
-                    }
-
-                    // Weighted depth averages using points that pass the height check
-                    if (rX > 0) {
-                        rightSum += rZ * conf;
-                        rightCount += conf;
-                    }
-                    else {
-                        leftSum += rZ * conf;
-                        leftCount += conf;
-                    }
-                }
-
-                if (translated.y < 0)
-                    AddToGrid(pos);
-            }
-        }
-
         float closest = 999f;
-        if (dists.Count == maxClosestPoints) {
-            closest = 0;
-            foreach (var d in dists) {
-                closest += Mathf.Sqrt(d);
+        const int maxClosestPoints = 10;
+        for (int i = 0; i < test.pts.Count; i++) {
+            Vector3 pos = test.pts[i];
+            Vector3 translated = pos - position;
+            if (translated.y > ground && translated.y < (ground + personHeight)) { // Height check
+                float rX = cos*translated.x - sin*translated.z;
+                float rZ = sin*translated.x + cos*translated.z;
+                // Distance & width check
+                if (rZ > 0 && rZ < distanceToObstacle && rX > -halfPersonWidth && rX < halfPersonWidth) {
+                    float t = rX*rX+rZ*rZ;
+                    if (t < closest) closest = t;
+                }
             }
-            closest /= maxClosestPoints;
+
+            if (translated.y < 0)
+                AddToGrid(pos);
         }
+
+        closest = Mathf.Sqrt(closest);
 
         float leftAvg = (leftCount == 0) ? Single.PositiveInfinity : leftSum/leftCount;
         float rightAvg = (rightCount == 0) ? Single.PositiveInfinity : rightSum/rightCount;

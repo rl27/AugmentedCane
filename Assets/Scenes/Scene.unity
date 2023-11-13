@@ -3933,12 +3933,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 86b456713bd4d4c31b3cb04c67d82381, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _frameRate: 5
+  _frameRate: 10
   _maximumIntegrationDistance: 5
-  _voxelSize: 0.05
+  _voxelSize: 0.025
   _enableDistanceBasedVolumetricCleanup: 1
-  _meshBlockSize: 1
-  _meshCullingDistance: 8
+  _meshBlockSize: 1.4
+  _meshCullingDistance: 10
   _enableMeshDecimation: 1
 --- !u!1 &1156557273
 GameObject:

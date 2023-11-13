@@ -5,6 +5,7 @@ using UnityEngine.XR.ARFoundation;
 
 public class test : MonoBehaviour
 {
+    public static List<Vector3> pts = new List<Vector3>();
     ARMeshManager mm;
     // Start is called before the first frame update
     void Start()
@@ -15,11 +16,14 @@ public class test : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Debug.unityLogger.Log("mytag", mm.meshes.Count);
-        int tricount = 0;
+        pts.Clear();
         foreach (var m in mm.meshes) {
-            tricount += m.mesh.triangles.Length / 3;
+            var t = m.mesh.triangles;
+            var v = m.mesh.vertices;
+            int numTriangles = t.Length / 3;
+            for (int i = 0; i < numTriangles; i++) {
+                pts.Add((v[t[i*3]] + v[t[i*3+1]] + v[t[i*3+2]]) / 3f);
+            }
         }
-        Debug.unityLogger.Log("mytag", tricount);
     }
 }
