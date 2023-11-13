@@ -114,7 +114,6 @@ public class DepthImage : MonoBehaviour
     public static float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
     int collisionWindowWidth = 24; // Min. pixel gap to go through
     public static float depthConfidenceThreshold = 0.2f;
-    int confidenceMax = 255;
 
     public static float halfPersonWidth = 0.3f; // Estimated half-width of a person
     public static float personHeight = 1.8f - groundPadding; // Estimated height of a person
@@ -149,12 +148,6 @@ public class DepthImage : MonoBehaviour
         m_CameraManager.frameReceived += OnCameraFrameReceived;
         // smoothingToggle.enabled = (m_OcclusionManager.descriptor.environmentDepthTemporalSmoothingSupported == Supported.Supported);
 
-        #if UNITY_ANDROID
-            confidenceMax = 255;
-        #elif UNITY_IOS
-            confidenceMax = 2;
-        #endif
-
         vision = VisionHandler.GetComponent<Vision>();
 
         // Set depth image material
@@ -165,8 +158,6 @@ public class DepthImage : MonoBehaviour
             // m_RawImage.enabled = false;
             m_RawCameraImage.enabled = false;
         }
-
-        pc = XR.GetComponent<PointCloud>();
 
         audioDuration = (double) audioSources[0].clip.samples / audioSources[0].clip.frequency;
         collisionAudioMaxRate = 1 / (float)audioDuration;
@@ -285,7 +276,6 @@ public class DepthImage : MonoBehaviour
         }
     }
 
-    List<float> consecutiveClosestDistances = new List<float>();
     private void ProcessDepthImages()
     {
         // m_StringBuilder.AppendLine($"Depth dims: {depthWidth} {depthHeight}");
@@ -352,65 +342,17 @@ public class DepthImage : MonoBehaviour
         // else m_StringBuilder.AppendLine("Num pts: 0");
         m_StringBuilder.AppendLine($"Ground: {ground.ToString("F2")}m");
 
-        // Check for obstacles using depth image
-        (int[] closeTotals, bool avgGoLeft, float closest) = ProcessDepthImage(); // In portrait mode, index 0 = right side, max index = left side
-        if (closest > 100) {
-            consecutiveClosestDistances.Clear();
-            return;
-        }
-        else {
-            consecutiveClosestDistances.Add(closest);
-            if (consecutiveClosestDistances.Count < 3)
-                return;
-            if (consecutiveClosestDistances.Count > 3)
-                consecutiveClosestDistances.RemoveAt(0);
-        }
-        // Obstacle detected in for consecutive frames
-        m_StringBuilder.AppendLine("Obstacle ahead");
+        if (test.pointAhead != 0) {
+            m_StringBuilder.AppendLine("Obstacle ahead");
+            bool goLeft = (test.pointAhead == 1);
+            direction = goLeft ? Direction.Left : Direction.Right;
+            float rate = (test.closest - collisionAudioCapDistance) / (distanceToObstacle - collisionAudioCapDistance);
+            rate = Mathf.Lerp(collisionAudioMaxRate, collisionAudioMinRate, rate);
+            PlayCollision(goLeft ? -1 : 1, 1/rate - audioDuration);
 
-        closest = consecutiveClosestDistances.Average();
-        int len = closeTotals.Length;
-        // Search for longest gap
-        int start = 0, end = 0, temp = 0;
-        bool open = false;
-        for (int i = 0; i < len-1; i++) {
-            if (closeTotals[i] > 0) { // No gap
-                if (open) { // End gap
-                    if (end - start < i - temp)
-                        (start, end) = (temp, i);
-                    open = false;
-                }
-            }
-            else { // Gap
-                if (!open)  { // Start gap
-                    temp = i;
-                    open = true;
-                }
-            }
+            m_StringBuilder.AppendLine(goLeft ? " Dir: Left" : "Dir: Right");
+            m_StringBuilder.AppendLine($" Closest {test.closest.ToString("F2")}m; Beep rate {rate.ToString("F2")}");
         }
-        // If there's an open gap at the last index, close it
-        if (open && end - start < len-1 - temp)
-            (start, end) = (temp, len-1);
-
-        bool goLeft;
-        // If longest gap is long enough, go towards that gap
-        // Sides/indices will be flipped depending on screen orientation
-        if (end - start > collisionWindowWidth) {
-            goLeft = (start+end)/2 > len/2;
-            if (Screen.orientation == ScreenOrientation.PortraitUpsideDown || Screen.orientation == ScreenOrientation.LandscapeLeft)
-                goLeft = !goLeft;
-        }
-        else { // Longest gap isn't long enough; take side with higher avg distance
-            goLeft = avgGoLeft;
-        }
-        
-        direction = goLeft ? Direction.Left : Direction.Right;
-        float rate = (closest - collisionAudioCapDistance) / (distanceToObstacle - collisionAudioCapDistance);
-        rate = Mathf.Lerp(collisionAudioMaxRate, collisionAudioMinRate, rate);
-        PlayCollision(goLeft ? -1 : 1, 1/rate - audioDuration);
-
-        m_StringBuilder.AppendLine(goLeft ? " Dir: Left" : "Dir: Right");
-        m_StringBuilder.AppendLine($" Closest {closest.ToString("F2")}m; Beep rate {rate.ToString("F2")}");
     }
 
     // mag = -1 for left, mag = 1 for right
@@ -467,18 +409,10 @@ public class DepthImage : MonoBehaviour
             Debug.Log(text);
     }
 
-    [SerializeField]
-    GameObject XR;
-    PointCloud pc;
-
     public void ToggleObstacleAvoidance()
     {
         doObstacleAvoidance = depthToggle.isOn;
         m_OcclusionManager.enabled = depthToggle.isOn;
-        #if !UNITY_EDITOR
-            pc.enabled = doObstacleAvoidance;
-            XR.GetComponent<ARPointCloudManager>().enabled = doObstacleAvoidance;
-        #endif
     }
 
     public void ToggleSmoothing()
@@ -768,66 +702,5 @@ public class DepthImage : MonoBehaviour
     private const float cellSize = 0.3f;
     private static Vector2 SnapToGrid(Vector3 v) {
         return new Vector2(cellSize * Mathf.Round(v.x/cellSize), cellSize * Mathf.Round(v.z/cellSize));
-    }
-
-    // This function iterates over the depth image and does a variety of tasks.
-
-    // This function returns a 1D array representing a horizontal row of pixels.
-    // Each point in the 2D depth array that is (1) high enough confidence and (2) within a certain distance
-    // will give a weighted vote towards the corresponding value in the 1D array.
-    // The second return value tells us whether there is more space on the left or the right side.
-    // The third return value is the closest point that counts as an obstacle.
-
-    // This function also populates the grid dictionary.
-    private (int[], bool, float) ProcessDepthImage()
-    {
-        bool portrait = IsPortrait();
-        int[] output = new int[portrait ? depthHeight : depthWidth];
-
-        float sin = Mathf.Sin(rotation.y * Mathf.Deg2Rad);
-        float cos = Mathf.Cos(rotation.y * Mathf.Deg2Rad);
-
-        float leftSum = 0;
-        float leftCount = 0;
-        float rightSum = 0;
-        float rightCount = 0;
-        List<float> dists = new List<float>();
-        float closest = 999f;
-        const int maxClosestPoints = 10;
-        for (int i = 0; i < test.pts.Count; i++) {
-            Vector3 pos = test.pts[i];
-            Vector3 translated = pos - position;
-            if (translated.y > ground && translated.y < (ground + personHeight)) { // Height check
-                float rX = cos*translated.x - sin*translated.z;
-                float rZ = sin*translated.x + cos*translated.z;
-                // Distance & width check
-                if (rZ > 0 && rZ < distanceToObstacle && rX > -halfPersonWidth && rX < halfPersonWidth) {
-                    float t = rX*rX+rZ*rZ;
-                    if (t < closest) closest = t;
-                }
-            }
-
-            if (translated.y < 0)
-                AddToGrid(pos);
-        }
-
-        closest = Mathf.Sqrt(closest);
-
-        float leftAvg = (leftCount == 0) ? Single.PositiveInfinity : leftSum/leftCount;
-        float rightAvg = (rightCount == 0) ? Single.PositiveInfinity : rightSum/rightCount;
-        bool avgGoLeft = leftAvg > rightAvg;
-
-        return (output, avgGoLeft, closest);
-    }
-
-    private void Insert(List<float> list, float f, bool remove) {
-        for (int i = 0; i < list.Count; i++) {
-            if (f < list[i]) {
-                list.Insert(i, f);
-                if (remove)
-                    list.RemoveAt(i + 1);
-                return;
-            }
-        }
     }
 }
