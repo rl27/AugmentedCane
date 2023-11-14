@@ -610,9 +610,9 @@ public class DepthImage : MonoBehaviour
             grid[gridPt] = new Dictionary<float, float>();
         float height = SnapToGrid(pointToAdd.y);
         if (!grid[gridPt].ContainsKey(height))
-            grid[gridPt][height] = 1;
+            grid[gridPt][height] = 1E-5f;
         else
-            grid[gridPt][height] += 1;
+            grid[gridPt][height] += 1E-5f;
     }
 
     // Get elevation of floor relative to device
@@ -624,7 +624,7 @@ public class DepthImage : MonoBehaviour
             var column = grid[gridPt];
             float min = Single.PositiveInfinity;
             foreach (float height in column.Keys) {
-                if (height < min && column[height] > 5) {
+                if (height < min && column[height] >= 3) {
                     min = height;
                     ground = height;
                 }
@@ -660,7 +660,6 @@ public class DepthImage : MonoBehaviour
     private float closest = 999;
     private void ProcessDepthImage()
     {
-        // For grid value decay
         Vector3 TR = TransformLocalToWorld(ComputeVertex(0, 0, 1));
         Vector3 TL = TransformLocalToWorld(ComputeVertex(0, depthHeight-1, 1));
         Vector3 BR = TransformLocalToWorld(ComputeVertex(depthWidth-1, 0, 1));
@@ -670,25 +669,34 @@ public class DepthImage : MonoBehaviour
         Plane left = new Plane(position, TL, BL);
         Plane bottom = new Plane(position, BL, BR);
 
-        List<(Vector2, float)> toBeDecayed = new List<(Vector2, float)>(); // Can't modify dictionary while iterating over it
-        foreach (Vector2 gridPt in grid.Keys) {
-            var column = grid[gridPt];
-            foreach (float height in column.Keys) {
-                Vector3 pos = new Vector3(gridPt.x, height, gridPt.y);
-                if (right.GetSide(pos) && left.GetSide(pos) && top.GetSide(pos) && bottom.GetSide(pos)) {
-                    toBeDecayed.Add((gridPt, height));
-                }
-            }
-        }
-        foreach (var tuple in toBeDecayed)
-            grid[tuple.Item1][tuple.Item2] = 0;
-
         // Populate grid
         for (int y = 0; y < depthHeight; y++) {
             for (int x = 0; x < depthWidth; x++) {
                 AddToGrid(TransformLocalToWorld(ComputeVertex(x, y, GetDepth(x, y))));
             }
         }
+
+        List<(Vector2, float)> toBeDecayed = new List<(Vector2, float)>(); // Can't modify dictionary while iterating over it
+        List<(Vector2, float)> toBeIncreased = new List<(Vector2, float)>();
+        List<(Vector2, float)> toBeFloored = new List<(Vector2, float)>();
+        foreach (Vector2 gridPt in grid.Keys) {
+            var column = grid[gridPt];
+            foreach (float height in column.Keys) {
+                Vector3 pos = new Vector3(gridPt.x, height, gridPt.y);
+                if (right.GetSide(pos) && left.GetSide(pos) && top.GetSide(pos) && bottom.GetSide(pos))
+                    toBeDecayed.Add((gridPt, height));
+                if (column[height] % 1 >= 20E-5f)
+                    toBeIncreased.Add((gridPt, height));
+                if (column[height] % 1 > 0)
+                    toBeFloored.Add((gridPt, height));
+            }
+        }
+        foreach (var tuple in toBeIncreased)
+            grid[tuple.Item1][tuple.Item2] += 2;
+        foreach (var tuple in toBeDecayed)
+            grid[tuple.Item1][tuple.Item2] = Mathf.Max(0, grid[tuple.Item1][tuple.Item2] - 1);
+        foreach (var tuple in toBeFloored)
+            grid[tuple.Item1][tuple.Item2] = Mathf.Floor(grid[tuple.Item1][tuple.Item2]);
 
         // Detect obstacles using grid
         float sin = Mathf.Sin(rotation.y * Mathf.Deg2Rad);
@@ -704,7 +712,7 @@ public class DepthImage : MonoBehaviour
         foreach (Vector2 gridPt in grid.Keys) {
             var column = grid[gridPt];
             foreach (float height in column.Keys) {
-                if (column[height] <= 5)
+                if (column[height] < 3)
                     continue;
 
                 Vector3 pos = new Vector3(gridPt.x, height, gridPt.y);
