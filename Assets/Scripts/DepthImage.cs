@@ -291,43 +291,6 @@ public class DepthImage : MonoBehaviour
         // m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f))}");
         // m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f))}");
 
-        // m_StringBuilder.AppendLine("CONFIDENCE:");
-        // m_StringBuilder.AppendLine($"(0.1,0.1): {GetConfidence(new Vector2(0.1f, 0.1f))}");
-        // m_StringBuilder.AppendLine($"(0.5,0.5): {GetConfidence(new Vector2(0.5f, 0.5f))}");
-        // m_StringBuilder.AppendLine($"(0.9,0.9): {GetConfidence(new Vector2(0.9f, 0.9f))}");
-
-        /*int numLow = 0;
-        int numMed = 0;
-        int numHigh = 0;
-        #if UNITY_ANDROID
-            for (int y = 0; y < depthHeight; y++) {
-                for (int x = 0; x < depthWidth; x++) {
-                    int val = confidenceArray[(y * depthWidth) + x];
-                    if (val <= 255*depthConfidenceThreshold)
-                        numLow += 1;
-                    else if (val < 255)
-                        numMed += 1;
-                    else if (val == 255)
-                        numHigh += 1;
-                }
-            }
-        #elif UNITY_IOS
-            for (int y = 0; y < depthHeight; y++) {
-                for (int x = 0; x < depthWidth; x++) {
-                    int val = confidenceArray[(y * depthWidth) + x];
-                    if (val == 0)
-                        numLow += 1;
-                    else if (val == 1)
-                        numMed += 1;
-                    else if (val == 2)
-                        numHigh += 1;
-                }
-            }
-        #endif
-        int numPixels = depthWidth * depthHeight;
-        m_StringBuilder.AppendLine("Confidence proportions:");
-        m_StringBuilder.AppendLine($"  Low {((float) numLow / numPixels).ToString("F3")}; Med {((float) numMed / numPixels).ToString("F3")}; High {((float) numHigh / numPixels).ToString("F3")}");*/
-
         // Update floor grid
         Vector2 cell;
         (ground, cell) = GetFloor();
@@ -335,23 +298,19 @@ public class DepthImage : MonoBehaviour
             currentGridCell = cell;
             CleanupDict();
         }
-        // m_StringBuilder.AppendLine($"Num cells: {grid.Count}");
-        // Vector2 gridPt = SnapToGrid(position);
-        // if (grid.ContainsKey(gridPt))
-        //     m_StringBuilder.AppendLine($"Num pts: {grid[SnapToGrid(position)].Count}");
-        // else m_StringBuilder.AppendLine("Num pts: 0");
-        m_StringBuilder.AppendLine($"Ground: {ground.ToString("F2")}m");
 
-        if (test.pointAhead != 0) {
+        m_StringBuilder.AppendLine($"Ground: {ground.ToString("F2")}m");
+        ProcessDepthImage();
+        if (pointAhead != 0) {
             m_StringBuilder.AppendLine("Obstacle ahead");
-            bool goLeft = (test.pointAhead == 1);
+            bool goLeft = (pointAhead == 1);
             direction = goLeft ? Direction.Left : Direction.Right;
-            float rate = (test.closest - collisionAudioCapDistance) / (distanceToObstacle - collisionAudioCapDistance);
+            float rate = (closest - collisionAudioCapDistance) / (distanceToObstacle - collisionAudioCapDistance);
             rate = Mathf.Lerp(collisionAudioMaxRate, collisionAudioMinRate, rate);
             PlayCollision(goLeft ? -1 : 1, 1/rate - audioDuration);
 
             m_StringBuilder.AppendLine(goLeft ? " Dir: Left" : "Dir: Right");
-            m_StringBuilder.AppendLine($" Closest {test.closest.ToString("F2")}m; Beep rate {rate.ToString("F2")}");
+            m_StringBuilder.AppendLine($" Closest {closest.ToString("F2")}m; Beep rate {rate.ToString("F2")}");
         }
     }
 
@@ -643,29 +602,18 @@ public class DepthImage : MonoBehaviour
     private const float groundPadding = 0.35f; // Height to add to calculated ground level to count as ground
 
     // Dict keys are grid points. Each value is a list of (elevation, confidence) for the points in the corresponding grid cell
-    public static Dictionary<Vector2, Queue<float>> grid = new Dictionary<Vector2, Queue<float>>();
-    private const int maxPointsPerCell = 32; // Max points to store per cell
-    private const int minPointsPerCell = 5; // Min points needed to get elevation estimate from cell
-
+    public static Dictionary<Vector2, Dictionary<float, float>> grid = new Dictionary<Vector2, Dictionary<float, float>>();
     public static void AddToGrid(Vector3 pointToAdd)
     {
         Vector2 gridPt = SnapToGrid(pointToAdd);
         if (!grid.ContainsKey(gridPt))
-            grid[gridPt] = new Queue<float>();
-        Queue<float> pts = grid[gridPt];
-        if (pts.Count < maxPointsPerCell) {
-            pts.Enqueue(pointToAdd.y);
-        }
-        else {
-            pts.Dequeue();
-            pts.Enqueue(pointToAdd.y);
-        }
-        
+            grid[gridPt] = new Dictionary<float, float>();
+        float height = SnapToGrid(pointToAdd.y);
+        if (!grid[gridPt].ContainsKey(height))
+            grid[gridPt][height] = 1;
+        else
+            grid[gridPt][height] += 1;
     }
-
-    private const int numFloors = 15;
-    private float[] pastFloors = new float[numFloors]; // Stores past floor elevations in world space
-    private int floorIndex = 0;
 
     // Get elevation of floor relative to device
     // Second return value is current grid point
@@ -673,15 +621,16 @@ public class DepthImage : MonoBehaviour
     {
         Vector2 gridPt = SnapToGrid(position);
         if (grid.ContainsKey(gridPt)) {
-            var pts = grid[gridPt];
-            if (pts.Count >= minPointsPerCell) {
-                var orderedPts = pts.OrderBy(p => p);
-                float median = (pts.ElementAt(pts.Count/2) + pts.ElementAt((pts.Count-1)/2)) / 2;
-                pastFloors[floorIndex] = median;
-                floorIndex = (floorIndex + 1) % numFloors;
+            var column = grid[gridPt];
+            float min = Single.PositiveInfinity;
+            foreach (float height in column.Keys) {
+                if (height < min && column[height] > 5) {
+                    min = height;
+                    ground = height;
+                }
             }
         }
-        return (Mathf.Min(-0.5f, pastFloors.Average() + groundPadding - position.y), gridPt);
+        return (Mathf.Min(-0.5f, ground + groundPadding - position.y), gridPt);
     }
 
     // Delete any cells that are too far from user location
@@ -699,8 +648,94 @@ public class DepthImage : MonoBehaviour
             grid.Remove(gridPt);
     }
 
-    private const float cellSize = 0.3f;
+    private const float cellSize = 0.1f;
     private static Vector2 SnapToGrid(Vector3 v) {
         return new Vector2(cellSize * Mathf.Round(v.x/cellSize), cellSize * Mathf.Round(v.z/cellSize));
+    }
+    private static float SnapToGrid(float f) {
+        return cellSize * Mathf.Round(f/cellSize);
+    }
+
+    private int pointAhead = 0; // 0 = no obstacle; 1 = go left; 2 = go right
+    private float closest = 999;
+    private void ProcessDepthImage()
+    {
+        // For grid value decay
+        Vector3 TR = TransformLocalToWorld(ComputeVertex(0, 0, 1));
+        Vector3 TL = TransformLocalToWorld(ComputeVertex(0, depthHeight-1, 1));
+        Vector3 BR = TransformLocalToWorld(ComputeVertex(depthWidth-1, 0, 1));
+        Vector3 BL = TransformLocalToWorld(ComputeVertex(depthWidth-1, depthHeight-1, 1));
+        Plane right = new Plane(position, BR, TR);
+        Plane top = new Plane(position, TR, TL);
+        Plane left = new Plane(position, TL, BL);
+        Plane bottom = new Plane(position, BL, BR);
+
+        List<(Vector2, float)> toBeDecayed = new List<(Vector2, float)>(); // Can't modify dictionary while iterating over it
+        foreach (Vector2 gridPt in grid.Keys) {
+            var column = grid[gridPt];
+            foreach (float height in column.Keys) {
+                Vector3 pos = new Vector3(gridPt.x, height, gridPt.y);
+                if (right.GetSide(pos) && left.GetSide(pos) && top.GetSide(pos) && bottom.GetSide(pos)) {
+                    toBeDecayed.Add((gridPt, height));
+                }
+            }
+        }
+        foreach (var tuple in toBeDecayed)
+            grid[tuple.Item1][tuple.Item2] = 0;
+
+        // Populate grid
+        for (int y = 0; y < depthHeight; y++) {
+            for (int x = 0; x < depthWidth; x++) {
+                AddToGrid(TransformLocalToWorld(ComputeVertex(x, y, GetDepth(x, y))));
+            }
+        }
+
+        // Detect obstacles using grid
+        float sin = Mathf.Sin(rotation.y * Mathf.Deg2Rad);
+        float cos = Mathf.Cos(rotation.y * Mathf.Deg2Rad);
+
+        pointAhead = 0;
+        closest = 999f;
+        float leftCount = 0;
+        float leftSum = 0;
+        float rightCount = 0;
+        float rightSum = 0;
+        int numPoints = 0;
+        foreach (Vector2 gridPt in grid.Keys) {
+            var column = grid[gridPt];
+            foreach (float height in column.Keys) {
+                if (column[height] <= 5)
+                    continue;
+
+                Vector3 pos = new Vector3(gridPt.x, height, gridPt.y);
+                Vector3 translated = pos - position;
+                if (translated.y > ground && translated.y < ground + personHeight) { // Height check
+                    float rX = cos*translated.x - sin*translated.z;
+                    float rZ = sin*translated.x + cos*translated.z;
+                    // Distance & width check
+                    if (rZ > 0 && rZ < distanceToObstacle && rX > -halfPersonWidth && rX < halfPersonWidth) {
+                        numPoints++;
+                        float t = rX*rX+rZ*rZ;
+                        if (t < closest) closest = t;
+                    }
+
+                    if (rX > 0) {
+                        rightSum += rZ;
+                        rightCount += 1;
+                    }
+                    else {
+                        leftSum += rZ;
+                        leftCount += 1;
+                    }
+                }
+            }
+        }
+
+        if (numPoints >= 3) {
+            closest = Mathf.Sqrt(closest);
+            float leftAvg = (leftCount == 0) ? Single.PositiveInfinity : leftSum/leftCount;
+            float rightAvg = (rightCount == 0) ? Single.PositiveInfinity : rightSum/rightCount;
+            pointAhead = (leftAvg > rightAvg) ? 1 : 2;
+        }
     }
 }
