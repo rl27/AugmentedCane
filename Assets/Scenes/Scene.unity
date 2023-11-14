@@ -3905,7 +3905,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _frameRate: 10
-  _maximumIntegrationDistance: 5
+  _maximumIntegrationDistance: 8
   _voxelSize: 0.025
   _enableDistanceBasedVolumetricCleanup: 1
   _meshBlockSize: 1.4

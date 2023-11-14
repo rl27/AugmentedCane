@@ -89,11 +89,6 @@ public class DepthImage : MonoBehaviour
     [NonSerialized]
     public int depthHeight = 0;
     int depthStride = 4; // Should be either 2 or 4
-
-    // Depth confidence array
-    // For iOS, confidence values are 0, 1, or 2. https://forum.unity.com/threads/depth-confidence-error-iphone-12-pro.1201831
-    byte[] confidenceArray = new byte[0];
-    int confidenceStride = 1; // Should be 1
     
     // Camera intrinsics
     Vector2 focalLength = Vector2.zero;
@@ -256,24 +251,6 @@ public class DepthImage : MonoBehaviour
                 image.GetPlane(0).data.CopyTo(depthArray);
             }
         }
-
-        // Acquire a depth confidence image.
-        if (m_OcclusionManager.TryAcquireEnvironmentDepthConfidenceCpuImage(out XRCpuImage confidenceImage)) {
-            using (confidenceImage) {
-                if (confidenceImage.width != depthWidth || confidenceImage.height != depthHeight) {
-                    LogDepth("Confidence dimensions don't match");
-                }
-                else {
-                    int numPixels = depthWidth * depthHeight;
-                    Debug.Assert(confidenceImage.planeCount == 1, "Plane count is not 1");
-                    confidenceStride = confidenceImage.GetPlane(0).pixelStride;
-                    int numBytes = numPixels * confidenceStride;
-                    if (confidenceArray.Length != numBytes)
-                        confidenceArray = new byte[numBytes];
-                    confidenceImage.GetPlane(0).data.CopyTo(confidenceArray);
-                }
-            }
-        }
     }
 
     private void ProcessDepthImages()
@@ -290,43 +267,6 @@ public class DepthImage : MonoBehaviour
         // m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.1f, 0.1f))}");
         // m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f))}");
         // m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f))}");
-
-        // m_StringBuilder.AppendLine("CONFIDENCE:");
-        // m_StringBuilder.AppendLine($"(0.1,0.1): {GetConfidence(new Vector2(0.1f, 0.1f))}");
-        // m_StringBuilder.AppendLine($"(0.5,0.5): {GetConfidence(new Vector2(0.5f, 0.5f))}");
-        // m_StringBuilder.AppendLine($"(0.9,0.9): {GetConfidence(new Vector2(0.9f, 0.9f))}");
-
-        /*int numLow = 0;
-        int numMed = 0;
-        int numHigh = 0;
-        #if UNITY_ANDROID
-            for (int y = 0; y < depthHeight; y++) {
-                for (int x = 0; x < depthWidth; x++) {
-                    int val = confidenceArray[(y * depthWidth) + x];
-                    if (val <= 255*depthConfidenceThreshold)
-                        numLow += 1;
-                    else if (val < 255)
-                        numMed += 1;
-                    else if (val == 255)
-                        numHigh += 1;
-                }
-            }
-        #elif UNITY_IOS
-            for (int y = 0; y < depthHeight; y++) {
-                for (int x = 0; x < depthWidth; x++) {
-                    int val = confidenceArray[(y * depthWidth) + x];
-                    if (val == 0)
-                        numLow += 1;
-                    else if (val == 1)
-                        numMed += 1;
-                    else if (val == 2)
-                        numHigh += 1;
-                }
-            }
-        #endif
-        int numPixels = depthWidth * depthHeight;
-        m_StringBuilder.AppendLine("Confidence proportions:");
-        m_StringBuilder.AppendLine($"  Low {((float) numLow / numPixels).ToString("F3")}; Med {((float) numMed / numPixels).ToString("F3")}; High {((float) numHigh / numPixels).ToString("F3")}");*/
 
         // Update floor grid
         Vector2 cell;
@@ -541,24 +481,6 @@ public class DepthImage : MonoBehaviour
         return 99999f;
     }
 
-    public float GetConfidence(Vector2 uv)
-    {
-        if (confidenceArray.Length == 0)
-            return 0;
-        int x = (int)(uv.x * (depthWidth - 1));
-        int y = (int)(uv.y * (depthHeight - 1));
-        int index = (y * depthWidth) + x;
-        return confidenceArray[confidenceStride * index];
-    }
-
-    public float GetConfidence(int x, int y)
-    {
-        if (confidenceArray.Length == 0)
-            return 0;
-        int index = (y * depthWidth) + x;
-        return confidenceArray[confidenceStride * index];
-    }
-
     // Given image pixel coordinates (x,y) and distance z, returns a vertex in local camera space.
     public Vector3 ComputeVertex(int x, int y, float z)
     {
@@ -642,7 +564,7 @@ public class DepthImage : MonoBehaviour
     public static float ground = -0.5f; // Ground elevation (in meters) relative to camera; default floor is 0.5m below camera
     private const float groundPadding = 0.35f; // Height to add to calculated ground level to count as ground
 
-    // Dict keys are grid points. Each value is a list of (elevation, confidence) for the points in the corresponding grid cell
+    // Dict keys are grid points. Each value is a list of elevations for the points in the corresponding grid cell
     public static Dictionary<Vector2, Queue<float>> grid = new Dictionary<Vector2, Queue<float>>();
     private const int maxPointsPerCell = 32; // Max points to store per cell
     private const int minPointsPerCell = 5; // Min points needed to get elevation estimate from cell
@@ -663,9 +585,7 @@ public class DepthImage : MonoBehaviour
         
     }
 
-    private const int numFloors = 15;
-    private float[] pastFloors = new float[numFloors]; // Stores past floor elevations in world space
-    private int floorIndex = 0;
+    private float lastWorldGround = 0;
 
     // Get elevation of floor relative to device
     // Second return value is current grid point
@@ -676,12 +596,10 @@ public class DepthImage : MonoBehaviour
             var pts = grid[gridPt];
             if (pts.Count >= minPointsPerCell) {
                 var orderedPts = pts.OrderBy(p => p);
-                float median = (pts.ElementAt(pts.Count/2) + pts.ElementAt((pts.Count-1)/2)) / 2;
-                pastFloors[floorIndex] = median;
-                floorIndex = (floorIndex + 1) % numFloors;
+                lastWorldGround = (pts.ElementAt(pts.Count/2) + pts.ElementAt((pts.Count-1)/2)) / 2; // Median
             }
         }
-        return (Mathf.Min(-0.5f, pastFloors.Average() + groundPadding - position.y), gridPt);
+        return (Mathf.Min(-0.5f, lastWorldGround + groundPadding - position.y), gridPt);
     }
 
     // Delete any cells that are too far from user location
