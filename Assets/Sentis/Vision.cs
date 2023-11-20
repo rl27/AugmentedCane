@@ -67,6 +67,14 @@ public class Vision : MonoBehaviour
         new Color32(255, 0, 0, 255), // covering
     };
 
+    private enum Classes {
+        Background = 0,
+        Road = 2,
+        Sidewalk = 5,
+        Plain = 6,
+        Zebra = 7,
+    }
+
     // Sidewalk or crosswalk
     private bool StrictWalkable(int cls) {
         return (cls >= 5 && cls <= 7);
@@ -372,28 +380,28 @@ public class Vision : MonoBehaviour
         if (lastClass != cls && (DateTime.Now - lastClassChange).TotalSeconds > classChangeInterval) {
             switch (cls)
             {
-                case 1: // Road
+                case (int)Classes.Road: // Road
                     lastClass = cls;
                     lastClassChange = DateTime.Now;
                     tts.EnqueueTTS(road);
                     logging = "Road";
                     break;
-                case 4: // Sidewalk
+                case (int)Classes.Sidewalk: // Sidewalk
                     lastClass = cls;
                     lastClassChange = DateTime.Now;
                     tts.EnqueueTTS(sidewalk);
                     logging = "Sidewalk";
                     break;
-                case 5: // Crosswalk
-                case 6:
+                case (int)Classes.Plain: // Crosswalk
+                case (int)Classes.Zebra:
                     lastClass = cls;
                     lastClassChange = DateTime.Now;
                     tts.EnqueueTTS(crosswalk);
                     logging = "Crosswalk";
                     break;
-                case 0: // Background
+                case (int)Classes.Background: // Background
                     lastClass = cls;
-                    logging = "Unknown";
+                    logging = "Background";
                     break;
                 default:
                     break;
