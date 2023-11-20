@@ -4037,7 +4037,7 @@ MonoBehaviour:
   arrow: {fileID: 1824169404}
   outputViewParent: {fileID: 2000448425}
   inputViewParent: {fileID: 630529194}
-  modelAsset: {fileID: 5022602860645237092, guid: 5edc93d7bfacd0d4d9c2630d9784b4b3, type: 3}
+  modelAsset: {fileID: 5022602860645237092, guid: 10eb70764e3f866458abe51f1d25a275, type: 3}
   compute: {fileID: 7200000, guid: f07148396908444429733077acb4ee0c, type: 3}
   sidewalk: {fileID: 8300000, guid: 1d39abad520b48b4fa36806012d16920, type: 3}
   crosswalk: {fileID: 8300000, guid: 5cb35b1523c46544d9cf7a307749d22f, type: 3}

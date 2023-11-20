@@ -57,6 +57,7 @@ public class Vision : MonoBehaviour
     public static readonly Color32[] COLOR_TABLE = new Color32[]
     {
         new Color32(0, 0, 0, 255), // background
+        new Color32(0, 128, 0, 255), // terrain
         new Color32(0, 0, 255, 255), // road
         new Color32(255, 255, 0, 255), // curb
         new Color32(200, 200, 0, 255), // curb cut
@@ -68,11 +69,11 @@ public class Vision : MonoBehaviour
 
     // Sidewalk or crosswalk
     private bool StrictWalkable(int cls) {
-        return (cls >= 4 && cls <= 6);
+        return (cls >= 5 && cls <= 7);
     }
     // Sidewalk, crosswalk, curb, covering
     private bool LaxWalkable(int cls) {
-        return (cls >= 2 && cls <= 7);
+        return (cls >= 3 && cls <= 8);
     }
 
     void Start()
