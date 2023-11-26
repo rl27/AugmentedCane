@@ -200,7 +200,7 @@ public class Vision : MonoBehaviour
             }
             notDone = enumerator.MoveNext();
             if ((++step - lastStep) % maxStepsPerFrame == 0 || (Time.realtimeSinceStartup - start) > maxTime) {
-                if (step != 377 && step != 378) { // Bandaid fix for iPhone bug
+                if (step != 378 && step != 380) { // Bandaid fix for iPhone bug
                     lastTime = Time.realtimeSinceStartup - start;
                     yield return null;
                 }
