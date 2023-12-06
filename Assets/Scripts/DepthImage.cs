@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
+using AStarSharp;
 
 // ARFoundation references:
 // https://github.com/Unity-Technologies/arfoundation-samples/blob/main/Assets/Scripts/Runtime/DisplayDepthImage.cs
@@ -34,6 +35,10 @@ public class DepthImage : MonoBehaviour
     [SerializeField]
     [Tooltip("The ARCameraManager which will produce camera frame events.")]
     ARCameraManager m_CameraManager;
+
+    [SerializeField]
+    ARMeshManager meshManager;
+    List<Vector4> meshPts = new List<Vector4>();
 
     // Using multiple audio sources to queue collision audio with no delay
     // https://johnleonardfrench.com/ultimate-guide-to-playscheduled-in-unity/#queue_clips
@@ -107,10 +112,8 @@ public class DepthImage : MonoBehaviour
     // These variables are for obstacle avoidance.
     private bool doObstacleAvoidance = true;
     public static float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
-    int collisionWindowWidth = 24; // Min. pixel gap to go through
-    public static float depthConfidenceThreshold = 0.2f;
 
-    public static float halfPersonWidth = 0.3f; // Estimated half-width of a person
+    public static float personRadius = 0.3f; // Estimated half-width of a person
     public static float personHeight = 1.8f - groundPadding; // Estimated height of a person
     private Vector2 currentGridCell = Vector2.zero;
 
@@ -268,38 +271,29 @@ public class DepthImage : MonoBehaviour
         // m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f))}");
         // m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f))}");
 
-        // Update floor grid
-        Vector2 cell;
-        (ground, cell) = GetFloor();
-        if (currentGridCell != cell) {
-            currentGridCell = cell;
-            CleanupDict();
-        }
-        // m_StringBuilder.AppendLine($"Num cells: {grid.Count}");
-        // Vector2 gridPt = SnapToGrid(position);
-        // if (grid.ContainsKey(gridPt))
-        //     m_StringBuilder.AppendLine($"Num pts: {grid[SnapToGrid(position)].Count}");
-        // else m_StringBuilder.AppendLine("Num pts: 0");
         m_StringBuilder.AppendLine($"Ground: {ground.ToString("F2")}m");
 
-        if (test.pointAhead != 0) {
-            m_StringBuilder.AppendLine("Obstacle ahead");
-            bool goLeft = (test.pointAhead == 1);
-            direction = goLeft ? Direction.Left : Direction.Right;
-            float rate = (test.closest - collisionAudioCapDistance) / (distanceToObstacle - collisionAudioCapDistance);
-            rate = Mathf.Lerp(collisionAudioMaxRate, collisionAudioMinRate, rate);
-            PlayCollision(goLeft ? -1 : 1, 1/rate - audioDuration);
+        (float dir, float closest) = ProcessMesh();
+        if (dir != 0) {
+            float relHeading = (dir - rotation.y + 360) % 360;
+            if (relHeading > 180) relHeading -= 360;
 
-            m_StringBuilder.AppendLine(goLeft ? " Dir: Left" : "Dir: Right");
-            m_StringBuilder.AppendLine($" Closest {test.closest.ToString("F2")}m; Beep rate {rate.ToString("F2")}");
+            m_StringBuilder.AppendLine("Obstacle ahead");
+            direction = Direction.Left;
+            float rate = (closest - collisionAudioCapDistance) / (distanceToObstacle - collisionAudioCapDistance);
+            rate = Mathf.Lerp(collisionAudioMaxRate, collisionAudioMinRate, rate);
+            PlayCollision(relHeading * Mathf.Deg2Rad, 1/rate - audioDuration);
+
+            m_StringBuilder.AppendLine($" Closest {closest.ToString("F2")}m; Beep rate {rate.ToString("F2")}; Dir {relHeading.ToString("F2")}");
         }
     }
 
     // mag = -1 for left, mag = 1 for right
     private double lastScheduled = -10;
     private int audioSelect = 0;
-    private void PlayCollision(int mag, double delay)
+    private void PlayCollision(float dir, double delay)
     {
+        float mag = Mathf.Sin(dir);
         float localRot = -rotation.y * Mathf.Deg2Rad;
         this.transform.position = position + new Vector3(mag * Mathf.Cos(localRot), 0, mag * Mathf.Sin(localRot));
 
@@ -563,62 +557,102 @@ public class DepthImage : MonoBehaviour
 
     public static float ground = -0.5f; // Ground elevation (in meters) relative to camera; default floor is 0.5m below camera
     private const float groundPadding = 0.35f; // Height to add to calculated ground level to count as ground
+    private const float groundRadius = 0.2f;
+    private const float nodeSize = 0.1f;
+    private const float gridRadius = 7f;
+    private const int numNodes = (int) (gridRadius / nodeSize);
+    private const int numNodes2 = 2 * ((int) (gridRadius / nodeSize));
+    private List<List<Node>> grid;
+    private Astar astar;
+    private Vector2 target = Vector2.zero;
 
-    // Dict keys are grid points. Each value is a list of elevations for the points in the corresponding grid cell
-    public static Dictionary<Vector2, Queue<float>> grid = new Dictionary<Vector2, Queue<float>>();
-    private const int maxPointsPerCell = 32; // Max points to store per cell
-    private const int minPointsPerCell = 5; // Min points needed to get elevation estimate from cell
-
-    public static void AddToGrid(Vector3 pointToAdd)
+    (float, float) ProcessMesh()
     {
-        Vector2 gridPt = SnapToGrid(pointToAdd);
-        if (!grid.ContainsKey(gridPt))
-            grid[gridPt] = new Queue<float>();
-        Queue<float> pts = grid[gridPt];
-        if (pts.Count < maxPointsPerCell) {
-            pts.Enqueue(pointToAdd.y);
+        float groundSum = 0;
+        float groundCount = 0;
+
+        // Update list of mesh points
+        meshPts.Clear();
+        foreach (var m in meshManager.meshes) {
+            var t = m.mesh.triangles;
+            var v = m.mesh.vertices;
+            int numTriangles = t.Length / 3;
+            for (int i = 0; i < numTriangles; i++) {
+                Vector3 pt = (v[t[i*3]] + v[t[i*3+1]] + v[t[i*3+2]]) / 3f;
+                float area = 1f;
+                meshPts.Add(new Vector4(pt.x, pt.y, pt.z, area));
+                if (Vector2.Distance(position, new Vector2(pt.x, pt.z)) < groundRadius) {
+                    groundSum += pt.y;
+                    groundCount += area;
+                }
+            }
+        }
+
+        if (groundCount >= 10) {
+            ground = Mathf.Min(-0.5f, groundSum/groundCount + groundPadding - position.y);
+        }
+
+        // For calculations
+        Vector3 userLoc = position;
+        float sin = Mathf.Sin(rotation.y * Mathf.Deg2Rad);
+        float cos = Mathf.Cos(rotation.y * Mathf.Deg2Rad);
+
+        float direction = 0;
+        float closest = 999f;
+        if (grid == null) {
+            grid = new List<List<Node>>();
+            for (int i = 0; i <= numNodes2; i++) {
+                List<Node> col = new List<Node>();
+                for (int j = 0; j <= 2*numNodes; j++) {
+                    col.Add(new Node(new Vector2(i, j)));
+                }
+                grid.Add(col);
+            }
+            astar = new Astar(grid, numNodes);
         }
         else {
-            pts.Dequeue();
-            pts.Enqueue(pointToAdd.y);
-        }
-        
-    }
-
-    private float lastWorldGround = 0;
-
-    // Get elevation of floor relative to device
-    // Second return value is current grid point
-    private (float, Vector2) GetFloor()
-    {
-        Vector2 gridPt = SnapToGrid(position);
-        if (grid.ContainsKey(gridPt)) {
-            var pts = grid[gridPt];
-            if (pts.Count >= minPointsPerCell) {
-                var orderedPts = pts.OrderBy(p => p);
-                lastWorldGround = (pts.ElementAt(pts.Count/2) + pts.ElementAt((pts.Count-1)/2)) / 2; // Median
+            for (int i = 0; i <= numNodes2; i++) {
+                for (int j = 0; j <= numNodes2; j++) {
+                    grid[i][j].Sum = 0;
+                }
             }
         }
-        return (Mathf.Min(-0.5f, lastWorldGround + groundPadding - position.y), gridPt);
-    }
+        foreach (Vector4 pt in meshPts) {
+            Vector3 translated = pt;
+            translated -= userLoc;
 
-    // Delete any cells that are too far from user location
-    private float cellDeletionRange = 5f;
-    private List<Vector2> pointsToRemove = new List<Vector2>();
-    private void CleanupDict()
-    {
-        pointsToRemove.Clear();
-        foreach (Vector2 gridPt in grid.Keys) {
-            if (Vector2.Distance(gridPt, new Vector2(position.x, position.z)) > cellDeletionRange) {
-                pointsToRemove.Add(gridPt);
+            if (translated.y > ground && translated.y < ground + personHeight) { // Height check
+                float rX = cos*translated.x - sin*translated.z;
+                float rZ = sin*translated.x + cos*translated.z;
+                // Distance & width check
+                if (rZ > 0 && rZ < distanceToObstacle && rX > -personRadius && rX < personRadius) {
+                    float t = rX*rX+rZ*rZ;
+                    if (t < closest) closest = t;
+                }
+                int x = (int)(translated.x/nodeSize) + numNodes;
+                int y = (int)(translated.y/nodeSize) + numNodes;
+                if (x >= 0 && x < numNodes && y >= 0 && y < numNodes)
+                    grid[x][y].Sum += pt.w;
             }
         }
-        foreach (Vector2 gridPt in pointsToRemove)
-            grid.Remove(gridPt);
-    }
 
-    private const float cellSize = 0.3f;
-    private static Vector2 SnapToGrid(Vector3 v) {
-        return new Vector2(cellSize * Mathf.Round(v.x/cellSize), cellSize * Mathf.Round(v.z/cellSize));
+        closest = Mathf.Sqrt(closest);
+
+        // Obstacle ahead, do A*
+        if (closest < 30f) {
+            Vector2 start = new Vector2(numNodes, numNodes);
+            Stack<Node> path = astar.FindPath(start, target);
+            int index = Math.Min(2, path.Count-1);
+            Vector2 v = path.ElementAt(index).Position - start;
+
+            direction = 90 - Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg;
+        }
+        else {
+            // Update A* target
+            target = new Vector2((int)(5 * sin/nodeSize) + numNodes,
+                                 (int)(5 * cos/nodeSize) + numNodes);
+        }
+
+        return (direction, closest);
     }
 }

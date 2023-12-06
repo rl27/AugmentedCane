@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.IO;
 
-public class Utils
+public class VisionUtils
 {
     public static Texture2D LoadPNG(string filePath) {
 

@@ -88,7 +88,7 @@ public class Vision : MonoBehaviour
     {
         #if UNITY_EDITOR
             testing = true;
-            testPNG = Utils.LoadPNG("Assets/TestImages/test3.png");
+            testPNG = VisionUtils.LoadPNG("Assets/TestImages/test3.png");
         #endif
 
         tts = TTSHandler.GetComponent<TTS>();
@@ -414,8 +414,8 @@ public class Vision : MonoBehaviour
         inputView.texture = resizedTex;
         outputView.texture = outputTex;
 
-        outputAspectRatioFitter.aspectMode = Utils.GetMode();
-        inputAspectRatioFitter.aspectMode = Utils.GetMode();
+        outputAspectRatioFitter.aspectMode = VisionUtils.GetMode();
+        inputAspectRatioFitter.aspectMode = VisionUtils.GetMode();
         outputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
         inputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
     }
