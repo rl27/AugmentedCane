@@ -3,6 +3,10 @@ A smartphone-based navigation system for people with blindness or visual impairm
 
 ***
 
+### Unity setup
+
+This project was built using Unity version 2023.1.0b14 with Android Build Support and iOS Build Support. Later versions might not work.
+
 ### GPS Navigation & TTS
 
 To use GPS navigation and TTS, you will need a Google Cloud API key. You will need to enable the Cloud Text-to-Speech API and the Routes API. Place your API key in a file named `apikey.txt` in Assets/StreamingAssets. This file is in the .gitignore.
