@@ -113,7 +113,7 @@ public class DepthImage : MonoBehaviour
     private bool doObstacleAvoidance = true;
     public static float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
 
-    public static float personRadius = 0.3f; // Estimated half-width of a person
+    public static float personRadius = 0.4f; // Estimated half-width of a person
     public static float personHeight = 1.8f - groundPadding; // Estimated height of a person
 
     public enum Direction { Left, Right, None }
@@ -273,7 +273,7 @@ public class DepthImage : MonoBehaviour
         m_StringBuilder.AppendLine($"Ground: {ground.ToString("F2")}m");
 
         (float dir, float closest) = ProcessMesh();
-        if (dir != 0) {
+        if (closest < 30) {
             float relHeading = (dir - rotation.y + 360) % 360;
             if (relHeading > 180) relHeading -= 360;
 
@@ -660,25 +660,42 @@ public class DepthImage : MonoBehaviour
         // If there is an obstacle ahead, do A*
         if (closest < 30f) {
             // For each blocking point in the grid, also block out nearby points within personRadius
-            List<Node> blocking = new List<Node>();
+            List<Vector2> blocking = new List<Vector2>();
             for (int i = 0; i <= numNodes2; i++) {
                 for (int j = 0; j <= numNodes2; j++) {
                     if (grid[i][j].Sum > Node.SumThreshold)
-                        blocking.Add(grid[i][j]);
+                        blocking.Add(grid[i][j].Position);
                 }
             }
-            foreach (Node b in blocking) {
+            foreach (Vector2 b in blocking) {
                 foreach (Vector2 circleCell in circleCells) {
-                    grid[(int)(b.Position.x + circleCell.x)][(int)(b.Position.y + circleCell.y)].Sum += Node.SumThreshold;
+                    int x = (int)(b.x + circleCell.x);
+                    if (x < 0 || x > numNodes2) continue;
+                    int y = (int)(b.y + circleCell.y);
+                    if (y < 0 || y > numNodes2) continue;
+                    grid[x][y].Sum += Node.SumThreshold;
                 }
+            }
+            // Unblock the person
+            foreach (Vector2 circleCell in circleCells) {
+                int x = (int)(numNodes + circleCell.x);
+                if (x < 0 || x > numNodes2) continue;
+                int y = (int)(numNodes + circleCell.y);
+                if (y < 0 || y > numNodes2) continue;
+                grid[x][y].Sum = 0;
+            }
+            // Re-block original obstacles
+            foreach (Vector2 b in blocking) {
+                grid[(int) b.x][(int) b.y].Sum = Node.SumThreshold;
             }
 
             Vector2 start = new Vector2(numNodes, numNodes);
             Stack<Node> path = astar.FindPath(start, target);
-            int index = Math.Min(2, path.Count-1);
-            Vector2 v = path.ElementAt(index).Position - start;
-
-            direction = 90 - Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg;
+            if (path != null) {
+                int index = Math.Min(2, path.Count-1);
+                Vector2 v = path.ElementAt(index).Position - start;
+                direction = 90 - Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg;
+            }
         }
         else {
             // Update A* target

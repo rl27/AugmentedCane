@@ -27,7 +27,7 @@ namespace AStarSharp
             }
         }
         public float Sum;
-        public static float SumThreshold = 0.02f;
+        public static float SumThreshold = 0.01f;
 
         public Node(Vector2 pos, float weight = 1)
         {
