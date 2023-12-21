@@ -31,9 +31,14 @@ public class Main : MonoBehaviour
     GameObject GPSHandler;
     GPSData gps;
 
+    [SerializeField]
+    GameObject XR;
+    PointCloud pc;
+
     bool depthActive = true;
     bool IMUActive = true;
     bool GPSActive = true;
+    bool pcActive = true;
 
     List<double> gpsCoords = new List<double>();
     List<byte[]> depthArrays = new List<byte[]>();
@@ -64,10 +69,13 @@ public class Main : MonoBehaviour
         depth = DepthHandler.GetComponent<DepthImage>();
         sensors = SensorHandler.GetComponent<SensorData>();
         gps = GPSHandler.GetComponent<GPSData>();
+        pc = XR.GetComponent<PointCloud>();
 
         DepthHandler.SetActive(depthActive);
         SensorHandler.SetActive(IMUActive);
         GPSHandler.SetActive(GPSActive);
+        pc.enabled = pcActive;
+        XR.GetComponent<ARPointCloudManager>().enabled = pcActive;
 
         cmaesPath = Path.Combine(Application.persistentDataPath, "cmaes.bin");
         if (!File.Exists(cmaesPath)) {
@@ -205,6 +213,8 @@ public class Main : MonoBehaviour
             m_StringBuilder.AppendLine($"{sensors.IMUstring()}");
         if (depthActive)
             m_StringBuilder.AppendLine($"{depth.m_StringBuilder.ToString()}");
+        if (pcActive)
+            m_StringBuilder.AppendLine($"{pc.info}\n");
         
         m_StringBuilder.AppendLine($"Gen {cmaoptimizer.cma.Generation}, sample {cmaoptimizer.solutions.Count}");
         m_StringBuilder.AppendLine($"Params: {GetString(Denormalize(x))}");

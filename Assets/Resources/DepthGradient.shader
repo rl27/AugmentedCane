@@ -1,86 +1,245 @@
-Shader "Unlit/DisplayDepth"
+Shader "Unlit/DepthGradient"
 {
     Properties
     {
-        _MainTex ("_MainTex", 2D) = "white" {}
-        _DepthTex ("_DepthTex", 2D) = "green" {}
+        _MainTex ("Main Texture", 2D) = "black" {}
+        _MinDistance ("Min Distance", Float) = 0.0
+        _MaxDistance ("Max Distance", Float) = 8.0
     }
+    // URP SubShader
     SubShader
     {
-        Tags {"Queue"="Transparent" "IgnoreProjector"="True" "RenderType"="Transparent"}
-        Blend SrcAlpha OneMinusSrcAlpha
-        // No culling or depth
-        Cull Off ZWrite Off ZTest Always
+        PackageRequirements
+        {
+            "com.unity.render-pipelines.universal": "12.0"
+        }
+
+        Tags
+        {
+            "Queue" = "Geometry"
+            "RenderType" = "Opaque"
+            "ForceNoShadowCasting" = "True"
+            "RenderPipeline" = "UniversalPipeline"
+        }
+
         Pass
         {
-            CGPROGRAM
+            Cull Off
+            ZTest Always
+            ZWrite Off
+            Lighting Off
+            LOD 100
+            Tags
+            {
+                "LightMode" = "UniversalForward"
+            }
+
+
+            HLSLPROGRAM
+
+            #pragma vertex vert
+            #pragma fragment frag
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            #define real half
+            #define real3 half3
+            #define real4 half4
+
+            struct appdata
+            {
+                float3 position : POSITION;
+                float2 texcoord : TEXCOORD0;
+
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct v2f
+            {
+                float4 position : SV_POSITION;
+                float2 texcoord : TEXCOORD0;
+
+                UNITY_VERTEX_OUTPUT_STEREO
+            };
+
+            struct fragment_output
+            {
+                real4 color : SV_Target;
+            };
+
+
+            CBUFFER_START(DisplayRotationPerFrame)
+            float4x4 _DisplayRotationPerFrame;
+            CBUFFER_END
+
+
+            v2f vert (appdata v)
+            {
+                v2f o;
+
+                UNITY_SETUP_INSTANCE_ID(v);
+                ZERO_INITIALIZE(v2f, o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+
+                o.position = TransformObjectToHClip(v.position);
+                o.texcoord = mul(float3(v.texcoord, 1.0f), _DisplayRotationPerFrame).xy;
+                return o;
+            }
+
+
+            real3 HSVtoRGB(real3 arg1)
+            {
+                real4 K = real4(1.0h, 2.0h / 3.0h, 1.0h / 3.0h, 3.0h);
+                real3 P = abs(frac(arg1.xxx + K.xyz) * 6.0h - K.www);
+                return arg1.z * lerp(K.xxx, saturate(P - K.xxx), arg1.y);
+            }
+
+
+            TEXTURE2D_FLOAT(_MainTex);
+            SAMPLER(sampler_MainTex);
+
+            real _MinDistance;
+            real _MaxDistance;
+
+            fragment_output frag (v2f i)
+            {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+
+                // Sample the environment depth (in meters).
+                float envDistance = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.texcoord).r;
+
+                real lerpFactor = (envDistance - _MinDistance) / (_MaxDistance - _MinDistance);
+                real hue = lerp(0.70h, -0.15h, saturate(lerpFactor));
+                if (hue < 0.0h)
+                {
+                    hue += 1.0h;
+                }
+                real3 color = real3(hue, 0.9h, 0.6h);
+
+                fragment_output o;
+                o.color = real4(HSVtoRGB(color), 1.0h);
+                return o;
+            }
+
+            ENDHLSL
+        }
+    }
+    // Built-in Render Pipeline SubShader
+    SubShader
+    {
+        Tags
+        {
+            "Queue" = "Geometry"
+            "RenderType" = "Opaque"
+            "ForceNoShadowCasting" = "True"
+        }
+
+        Pass
+        {
+            Cull Off
+            ZTest Always
+            ZWrite Off
+            Lighting Off
+            LOD 100
+            Tags
+            {
+                "LightMode" = "Always"
+            }
+
+
+            HLSLPROGRAM
+
             #pragma vertex vert
             #pragma fragment frag
 
             #include "UnityCG.cginc"
 
+            #define real half
+            #define real3 half3
+            #define real4 half4
+            #define TransformObjectToHClip UnityObjectToClipPos
+
+            #define DECLARE_TEXTURE2D_FLOAT(texture) UNITY_DECLARE_TEX2D_FLOAT(texture)
+            #define DECLARE_SAMPLER_FLOAT(sampler)
+            #define SAMPLE_TEXTURE2D(texture,sampler,texcoord) UNITY_SAMPLE_TEX2D(texture,texcoord)
+
+
             struct appdata
             {
-                float4 vertex : POSITION;
-                float2 uv : TEXCOORD0;
+                float3 position : POSITION;
+                float2 texcoord : TEXCOORD0;
+
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct v2f
             {
-                float2 uv : TEXCOORD0;
-                float2 texcoord : TEXCOORD1;
-                float4 vertex : SV_POSITION;
+                float4 position : SV_POSITION;
+                float2 texcoord : TEXCOORD0;
 
+                UNITY_VERTEX_OUTPUT_STEREO
             };
 
-            float4x4 _DisplayMat;
+            struct fragment_output
+            {
+                real4 color : SV_Target;
+            };
+
+
+            CBUFFER_START(DisplayRotationPerFrame)
+            float4x4 _DisplayRotationPerFrame;
+            CBUFFER_END
+
 
             v2f vert (appdata v)
             {
                 v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.uv = v.uv;
 
-                #if !UNITY_UV_STARTS_AT_TOP
-                o.uv.y = 1-o.uv.y;
-                #endif
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_INITIALIZE_OUTPUT(v2f, o);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
-                //we need to adjust our image to the correct rotation and aspect.
-                o.texcoord = mul(float3(o.uv, 1.0f), _DisplayMat).xy;
+                o.position = TransformObjectToHClip(v.position);
+                o.texcoord = mul(float3(v.texcoord, 1.0f), _DisplayRotationPerFrame).xy;
                 return o;
             }
 
-            sampler2D _MainTex;
-            sampler2D _DepthTex;
 
-            float3 HSVtoRGB(float3 arg1)
+            real3 HSVtoRGB(real3 arg1)
             {
-                float4 K = float4(1.0h, 2.0h / 3.0h, 1.0h / 3.0h, 3.0h);
-                float3 P = abs(frac(arg1.xxx + K.xyz) * 6.0h - K.www);
+                real4 K = real4(1.0h, 2.0h / 3.0h, 1.0h / 3.0h, 3.0h);
+                real3 P = abs(frac(arg1.xxx + K.xyz) * 6.0h - K.www);
                 return arg1.z * lerp(K.xxx, saturate(P - K.xxx), arg1.y);
             }
 
-            fixed4 frag (v2f i) : SV_Target
+
+            DECLARE_TEXTURE2D_FLOAT(_MainTex);
+            DECLARE_SAMPLER_FLOAT(sampler_MainTex);
+
+            real _MinDistance;
+            real _MaxDistance;
+
+            fragment_output frag (v2f i)
             {
-                float depth = tex2D(_DepthTex, i.texcoord).r;
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 
-                const float MAX_VIEW_DISP = 4.0f;
-                const float scaledDisparity = 1.0f / depth;
-                const float normDisparity = scaledDisparity / MAX_VIEW_DISP;
+                // Sample the environment depth (in meters).
+                float envDistance = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.texcoord).r;
 
-                float lerpFactor = depth / 8;
-                float hue = lerp(0.70h, -0.15h, saturate(lerpFactor));
+                real lerpFactor = (envDistance - _MinDistance) / (_MaxDistance - _MinDistance);
+                real hue = lerp(0.70h, -0.15h, saturate(lerpFactor));
                 if (hue < 0.0h)
                 {
                     hue += 1.0h;
                 }
+                real3 color = real3(hue, 0.9h, 0.6h);
 
-                float3 color = float3(hue, 0.9h, 0.6h);
-                return float4(HSVtoRGB(color), 1.0h);
-
-                //return float4(normDisparity,normDisparity,normDisparity,0.8);
+                fragment_output o;
+                o.color = real4(HSVtoRGB(color), 1.0h);
+                return o;
             }
-            ENDCG
+
+            ENDHLSL
         }
     }
 }

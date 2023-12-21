@@ -76,7 +76,6 @@ public class DepthImage : MonoBehaviour
     }
     [SerializeField]
     Material m_DepthMaterial;
-    private Matrix4x4 displayMatrix = Matrix4x4.identity;
 
     [SerializeField]
     GameObject VisionHandler;
@@ -115,8 +114,9 @@ public class DepthImage : MonoBehaviour
     public static float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
     private int confidenceMax = 255;
 
-    public static float personRadius = 0.4f; // Estimated half-width of a person
+    public static float personRadius = 0.3f; // Estimated half-width of a person
     public static float personHeight = 1.8f - groundPadding; // Estimated height of a person
+    private Vector2 currentGridCell = Vector2.zero;
 
     public enum Direction { Left, Right, None }
     public static Direction direction = Direction.None;
@@ -181,13 +181,6 @@ public class DepthImage : MonoBehaviour
 
         direction = Direction.None;
         if (doObstacleAvoidance) {
-            if (args.displayMatrix.HasValue) {
-                #if UNITY_IOS
-                    displayMatrix = args.displayMatrix.Value;
-                #else
-                    displayMatrix = args.displayMatrix.Value.transpose;
-                #endif
-            }
             UpdateDepthImages();
             ProcessDepthImages();
         }
@@ -243,9 +236,6 @@ public class DepthImage : MonoBehaviour
             using (image) {
                 UpdateRawImage(m_RawImage, image, image.format.AsTextureFormat(), true);
 
-                m_RawImage.material.SetTexture("_DepthTex", m_OcclusionManager.environmentDepthTexture);
-                m_RawImage.material.SetMatrix("_DisplayMat", displayMatrix);
-
                 // Get distance data into depthArray
                 // https://github.com/googlesamples/arcore-depth-lab/blob/8f76532d4a67311463ecad6b88b3f815c6cf1eea/Assets/ARRealismDemos/Common/Scripts/MotionStereoDepthDataSource.cs#L250
                 depthWidth = image.width;
@@ -296,13 +286,11 @@ public class DepthImage : MonoBehaviour
         // m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f))}");
         // m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f))}");
 
-        // Update floor grid
-        // Vector2 cell;
-        // (ground, cell) = GetFloor();
-        // if (currentGridCell != cell) {
-        //     currentGridCell = cell;
-        //     CleanupDict();
-        // }
+        Vector2 cell = SnapToGrid2d(position);
+        if (currentGridCell != cell) {
+            currentGridCell = cell;
+            CleanupGrid();
+        }
 
         m_StringBuilder.AppendLine($"Ground: {ground.ToString("F2")}m");
 
@@ -447,7 +435,7 @@ public class DepthImage : MonoBehaviour
             // Rotate the depth material to match screen orientation.
             Quaternion rotation = Quaternion.Euler(0, 0, GetRotation());
             Matrix4x4 rotMatrix = Matrix4x4.Rotate(rotation);
-            // m_RawImage.material.SetMatrix(Shader.PropertyToID("_DisplayRotationPerFrame"), rotMatrix);
+            m_RawImage.material.SetMatrix(Shader.PropertyToID("_DisplayRotationPerFrame"), rotMatrix);
         }
         else {
             rectSize = new Vector2(maxDimension, minDimension);
@@ -618,6 +606,9 @@ public class DepthImage : MonoBehaviour
     private static Vector3 SnapToGrid(Vector3 v) {
         return new Vector3(nodeSize * Mathf.Round(v.x/nodeSize), nodeSize * Mathf.Round(v.y/nodeSize), nodeSize * Mathf.Round(v.z/nodeSize));
     }
+    private static Vector2 SnapToGrid2d(Vector3 v) {
+        return new Vector2(nodeSize * Mathf.Round(v.x/nodeSize), nodeSize * Mathf.Round(v.z/nodeSize));
+    }
 
     // Delete any cells that are too far from user location
     private float cellDeletionRange = 6f;
@@ -669,6 +660,10 @@ public class DepthImage : MonoBehaviour
                         if (t < closest) {
                             closest = t;
                             curGround = translated.y;
+                        }
+                        else if (t - closest < 1E-5) {
+                            if (translated.y < curGround)
+                                curGround = translated.y;
                         }
                     }
                 }
