@@ -115,7 +115,6 @@ public class DepthImage : MonoBehaviour
 
     public static float personRadius = 0.3f; // Estimated half-width of a person
     public static float personHeight = 1.8f - groundPadding; // Estimated height of a person
-    private Vector2 currentGridCell = Vector2.zero;
 
     public enum Direction { Left, Right, None }
     public static Direction direction = Direction.None;
@@ -566,6 +565,9 @@ public class DepthImage : MonoBehaviour
     private Astar astar;
     private Vector2 target = Vector2.zero;
 
+    private float prevPersonRadius = 0; // This is for tracking when personRadius changes
+    private List<Vector2> circleCells = new List<Vector2>(); // Cells to block off based on personRadius
+
     (float, float) ProcessMesh()
     {
         float groundSum = 0;
@@ -579,26 +581,20 @@ public class DepthImage : MonoBehaviour
             int numTriangles = t.Length / 3;
             for (int i = 0; i < numTriangles; i++) {
                 Vector3 pt = (v[t[i*3]] + v[t[i*3+1]] + v[t[i*3+2]]) / 3f;
-                float area = 1f;
+                float area = TriangleArea(v[t[i*3]], v[t[i*3+1]], v[t[i*3+2]]);
                 meshPts.Add(new Vector4(pt.x, pt.y, pt.z, area));
                 if (Vector2.Distance(position, new Vector2(pt.x, pt.z)) < groundRadius) {
-                    groundSum += pt.y;
+                    groundSum += pt.y * area;
                     groundCount += area;
                 }
             }
         }
 
-        if (groundCount >= 10) {
+        if (groundCount >= Mathf.PI * groundRadius * groundRadius * 0.5f) {
             ground = Mathf.Min(-0.5f, groundSum/groundCount + groundPadding - position.y);
         }
 
-        // For calculations
-        Vector3 userLoc = position;
-        float sin = Mathf.Sin(rotation.y * Mathf.Deg2Rad);
-        float cos = Mathf.Cos(rotation.y * Mathf.Deg2Rad);
-
-        float direction = 0;
-        float closest = 999f;
+        // Create grid and Astar object if they don't exist; otherwise, empty the grid
         if (grid == null) {
             grid = new List<List<Node>>();
             for (int i = 0; i <= numNodes2; i++) {
@@ -617,6 +613,15 @@ public class DepthImage : MonoBehaviour
                 }
             }
         }
+
+        // For calculations
+        Vector3 userLoc = position;
+        float sin = Mathf.Sin(rotation.y * Mathf.Deg2Rad);
+        float cos = Mathf.Cos(rotation.y * Mathf.Deg2Rad);
+
+        // Find blocking points and fill up grid
+        float direction = 0;
+        float closest = 999f;
         foreach (Vector4 pt in meshPts) {
             Vector3 translated = pt;
             translated -= userLoc;
@@ -638,8 +643,36 @@ public class DepthImage : MonoBehaviour
 
         closest = Mathf.Sqrt(closest);
 
-        // Obstacle ahead, do A*
+        if (prevPersonRadius != personRadius) {
+            prevPersonRadius = personRadius;
+            circleCells.Clear();
+            int bound = (int) Mathf.Ceil(personRadius / nodeSize);
+            for (int i = -bound; i <= bound; i++) {
+                for (int j = -bound; j <= bound; j++) {
+                    if (i == 0 && j == 0)
+                        continue;
+                    if (Mathf.Sqrt(i*i+j*j) <= personRadius/nodeSize)
+                        circleCells.Add(new Vector2(i, j));
+                }
+            }
+        }
+
+        // If there is an obstacle ahead, do A*
         if (closest < 30f) {
+            // For each blocking point in the grid, also block out nearby points within personRadius
+            List<Node> blocking = new List<Node>();
+            for (int i = 0; i <= numNodes2; i++) {
+                for (int j = 0; j <= numNodes2; j++) {
+                    if (grid[i][j].Sum > Node.SumThreshold)
+                        blocking.Add(grid[i][j]);
+                }
+            }
+            foreach (Node b in blocking) {
+                foreach (Vector2 circleCell in circleCells) {
+                    grid[(int)(b.Position.x + circleCell.x)][(int)(b.Position.y + circleCell.y)].Sum += Node.SumThreshold;
+                }
+            }
+
             Vector2 start = new Vector2(numNodes, numNodes);
             Stack<Node> path = astar.FindPath(start, target);
             int index = Math.Min(2, path.Count-1);
@@ -654,5 +687,11 @@ public class DepthImage : MonoBehaviour
         }
 
         return (direction, closest);
+    }
+
+    private float TriangleArea(Vector3 a, Vector3 b, Vector3 c)
+    {
+        Vector3 cross = Vector3.Cross(b-a, c-a);
+        return cross.magnitude / 2;
     }
 }

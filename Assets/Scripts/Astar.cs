@@ -1,4 +1,6 @@
-﻿using System;
+﻿// https://github.com/davecusatis/A-Star-Sharp
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,7 +27,7 @@ namespace AStarSharp
             }
         }
         public float Sum;
-        public static float SumThreshold = 5f;
+        public static float SumThreshold = 0.02f;
 
         public Node(Vector2 pos, float weight = 1)
         {
