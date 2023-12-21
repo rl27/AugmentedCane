@@ -36,10 +36,6 @@ public class DepthImage : MonoBehaviour
     [Tooltip("The ARCameraManager which will produce camera frame events.")]
     ARCameraManager m_CameraManager;
 
-    [SerializeField]
-    ARMeshManager meshManager;
-    List<Vector4> meshPts = new List<Vector4>();
-
     // Using multiple audio sources to queue collision audio with no delay
     // https://johnleonardfrench.com/ultimate-guide-to-playscheduled-in-unity/#queue_clips
     // https://docs.unity3d.com/ScriptReference/AudioSource.SetScheduledEndTime.html
@@ -94,6 +90,11 @@ public class DepthImage : MonoBehaviour
     [NonSerialized]
     public int depthHeight = 0;
     int depthStride = 4; // Should be either 2 or 4
+
+    // Depth confidence array
+    // For iOS, confidence values are 0, 1, or 2. https://forum.unity.com/threads/depth-confidence-error-iphone-12-pro.1201831
+    byte[] confidenceArray = new byte[0];
+    int confidenceStride = 1; // Should be 1
     
     // Camera intrinsics
     Vector2 focalLength = Vector2.zero;
@@ -112,6 +113,7 @@ public class DepthImage : MonoBehaviour
     // These variables are for obstacle avoidance.
     private bool doObstacleAvoidance = true;
     public static float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
+    private int confidenceMax = 255;
 
     public static float personRadius = 0.4f; // Estimated half-width of a person
     public static float personHeight = 1.8f - groundPadding; // Estimated height of a person
@@ -144,6 +146,12 @@ public class DepthImage : MonoBehaviour
 
         m_CameraManager.frameReceived += OnCameraFrameReceived;
         // smoothingToggle.enabled = (m_OcclusionManager.descriptor.environmentDepthTemporalSmoothingSupported == Supported.Supported);
+
+        #if UNITY_ANDROID
+            confidenceMax = 255;
+        #elif UNITY_IOS
+            confidenceMax = 2;
+        #endif
 
         vision = VisionHandler.GetComponent<Vision>();
 
@@ -253,6 +261,24 @@ public class DepthImage : MonoBehaviour
                 image.GetPlane(0).data.CopyTo(depthArray);
             }
         }
+
+        // Acquire a depth confidence image.
+        if (occlusionManager.TryAcquireEnvironmentDepthConfidenceCpuImage(out XRCpuImage confidenceImage)) {
+            using (confidenceImage) {
+                if (confidenceImage.width != depthWidth || confidenceImage.height != depthHeight) {
+                    LogDepth("Confidence dimensions don't match");
+                }
+                else {
+                    int numPixels = depthWidth * depthHeight;
+                    Debug.Assert(confidenceImage.planeCount == 1, "Plane count is not 1");
+                    confidenceStride = confidenceImage.GetPlane(0).pixelStride;
+                    int numBytes = numPixels * confidenceStride;
+                    if (confidenceArray.Length != numBytes)
+                        confidenceArray = new byte[numBytes];
+                    confidenceImage.GetPlane(0).data.CopyTo(confidenceArray);
+                }
+            }
+        }
     }
 
     private void ProcessDepthImages()
@@ -270,9 +296,18 @@ public class DepthImage : MonoBehaviour
         // m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f))}");
         // m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f))}");
 
+        // Update floor grid
+        // Vector2 cell;
+        // (ground, cell) = GetFloor();
+        // if (currentGridCell != cell) {
+        //     currentGridCell = cell;
+        //     CleanupDict();
+        // }
+
         m_StringBuilder.AppendLine($"Ground: {ground.ToString("F2")}m");
 
-        (float dir, float closest) = ProcessMesh();
+        ProcessDepthImage();
+        (float dir, float closest) = CheckForObstacle();
         if (closest < 30) {
             float relHeading = (dir - rotation.y + 360) % 360;
             if (relHeading > 180) relHeading -= 360;
@@ -474,6 +509,24 @@ public class DepthImage : MonoBehaviour
         return 99999f;
     }
 
+    public float GetConfidence(Vector2 uv)
+    {
+        if (confidenceArray.Length == 0)
+            return 0;
+        int x = (int)(uv.x * (depthWidth - 1));
+        int y = (int)(uv.y * (depthHeight - 1));
+        int index = (y * depthWidth) + x;
+        return confidenceArray[confidenceStride * index];
+    }
+
+    public float GetConfidence(int x, int y)
+    {
+        if (confidenceArray.Length == 0)
+            return 0;
+        int index = (y * depthWidth) + x;
+        return confidenceArray[confidenceStride * index];
+    }
+
     // Given image pixel coordinates (x,y) and distance z, returns a vertex in local camera space.
     public Vector3 ComputeVertex(int x, int y, float z)
     {
@@ -554,11 +607,37 @@ public class DepthImage : MonoBehaviour
         return new Vector2(v1.x * v2.x, v1.y * v2.y);
     }
 
+    private static Dictionary<Vector3, int> grid3d = new Dictionary<Vector3, int>();
+    public static void AddToGrid(Vector3 pointToAdd)
+    {
+        Vector3 gridPt = SnapToGrid(pointToAdd);
+        if (!grid3d.ContainsKey(gridPt))
+            grid3d[gridPt] = 1;
+        else grid3d[gridPt] += 1;
+    }
+    private static Vector3 SnapToGrid(Vector3 v) {
+        return new Vector3(nodeSize * Mathf.Round(v.x/nodeSize), nodeSize * Mathf.Round(v.y/nodeSize), nodeSize * Mathf.Round(v.z/nodeSize));
+    }
+
+    // Delete any cells that are too far from user location
+    private float cellDeletionRange = 6f;
+    private void CleanupGrid()
+    {
+        List<Vector2> pointsToRemove = new List<Vector2>();
+        foreach (Vector3 gridPt in grid3d.Keys) {
+            if (Vector2.Distance(new Vector2(gridPt.x, gridPt.z), new Vector2(position.x, position.z)) > cellDeletionRange) {
+                pointsToRemove.Add(gridPt);
+            }
+        }
+        foreach (Vector2 gridPt in pointsToRemove)
+            grid3d.Remove(gridPt);
+    }
+
     public static float ground = -0.5f; // Ground elevation (in meters) relative to camera; default floor is 0.5m below camera
     private const float groundPadding = 0.35f; // Height to add to calculated ground level to count as ground
     private const float groundRadius = 0.2f;
     private const float nodeSize = 0.1f;
-    private const float gridRadius = 7f;
+    private const float gridRadius = 5f;
     private const int numNodes = (int) (gridRadius / nodeSize);
     private const int numNodes2 = 2 * ((int) (gridRadius / nodeSize));
     private List<List<Node>> grid;
@@ -568,32 +647,75 @@ public class DepthImage : MonoBehaviour
     private float prevPersonRadius = 0; // This is for tracking when personRadius changes
     private List<Vector2> circleCells = new List<Vector2>(); // Cells to block off based on personRadius
 
-    (float, float) ProcessMesh()
+    private const int numPoints = 5;
+    (float, float) CheckForObstacle()
     {
-        float groundSum = 0;
-        float groundCount = 0;
+        // For calculations
+        float sin = Mathf.Sin(rotation.y * Mathf.Deg2Rad);
+        float cos = Mathf.Cos(rotation.y * Mathf.Deg2Rad);
 
-        // Update list of mesh points
-        meshPts.Clear();
-        foreach (var m in meshManager.meshes) {
-            var t = m.mesh.triangles;
-            var v = m.mesh.vertices;
-            int numTriangles = t.Length / 3;
-            for (int i = 0; i < numTriangles; i++) {
-                Vector3 pt = (v[t[i*3]] + v[t[i*3+1]] + v[t[i*3+2]]) / 3f;
-                float area = TriangleArea(v[t[i*3]], v[t[i*3+1]], v[t[i*3+2]]);
-                meshPts.Add(new Vector4(pt.x, pt.y, pt.z, area));
-                if (Vector2.Distance(position, new Vector2(pt.x, pt.z)) < groundRadius) {
-                    groundSum += pt.y * area;
-                    groundCount += area;
+        float direction = 0;
+        float closest = 999f;
+        float curGround = 999f;
+        foreach (Vector3 gridPt in grid3d.Keys) {
+            if (grid3d[gridPt] >= numPoints) {
+                Vector3 translated = gridPt - position;
+                if (translated.y > ground && translated.y < (ground + personHeight)) { // Height check
+                    float rX = cos*translated.x - sin*translated.z;
+                    float rZ = sin*translated.x + cos*translated.z;
+                    // Distance & width check
+                    if (rZ > 0 && rZ < distanceToObstacle && rX > -personRadius && rX < personRadius) {
+                        float t = rX*rX+rZ*rZ;
+                        if (t < closest) {
+                            closest = t;
+                            curGround = translated.y;
+                        }
+                    }
                 }
             }
         }
+        closest = Mathf.Sqrt(closest);
+        ground = Mathf.Min(-0.5f, curGround + groundPadding);
 
-        if (groundCount >= Mathf.PI * groundRadius * groundRadius * 0.5f) {
-            ground = Mathf.Min(-0.5f, groundSum/groundCount + groundPadding - position.y);
+        // If there is an obstacle ahead, do A*
+        if (closest < 30f) {
+            // Update A* target
+            target = new Vector2((int)(4 * sin/nodeSize) + numNodes,
+                                 (int)(4 * cos/nodeSize) + numNodes);
+            direction = RunAstar();
         }
 
+        return (direction, closest);
+    }
+
+    // Populates the grid dictionary using the depth image.
+    private void ProcessDepthImage()
+    {
+        float sin = Mathf.Sin(rotation.y * Mathf.Deg2Rad);
+        float cos = Mathf.Cos(rotation.y * Mathf.Deg2Rad);
+
+        for (int y = 0; y < depthHeight; y++) {
+            for (int x = 0; x < depthWidth; x++) {
+                float conf = GetConfidence(x, y);
+                if (conf / confidenceMax < 0.2f) continue;
+
+                float dist = GetDepth(x, y);
+                Vector3 pos = TransformLocalToWorld(ComputeVertex(x, y, dist));
+                Vector3 translated = pos - position;
+                if (translated.y > ground && translated.y < (ground + personHeight)) { // Height check
+                    float rX = cos*translated.x - sin*translated.z;
+                    float rZ = sin*translated.x + cos*translated.z;
+                    // Distance & width check
+                    if (rZ > 0 && rZ < distanceToObstacle && rX > -personRadius && rX < personRadius) {
+                        AddToGrid(pos);
+                    }
+                }
+            }
+        }
+    }
+
+    private float RunAstar()
+    {
         // Create grid and Astar object if they don't exist; otherwise, empty the grid
         if (grid == null) {
             grid = new List<List<Node>>();
@@ -614,35 +736,7 @@ public class DepthImage : MonoBehaviour
             }
         }
 
-        // For calculations
-        Vector3 userLoc = position;
-        float sin = Mathf.Sin(rotation.y * Mathf.Deg2Rad);
-        float cos = Mathf.Cos(rotation.y * Mathf.Deg2Rad);
-
-        // Find blocking points and fill up grid
-        float direction = 0;
-        float closest = 999f;
-        foreach (Vector4 pt in meshPts) {
-            Vector3 translated = pt;
-            translated -= userLoc;
-
-            if (translated.y > ground && translated.y < ground + personHeight) { // Height check
-                float rX = cos*translated.x - sin*translated.z;
-                float rZ = sin*translated.x + cos*translated.z;
-                // Distance & width check
-                if (rZ > 0 && rZ < distanceToObstacle && rX > -personRadius && rX < personRadius) {
-                    float t = rX*rX+rZ*rZ;
-                    if (t < closest) closest = t;
-                }
-                int x = (int)(translated.x/nodeSize) + numNodes;
-                int y = (int)(translated.y/nodeSize) + numNodes;
-                if (x >= 0 && x < numNodes && y >= 0 && y < numNodes)
-                    grid[x][y].Sum += pt.w;
-            }
-        }
-
-        closest = Mathf.Sqrt(closest);
-
+        // Recalculate circle cells if personRadius has changed
         if (prevPersonRadius != personRadius) {
             prevPersonRadius = personRadius;
             circleCells.Clear();
@@ -657,58 +751,56 @@ public class DepthImage : MonoBehaviour
             }
         }
 
-        // If there is an obstacle ahead, do A*
-        if (closest < 30f) {
-            // For each blocking point in the grid, also block out nearby points within personRadius
-            List<Vector2> blocking = new List<Vector2>();
-            for (int i = 0; i <= numNodes2; i++) {
-                for (int j = 0; j <= numNodes2; j++) {
-                    if (grid[i][j].Sum > Node.SumThreshold)
-                        blocking.Add(grid[i][j].Position);
-                }
-            }
-            foreach (Vector2 b in blocking) {
-                foreach (Vector2 circleCell in circleCells) {
-                    int x = (int)(b.x + circleCell.x);
-                    if (x < 0 || x > numNodes2) continue;
-                    int y = (int)(b.y + circleCell.y);
-                    if (y < 0 || y > numNodes2) continue;
-                    grid[x][y].Sum += Node.SumThreshold;
-                }
-            }
-            // Unblock the person
-            foreach (Vector2 circleCell in circleCells) {
-                int x = (int)(numNodes + circleCell.x);
+        // Populate A* grid using grid3d
+        foreach (Vector3 gridPt in grid3d.Keys) {
+            if (grid3d[gridPt] >= numPoints) {
+                int x = (int)(gridPt.x - position.x) + numNodes;
                 if (x < 0 || x > numNodes2) continue;
-                int y = (int)(numNodes + circleCell.y);
+                int y = (int)(gridPt.z - position.z) + numNodes;
                 if (y < 0 || y > numNodes2) continue;
-                grid[x][y].Sum = 0;
-            }
-            // Re-block original obstacles
-            foreach (Vector2 b in blocking) {
-                grid[(int) b.x][(int) b.y].Sum = Node.SumThreshold;
-            }
-
-            Vector2 start = new Vector2(numNodes, numNodes);
-            Stack<Node> path = astar.FindPath(start, target);
-            if (path != null) {
-                int index = Math.Min(2, path.Count-1);
-                Vector2 v = path.ElementAt(index).Position - start;
-                direction = 90 - Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg;
+                grid[x][y].Sum += 1;
             }
         }
-        else {
-            // Update A* target
-            target = new Vector2((int)(5 * sin/nodeSize) + numNodes,
-                                 (int)(5 * cos/nodeSize) + numNodes);
+
+        // For each blocking point in the grid, also block out nearby points within personRadius
+        List<Vector2> blocking = new List<Vector2>();
+        for (int i = 0; i <= numNodes2; i++) {
+            for (int j = 0; j <= numNodes2; j++) {
+                if (grid[i][j].Sum >= Node.SumThreshold)
+                    blocking.Add(grid[i][j].Position);
+            }
+        }
+        foreach (Vector2 b in blocking) {
+            foreach (Vector2 circleCell in circleCells) {
+                int x = (int)(b.x + circleCell.x);
+                if (x < 0 || x > numNodes2) continue;
+                int y = (int)(b.y + circleCell.y);
+                if (y < 0 || y > numNodes2) continue;
+                grid[x][y].Sum += Node.SumThreshold;
+            }
+        }
+        // Unblock the person
+        foreach (Vector2 circleCell in circleCells) {
+            int x = (int)(numNodes + circleCell.x);
+            if (x < 0 || x > numNodes2) continue;
+            int y = (int)(numNodes + circleCell.y);
+            if (y < 0 || y > numNodes2) continue;
+            grid[x][y].Sum = 0;
+        }
+        // Re-block original obstacles
+        foreach (Vector2 b in blocking) {
+            grid[(int) b.x][(int) b.y].Sum = Node.SumThreshold;
         }
 
-        return (direction, closest);
-    }
+        float direction = 0;
+        Vector2 start = new Vector2(numNodes, numNodes);
+        Stack<Node> path = astar.FindPath(start, target);
+        if (path != null) {
+            int index = Math.Min(2, path.Count-1);
+            Vector2 v = path.ElementAt(index).Position - start;
+            direction = 90 - Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg;
+        }
 
-    private float TriangleArea(Vector3 a, Vector3 b, Vector3 c)
-    {
-        Vector3 cross = Vector3.Cross(b-a, c-a);
-        return cross.magnitude / 2;
+        return direction;
     }
 }
