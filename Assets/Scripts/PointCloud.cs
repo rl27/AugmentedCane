@@ -28,12 +28,12 @@ public class PointCloud : MonoBehaviour
 
     void OnPointCloudsChanged(ARPointCloudChangedEventArgs eventArgs)
     {
-        info = "Total points:";
-        foreach (var pointCloud in eventArgs.updated) {
-            var visualizer = pointCloud.GetComponent<PointCloudVisualizer>();
-            if (visualizer) {
-                info += " " + visualizer.points.Count.ToString();
-            }
-        }
+        info = "Total points: " + PointCloudVisualizer.points.Count.ToString();
+        // foreach (var pointCloud in eventArgs.updated) {
+        //     var visualizer = pointCloud.GetComponent<PointCloudVisualizer>();
+        //     if (visualizer) {
+        //         info += " " + visualizer.points.Count.ToString();
+        //     }
+        // }
     }
 }

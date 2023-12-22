@@ -14,23 +14,23 @@ public class PointCloudVisualizer : MonoBehaviour
     public string info = "";
 
     // Keep track of all points.
-    public Dictionary<ulong, Vector3> points = new Dictionary<ulong, Vector3>();
+    public static Dictionary<ulong, Vector3> points = new Dictionary<ulong, Vector3>();
     // public Dictionary<ulong, float> confidences = new Dictionary<ulong, float>();
 
     // ParticleSystem for rendering particles.
-    new ParticleSystem particleSystem;
-    ParticleSystem.Particle[] particles;
-    int prevNumParticles = 0;
+    static new ParticleSystem particleSystem;
+    static ParticleSystem.Particle[] particles;
+    static int prevNumParticles = 0;
 
     // Access data from other scripts
     DepthImage depthSource;
 
     ARPointCloud pointCloud;
 
-    Color32 startColor;
-    Color32 failColor = Color.red;
-    Color32 ignoreColor = Color.yellow;
-    float startSize;
+    static Color32 startColor;
+    static Color32 failColor = Color.red;
+    static Color32 ignoreColor = Color.yellow;
+    static float startSize;
 
     void Awake()
     {
@@ -80,12 +80,12 @@ public class PointCloudVisualizer : MonoBehaviour
                 points[id] = positions[i];
         }
 
-        ProcessPoints();
+        // ProcessPoints();
     }
 
     // Iterate over positions[] if only rendering points in the current frame.
     // Set numParticles to positions.Length if only rendering points in the current frame.
-    void ProcessPoints()
+    public static void ProcessPoints()
     {
         int numParticles = points.Count;
 
@@ -109,9 +109,10 @@ public class PointCloudVisualizer : MonoBehaviour
                 // Distance & width check
                 if (rZ > 0 && rZ < DepthImage.distanceToObstacle && rX > -DepthImage.personRadius && rX < DepthImage.personRadius) {
                     particles[index].startColor = failColor;
-                    DepthImage.AddToGrid(pos);
                 }
             }
+
+            DepthImage.AddToGrid(pos);
 
             particles[index].startSize = startSize;
             particles[index].position = pos;

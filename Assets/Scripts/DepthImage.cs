@@ -113,6 +113,7 @@ public class DepthImage : MonoBehaviour
     private bool doObstacleAvoidance = true;
     public static float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
     private int confidenceMax = 255;
+    private float depthConfidenceThreshold = 0.3f;
 
     public static float personRadius = 0.3f; // Estimated half-width of a person
     public static float personHeight = 1.8f - groundPadding; // Estimated height of a person
@@ -294,7 +295,10 @@ public class DepthImage : MonoBehaviour
 
         m_StringBuilder.AppendLine($"Ground: {ground.ToString("F2")}m");
 
+        CullGrid();
         ProcessDepthImage();
+        PointCloudVisualizer.ProcessPoints();
+
         (float dir, float closest) = CheckForObstacle();
         if (closest < 30) {
             float relHeading = (dir - rotation.y + 360) % 360;
@@ -595,6 +599,7 @@ public class DepthImage : MonoBehaviour
         return new Vector2(v1.x * v2.x, v1.y * v2.y);
     }
 
+    // 3D grid for tracking points / potential obstacles
     private static Dictionary<Vector3, int> grid3d = new Dictionary<Vector3, int>();
     public static void AddToGrid(Vector3 pointToAdd)
     {
@@ -624,6 +629,29 @@ public class DepthImage : MonoBehaviour
             grid3d.Remove(gridPt);
     }
 
+    // Reset counts for cells within view of the camera
+    private void CullGrid()
+    {
+        Vector3 TR = TransformLocalToWorld(ComputeVertex(0, 0, 1));
+        Vector3 BR = TransformLocalToWorld(ComputeVertex(depthWidth-1, 0, 1));
+        Vector3 BL = TransformLocalToWorld(ComputeVertex(depthWidth-1, depthHeight-1, 1));
+        Vector3 TL = TransformLocalToWorld(ComputeVertex(0, depthHeight-1, 1));
+        Plane right = new Plane(position, TR, BR);
+        Plane bot = new Plane(position, BR, BL);
+        Plane left = new Plane(position, BL, TL);
+        Plane top = new Plane(position, TL, TR);
+        
+        List<Vector3> toZero = new List<Vector3>();
+        foreach (Vector3 gridPt in grid3d.Keys) {
+            if (!right.GetSide(gridPt) && !left.GetSide(gridPt) && !bot.GetSide(gridPt) && !top.GetSide(gridPt)) {
+                toZero.Add(gridPt);
+            }
+        }
+        foreach (Vector3 gridPt in toZero) {
+            grid3d[gridPt] = 0;
+        }
+    }
+
     public static float ground = -0.5f; // Ground elevation (in meters) relative to camera; default floor is 0.5m below camera
     private const float groundPadding = 0.35f; // Height to add to calculated ground level to count as ground
     private const float groundRadius = 0.2f;
@@ -638,7 +666,7 @@ public class DepthImage : MonoBehaviour
     private float prevPersonRadius = 0; // This is for tracking when personRadius changes
     private List<Vector2> circleCells = new List<Vector2>(); // Cells to block off based on personRadius
 
-    private const int numPoints = 5;
+    private const int numPoints = 3;
     (float, float) CheckForObstacle()
     {
         // For calculations
@@ -647,30 +675,31 @@ public class DepthImage : MonoBehaviour
 
         float direction = 0;
         float closest = 999f;
-        float curGround = 999f;
+        float groundSum = 0;
+        float groundCount = 0;
         foreach (Vector3 gridPt in grid3d.Keys) {
             if (grid3d[gridPt] >= numPoints) {
                 Vector3 translated = gridPt - position;
+                float rX = cos*translated.x - sin*translated.z;
+                float rZ = sin*translated.x + cos*translated.z;
+                float t = rX*rX+rZ*rZ;
                 if (translated.y > ground && translated.y < (ground + personHeight)) { // Height check
-                    float rX = cos*translated.x - sin*translated.z;
-                    float rZ = sin*translated.x + cos*translated.z;
                     // Distance & width check
                     if (rZ > 0 && rZ < distanceToObstacle && rX > -personRadius && rX < personRadius) {
-                        float t = rX*rX+rZ*rZ;
                         if (t < closest) {
                             closest = t;
-                            curGround = translated.y;
-                        }
-                        else if (t - closest < 1E-5) {
-                            if (translated.y < curGround)
-                                curGround = translated.y;
                         }
                     }
+                }
+                if (translated.y < 0 && (new Vector2(translated.x, translated.z)).magnitude < groundRadius) {
+                    groundSum += translated.y * grid3d[gridPt];
+                    groundCount += grid3d[gridPt];
                 }
             }
         }
         closest = Mathf.Sqrt(closest);
-        ground = Mathf.Min(-0.5f, curGround + groundPadding);
+        if (groundCount > 0)
+            ground = Mathf.Min(-0.5f, groundSum/groundCount + groundPadding);
 
         // If there is an obstacle ahead, do A*
         if (closest < 30f) {
@@ -692,19 +721,9 @@ public class DepthImage : MonoBehaviour
         for (int y = 0; y < depthHeight; y++) {
             for (int x = 0; x < depthWidth; x++) {
                 float conf = GetConfidence(x, y);
-                if (conf / confidenceMax < 0.2f) continue;
-
-                float dist = GetDepth(x, y);
-                Vector3 pos = TransformLocalToWorld(ComputeVertex(x, y, dist));
-                Vector3 translated = pos - position;
-                if (translated.y > ground && translated.y < (ground + personHeight)) { // Height check
-                    float rX = cos*translated.x - sin*translated.z;
-                    float rZ = sin*translated.x + cos*translated.z;
-                    // Distance & width check
-                    if (rZ > 0 && rZ < distanceToObstacle && rX > -personRadius && rX < personRadius) {
-                        AddToGrid(pos);
-                    }
-                }
+                if (conf / confidenceMax < depthConfidenceThreshold) continue;
+                Vector3 pos = TransformLocalToWorld(ComputeVertex(x, y, GetDepth(x, y)));
+                AddToGrid(pos);
             }
         }
     }
