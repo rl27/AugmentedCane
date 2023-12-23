@@ -45,8 +45,10 @@ public class Vision : MonoBehaviour
     private RenderTexture labelTex;
     private int labelToTexKernel;
 
-    public static int W = 480;
-    public static int H = 480;
+    public static int inputW = 480;
+    public static int inputH = 480;
+    public static int W = 480; // Output width
+    public static int H = 480; // Output height
 
     public AudioClip sidewalk;
     public AudioClip crosswalk;
@@ -109,8 +111,8 @@ public class Vision : MonoBehaviour
             rotationDegree = 90,
             mirrorHorizontal = false,
             mirrorVertical = false,
-            width = W,
-            height = H,
+            width = inputW,
+            height = inputH,
         };
 
         toggle.onValueChanged.AddListener(delegate {ToggleSidewalkDirection();});
@@ -123,17 +125,17 @@ public class Vision : MonoBehaviour
         inputView.enabled = false;
 
         // Init compute shader resources
-        labelTex = new RenderTexture(resizeOptions.width, resizeOptions.height, 0, RenderTextureFormat.ARGB32);
+        labelTex = new RenderTexture(W, H, 0, RenderTextureFormat.ARGB32);
         labelTex.enableRandomWrite = true;
         labelTex.Create();
-        labelBuffer = new ComputeBuffer(resizeOptions.width * resizeOptions.height, sizeof(int));
+        labelBuffer = new ComputeBuffer(W * H, sizeof(int));
         colorTableBuffer = new ComputeBuffer(COLOR_TABLE.Length, sizeof(float) * 4);
 
         int initKernel = compute.FindKernel("Init");
-        compute.SetInt("Width", resizeOptions.width);
-        compute.SetInt("Height", resizeOptions.height);
+        compute.SetInt("Width", W);
+        compute.SetInt("Height", H);
         compute.SetTexture(initKernel, "Result", labelTex);
-        compute.Dispatch(initKernel, resizeOptions.width, resizeOptions.height, 1);
+        compute.Dispatch(initKernel, W, H, 1);
 
         labelToTexKernel = compute.FindKernel("LabelToTex");
 
@@ -426,7 +428,7 @@ public class Vision : MonoBehaviour
         compute.SetBuffer(labelToTexKernel, "LabelBuffer", labelBuffer);
         compute.SetBuffer(labelToTexKernel, "ColorTable", colorTableBuffer);
         compute.SetTexture(labelToTexKernel, "Result", labelTex);
-        compute.Dispatch(labelToTexKernel, resizeOptions.width / 8, resizeOptions.height / 8, 1);
+        compute.Dispatch(labelToTexKernel, W / 8, H / 8, 1);
 
         return labelTex;
     }
