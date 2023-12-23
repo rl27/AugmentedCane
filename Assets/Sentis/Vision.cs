@@ -119,8 +119,8 @@ public class Vision : MonoBehaviour
 
         outputAspectRatioFitter = outputViewParent.GetComponent<AspectRatioFitter>();
         inputAspectRatioFitter = inputViewParent.GetComponent<AspectRatioFitter>();
-        outputAspectRatioFitter.aspectRatio = (float) resizeOptions.width / resizeOptions.height;
-        inputAspectRatioFitter.aspectRatio = (float) resizeOptions.width / resizeOptions.height;
+        outputAspectRatioFitter.aspectRatio = (float) W / H;
+        inputAspectRatioFitter.aspectRatio = (float) W / H;
         outputView.enabled = false;
         inputView.enabled = false;
 
@@ -418,8 +418,8 @@ public class Vision : MonoBehaviour
 
         outputAspectRatioFitter.aspectMode = VisionUtils.GetMode();
         inputAspectRatioFitter.aspectMode = VisionUtils.GetMode();
-        outputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
-        inputView.rectTransform.sizeDelta = new Vector2(resizeOptions.width, resizeOptions.height);
+        outputView.rectTransform.sizeDelta = new Vector2(480, 480);
+        inputView.rectTransform.sizeDelta = new Vector2(480, 480);
     }
 
     private RenderTexture GetResultTexture(int[] data)
