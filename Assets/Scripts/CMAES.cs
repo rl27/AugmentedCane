@@ -12,6 +12,7 @@ public class CMAES
 {
     public CMA2 cma;
     public double[] ask;
+    public bool converged = false;
     public List<double[]> inputs = new List<double[]>();
     public List<double> outputs = new List<double>();
     public List<double[]> means = new List<double[]>();
@@ -40,7 +41,7 @@ public class CMAES
 
     public List<Tuple<Vector<double>, double>> solutions = new List<Tuple<Vector<double>, double>>();
 
-    public (double[], bool) Optimize(double[] x, double output)
+    public double[] Optimize(double[] x, double output, bool saveToFile)
     {
         inputs.Add(x);
         outputs.Add(output);
@@ -57,9 +58,11 @@ public class CMAES
         }
 
         ask = cma.Ask().ToArray();
+        converged = cma.IsConverged();
 
-        BinarySerialization.WriteToBinaryFile<CMAES>(Path.Combine(Application.persistentDataPath, "cmaes.bin"), this);
+        if (saveToFile)
+            BinarySerialization.WriteToBinaryFile<CMAES>(Path.Combine(Application.persistentDataPath, "cmaes.bin"), this);
 
-        return (ask, cma.IsConverged());
+        return ask;
     }
 }

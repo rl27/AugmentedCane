@@ -1,10 +1,14 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
+using UnityEngine.Networking;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 public class Main : MonoBehaviour
 {
@@ -49,10 +53,12 @@ public class Main : MonoBehaviour
 
     CMAES cmaoptimizer;
 
-    private double[] original = new double[] { DepthImage.distanceToObstacle, DepthImage.personRadius, DepthImage.collisionAudioMinRate, DepthImage.collisionAudioCapDistance };
+    private double[] original = { DepthImage.distanceToObstacle, DepthImage.personRadius, DepthImage.collisionAudioMinRate, DepthImage.collisionAudioCapDistance };
+    private double[] lowerBounds = { 0.5, 0.1, 0.5, 0.1 };
+    private double[] upperBounds = { 4, 0.7, 11, 3 };
+    private int[,] caps = { { 3, 0 } }; // For each pair of values (A,B), the value in index A should be capped by the value in index B
+
     private double[] x;
-    private double[] lowerBounds = new double[] {0.5, 0.01, 0.5, 0.1};
-    private double[] upperBounds = new double[] {4, 0.7, 11, 3};
 
     private double[] bestVector = null;
     private double bestValue = double.MaxValue;
@@ -80,29 +86,33 @@ public class Main : MonoBehaviour
         cmaesPath = Path.Combine(Application.persistentDataPath, "cmaes.bin");
         if (!File.Exists(cmaesPath)) {
             x = Normalize(original);
-            cmaoptimizer = new CMAES(x, 0.3, Normalize(lowerBounds), Normalize(upperBounds));
+            cmaoptimizer = new CMAES(x, 0.2, Normalize(lowerBounds), Normalize(upperBounds));
         }
         else {
             cmaoptimizer = BinarySerialization.ReadFromBinaryFile<CMAES>(cmaesPath);
             x = cmaoptimizer.ask;
-            x[3] = Math.Min(x[3], x[0]); // Cap collisionAudioCapDistance if it is greater than distanceToObstacle
+            CapX();
             SetParams();
         }
     }
 
     // Use sample for CMA generation
-    // Returns true if CMA has converged
-    private bool CMAGenerate(double output)
+    private void CMAGenerate(double output)
     {
-        bool converged = false;
         if (output < bestValue) {
             bestValue = output;
             bestVector = x;
         }
-        (x, converged) = cmaoptimizer.Optimize(x, output);
+        x = cmaoptimizer.Optimize(x, output, true);
+        CapX();
         SetParams();
+    }
 
-        return converged;
+    private void CapX()
+    {
+        for (int i = 0; i < caps.GetLength(0); i++) {
+            x[caps[i,0]] = Math.Min(x[caps[i,0]], x[caps[i,1]]);
+        }
     }
 
     private void SetParams()
@@ -143,6 +153,7 @@ public class Main : MonoBehaviour
         double output;
         if (double.TryParse(input, out output)) {
             CMAGenerate(output);
+            StartCoroutine(GetLatestTime());
         }
     }
 
@@ -189,6 +200,8 @@ public class Main : MonoBehaviour
         Application.targetFrameRate = 30; // Must be done in Update(). Doing this in Start() makes it not work for mobile devices.
         // QualitySettings.vSyncCount = 0;
 
+        StartCoroutine(GetLatestTime());
+
         // if ((DateTime.Now - gpsLastLog).TotalSeconds > gpsLogInterval) {
         //     Navigation.Point loc = GPSData.EstimatedUserLocation();
         //     gpsCoords.Add(loc.lat);
@@ -200,7 +213,7 @@ public class Main : MonoBehaviour
         m_StringBuilder.AppendLine($"FPS: {Convert.ToInt32(1.0 / Time.unscaledDeltaTime)}\n");
 
         if (Vision.doSidewalkDirection)
-            m_StringBuilder.AppendLine($"Sidewalk: {Vision.direction.ToString("F1")}°, {Vision.relativeDir.ToString("F1")}°, {Vision.logging}");
+            m_StringBuilder.AppendLine($"Sidewalk: {Vision.direction.ToString("F1")}°, {Vision.relativeDir.ToString("F1")}°, {Vision.logging}\n");
 
         if (GPSActive) {
             m_StringBuilder.AppendLine($"{gps.GPSstring()}");
@@ -236,5 +249,62 @@ public class Main : MonoBehaviour
             m_ImageInfo.text = text;
         else
             Debug.Log(text);
+    }
+
+    private bool working = false;
+    private IEnumerator GetLatestTime()
+    {
+        if (working) yield break;
+        working = true;
+
+        string url = "raymondl.pythonanywhere.com/retrieve";
+
+        using (UnityWebRequest webRequest = new UnityWebRequest(url, "GET"))
+        {
+            webRequest.downloadHandler = (DownloadHandler) new DownloadHandlerBuffer();
+            yield return webRequest.SendWebRequest();
+            if (WebClient.checkStatus(webRequest, url.Split('/'))) {
+                string response = webRequest.downloadHandler.text;
+                if (response != "00") {
+                    OnSampleEntered(response);
+                }
+            }
+        }
+
+        yield return new WaitForSeconds(5f);
+
+        working = false;
+    }
+
+    private IEnumerator SendLatestData()
+    {
+        Dictionary<string, dynamic> newData = new Dictionary<string, dynamic>();
+        newData["inputs"] = cmaoptimizer.inputs[cmaoptimizer.inputs.Count - 1];
+        newData["outputs"] = cmaoptimizer.outputs[cmaoptimizer.outputs.Count - 1];
+        newData["means"] = cmaoptimizer.means[cmaoptimizer.means.Count - 1];
+        newData["sigmas"] = cmaoptimizer.sigmas[cmaoptimizer.sigmas.Count - 1];
+
+        string url = "raymondl.pythonanywhere.com/append";
+        using (UnityWebRequest webRequest = new UnityWebRequest(url, "POST"))
+        {
+            byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(JsonConvert.SerializeObject(newData));
+            webRequest.uploadHandler = (UploadHandler) new UploadHandlerRaw(jsonToSend);
+            webRequest.downloadHandler = (DownloadHandler) new DownloadHandlerBuffer();
+            webRequest.SetRequestHeader("Content-Type", "application/json");
+            yield return webRequest.SendWebRequest();
+            if (WebClient.checkStatus(webRequest, url.Split('/'))) {
+                Debug.Log("log success");
+            }
+        }
+    }
+
+    private void ReconstructState(double[][] _inputs, double[] _outputs)
+    {
+        for (int i = 0; i < _inputs.Length; i++) {
+            x = _inputs[i];
+            x = cmaoptimizer.Optimize(x, _outputs[i], false);
+        }
+        CapX();
+        SetParams();
     }
 }

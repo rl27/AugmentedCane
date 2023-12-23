@@ -42,11 +42,11 @@ public class CMA2
     /// <summary>
     /// A population size
     /// </summary>
-    public int PopulationSize { get; private set; }
+    public int PopulationSize { get; set; }
     /// <summary>
     /// Generation number which is monotonically incremented when multi-variate gaussian distribution is updated.
     /// </summary>
-    public int Generation { get; private set; }
+    public int Generation { get; set; }
 
     /// <summary>
     /// CMA-ES stochastic optimizer class with ask-and-tell interface.
