@@ -12,6 +12,9 @@ using Newtonsoft.Json.Linq;
 
 public class Main : MonoBehaviour
 {
+    public static float timeInFrame = 0;
+    private float timeAtStart = 0;
+
     // StringBuilder for building strings to be logged.
     readonly StringBuilder m_StringBuilder = new StringBuilder();
 
@@ -65,8 +68,13 @@ public class Main : MonoBehaviour
 
     private string cmaesPath;
 
-    public static float timeInFrame = 0;
-    private float timeAtStart = 0;
+    [Serializable]
+    public class Response
+    {
+        public double? time;
+        public double[][] inputs;
+        public double[] outputs;
+    }
 
     void Awake()
     {
@@ -153,7 +161,7 @@ public class Main : MonoBehaviour
         double output;
         if (double.TryParse(input, out output)) {
             CMAGenerate(output);
-            StartCoroutine(GetLatestTime());
+            StartCoroutine(SendLatestData());
         }
     }
 
@@ -264,15 +272,30 @@ public class Main : MonoBehaviour
             webRequest.downloadHandler = (DownloadHandler) new DownloadHandlerBuffer();
             yield return webRequest.SendWebRequest();
             if (WebClient.checkStatus(webRequest, url.Split('/'))) {
-                string response = webRequest.downloadHandler.text;
-                if (response != "00") {
-                    OnSampleEntered(response);
+                try {
+                    Response data = JsonConvert.DeserializeObject<Response>(webRequest.downloadHandler.text);
+                    
+                    if (data.time != null) {
+                        OnSampleEntered(data.time.ToString());
+                    }
+                    else if (data.inputs != null && data.outputs != null) {
+                        ResetButtonPress();
+                        int len = data.inputs.Length;
+                        for (int i = 0; i < len; i++) {
+                            x = data.inputs[i];
+                            x = cmaoptimizer.Optimize(x, data.outputs[i], i == len - 1);
+                        }
+                        CapX();
+                        SetParams();
+                    }
+                }
+                catch (Exception e) {
+                    Debug.Log(e);
                 }
             }
         }
 
         yield return new WaitForSeconds(5f);
-
         working = false;
     }
 
@@ -296,15 +319,5 @@ public class Main : MonoBehaviour
                 Debug.Log("log success");
             }
         }
-    }
-
-    private void ReconstructState(double[][] _inputs, double[] _outputs)
-    {
-        for (int i = 0; i < _inputs.Length; i++) {
-            x = _inputs[i];
-            x = cmaoptimizer.Optimize(x, _outputs[i], false);
-        }
-        CapX();
-        SetParams();
     }
 }
