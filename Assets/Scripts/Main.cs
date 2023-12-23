@@ -71,9 +71,10 @@ public class Main : MonoBehaviour
     [Serializable]
     public class Response
     {
-        public double? time;
+        public double? sample;
         public double[][] inputs;
         public double[] outputs;
+        public double[] prms; // params
     }
 
     void Awake()
@@ -176,6 +177,11 @@ public class Main : MonoBehaviour
             if (!double.TryParse(splits[i], out ps[i]))
                 return;
         }
+        OnParamsEntered(ps);
+    }
+
+    void OnParamsEntered(double[] ps)
+    {
         x = Normalize(ps);
         SetParams();
     }
@@ -208,7 +214,7 @@ public class Main : MonoBehaviour
         Application.targetFrameRate = 30; // Must be done in Update(). Doing this in Start() makes it not work for mobile devices.
         // QualitySettings.vSyncCount = 0;
 
-        StartCoroutine(GetLatestTime());
+        StartCoroutine(Retrieve());
 
         // if ((DateTime.Now - gpsLastLog).TotalSeconds > gpsLogInterval) {
         //     Navigation.Point loc = GPSData.EstimatedUserLocation();
@@ -260,7 +266,7 @@ public class Main : MonoBehaviour
     }
 
     private bool working = false;
-    private IEnumerator GetLatestTime()
+    private IEnumerator Retrieve()
     {
         if (working) yield break;
         working = true;
@@ -275,8 +281,8 @@ public class Main : MonoBehaviour
                 try {
                     Response data = JsonConvert.DeserializeObject<Response>(webRequest.downloadHandler.text);
                     
-                    if (data.time != null) {
-                        OnSampleEntered(data.time.ToString());
+                    if (data.sample != null) {
+                        OnSampleEntered(data.sample.ToString());
                     }
                     else if (data.inputs != null && data.outputs != null) {
                         ResetButtonPress();
@@ -287,6 +293,9 @@ public class Main : MonoBehaviour
                         }
                         CapX();
                         SetParams();
+                    }
+                    else if (data.prms != null) {
+                        OnParamsEntered(data.prms);
                     }
                 }
                 catch (Exception e) {
