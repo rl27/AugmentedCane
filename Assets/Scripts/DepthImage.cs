@@ -609,10 +609,10 @@ public class DepthImage : MonoBehaviour
         else grid3d[gridPt] += 1;
     }
     private static Vector3 SnapToGrid(Vector3 v) {
-        return new Vector3(nodeSize * Mathf.Round(v.x/nodeSize), nodeSize * Mathf.Round(v.y/nodeSize), nodeSize * Mathf.Round(v.z/nodeSize));
+        return new Vector3(nodeSize * Mathf.Round(v.x / nodeSize), nodeSize * Mathf.Round(v.y / nodeSize), nodeSize * Mathf.Round(v.z / nodeSize));
     }
     private static Vector2 SnapToGrid2d(Vector3 v) {
-        return new Vector2(nodeSize * Mathf.Round(v.x/nodeSize), nodeSize * Mathf.Round(v.z/nodeSize));
+        return new Vector2(nodeSize * Mathf.Round(v.x / nodeSize), nodeSize * Mathf.Round(v.z / nodeSize));
     }
 
     // Delete any cells that are too far from user location
@@ -704,8 +704,8 @@ public class DepthImage : MonoBehaviour
         // If there is an obstacle ahead, do A*
         if (closest < 30f) {
             // Update A* target
-            target = new Vector2((int)(4 * sin/nodeSize) + numNodes,
-                                 (int)(4 * cos/nodeSize) + numNodes);
+            target = new Vector2((int)(4 * sin / nodeSize) + numNodes,
+                                 (int)(4 * cos / nodeSize) + numNodes);
             direction = RunAstar();
         }
 
@@ -759,7 +759,7 @@ public class DepthImage : MonoBehaviour
                 for (int j = -bound; j <= bound; j++) {
                     if (i == 0 && j == 0)
                         continue;
-                    if (Mathf.Sqrt(i*i+j*j) <= personRadius/nodeSize)
+                    if (Mathf.Sqrt(i*i+j*j) <= personRadius / nodeSize)
                         circleCells.Add(new Vector2(i, j));
                 }
             }
@@ -768,9 +768,9 @@ public class DepthImage : MonoBehaviour
         // Populate A* grid using grid3d
         foreach (Vector3 gridPt in grid3d.Keys) {
             if (grid3d[gridPt] >= numPoints) {
-                int x = (int)(gridPt.x - position.x) + numNodes;
+                int x = (int)((gridPt.x - position.x) / nodeSize + numNodes);
                 if (x < 0 || x > numNodes2) continue;
-                int y = (int)(gridPt.z - position.z) + numNodes;
+                int y = (int)((gridPt.z - position.z) / nodeSize + numNodes);
                 if (y < 0 || y > numNodes2) continue;
                 grid[x][y].Sum += 1;
             }
@@ -784,27 +784,19 @@ public class DepthImage : MonoBehaviour
                     blocking.Add(grid[i][j].Position);
             }
         }
-        foreach (Vector2 b in blocking) {
-            foreach (Vector2 circleCell in circleCells) {
-                int x = (int)(b.x + circleCell.x);
-                if (x < 0 || x > numNodes2) continue;
-                int y = (int)(b.y + circleCell.y);
-                if (y < 0 || y > numNodes2) continue;
-                grid[x][y].Sum += Node.SumThreshold;
-            }
-        }
+        foreach (Vector2 b in blocking)
+            SetInCircle(b, Node.SumThreshold);
+
         // Unblock the person
-        foreach (Vector2 circleCell in circleCells) {
-            int x = (int)(numNodes + circleCell.x);
-            if (x < 0 || x > numNodes2) continue;
-            int y = (int)(numNodes + circleCell.y);
-            if (y < 0 || y > numNodes2) continue;
-            grid[x][y].Sum = 0;
-        }
+        SetInCircle(new Vector2(numNodes, numNodes), 0);
+
         // Re-block original obstacles
         foreach (Vector2 b in blocking) {
             grid[(int) b.x][(int) b.y].Sum = Node.SumThreshold;
         }
+
+        // Unblock the target
+        grid[(int) target.x][(int) target.y].Sum = 0;
 
         float direction = 0;
         Vector2 start = new Vector2(numNodes, numNodes);
@@ -816,5 +808,16 @@ public class DepthImage : MonoBehaviour
         }
 
         return direction;
+    }
+
+    private void SetInCircle(Vector2 center, float val)
+    {
+        foreach (Vector2 circleCell in circleCells) {
+            int x = (int)(center.x + circleCell.x);
+            if (x < 0 || x > numNodes2) continue;
+            int y = (int)(center.y + circleCell.y);
+            if (y < 0 || y > numNodes2) continue;
+            grid[x][y].Sum = val;
+        }
     }
 }
