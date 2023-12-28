@@ -520,8 +520,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 207288730}
-  - component: {fileID: 207288729}
   - component: {fileID: 207288728}
+  - component: {fileID: 207288729}
   m_Layer: 0
   m_Name: TTSHandler
   m_TagString: Untagged
@@ -3332,7 +3332,6 @@ GameObject:
   - component: {fileID: 975916391}
   - component: {fileID: 975916390}
   - component: {fileID: 975916389}
-  - component: {fileID: 975916392}
   m_Layer: 0
   m_Name: DepthHandler
   m_TagString: Untagged
@@ -3765,18 +3764,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &975916392
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 975916385}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 40b2f9039c2b04d5c8b51cca3cfa0820, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &984716422
 GameObject:
   m_ObjectHideFlags: 0
