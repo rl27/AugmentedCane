@@ -12,7 +12,7 @@ namespace AStarSharp
     public class Node
     {
         public Node Parent;
-        public Vector2 Position;
+        public Vector2Int Position;
         public float DistanceToTarget;
         public float Cost;
         public float Weight;
@@ -29,7 +29,7 @@ namespace AStarSharp
         public float Sum;
         public static float SumThreshold = 1f;
 
-        public Node(Vector2 pos, float weight = 1)
+        public Node(Vector2Int pos, float weight = 1)
         {
             Parent = null;
             Position = pos;
@@ -51,7 +51,7 @@ namespace AStarSharp
             numNodes = num;
         }
 
-        public Stack<Node> FindPath(Vector2 Start, Vector2 End)
+        public Stack<Node> FindPath(Vector2Int Start, Vector2Int End)
         {
             Node start = new Node(Start);
             Node end = new Node(End);
@@ -115,8 +115,8 @@ namespace AStarSharp
         {
             List<Node> temp = new List<Node>();
 
-            int row = (int)n.Position.y;
-            int col = (int)n.Position.x;
+            int row = n.Position.y;
+            int col = n.Position.x;
 
             if(row + 1 < 2*numNodes)
             {

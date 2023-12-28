@@ -600,6 +600,7 @@ public class DepthImage : MonoBehaviour
     }
 
     // 3D grid for tracking points / potential obstacles
+    // Using ushort to save memory
     private static Dictionary<Vector3, ushort> grid3d = new Dictionary<Vector3, ushort>();
     public static void AddToGrid(Vector3 pointToAdd)
     {
@@ -661,10 +662,10 @@ public class DepthImage : MonoBehaviour
     private const int numNodes2 = 2 * ((int) (gridRadius / nodeSize));
     private List<List<Node>> grid;
     private Astar astar;
-    private Vector2 target = Vector2.zero;
+    private Vector2Int target = Vector2Int.zero;
 
     private float prevPersonRadius = 0; // This is for tracking when personRadius changes
-    private List<Vector2> circleCells = new List<Vector2>(); // Cells to block off based on personRadius
+    private List<Vector2Int> circleCells = new List<Vector2Int>(); // Cells to block off based on personRadius
 
     private const int numPoints = 1; // Number of points required for a grid3d cell to be considered blocked
     (float, float) CheckForObstacle()
@@ -677,7 +678,7 @@ public class DepthImage : MonoBehaviour
         float closest = 999f;
         float groundSum = 0;
         float groundCount = 0;
-        int count = 0;
+        int blockingCount = 0;
         foreach (Vector3 gridPt in grid3d.Keys) {
             if (grid3d[gridPt] >= numPoints) {
                 Vector3 translated = gridPt - position;
@@ -687,7 +688,7 @@ public class DepthImage : MonoBehaviour
                 if (translated.y > ground && translated.y < (ground + personHeight)) { // Height check
                     // Distance & width check
                     if (rZ > 0 && rZ < distanceToObstacle && rX > -personRadius && rX < personRadius) {
-                        count++;
+                        blockingCount++;
                         if (t < closest) {
                             closest = t;
                         }
@@ -704,10 +705,10 @@ public class DepthImage : MonoBehaviour
             ground = Mathf.Min(-0.5f, groundSum/groundCount + groundPadding);
 
         // If there is an obstacle ahead, do A*
-        if (count > 0) {
+        if (blockingCount >= 3) {
             // Update A* target
-            target = new Vector2((int)(4 * sin / nodeSize) + numNodes,
-                                 (int)(4 * cos / nodeSize) + numNodes);
+            target = new Vector2Int((int)(4 * sin / nodeSize) + numNodes,
+                                    (int)(4 * cos / nodeSize) + numNodes);
             direction = RunAstar();
         }
 
@@ -738,7 +739,7 @@ public class DepthImage : MonoBehaviour
             for (int i = 0; i <= numNodes2; i++) {
                 List<Node> col = new List<Node>();
                 for (int j = 0; j <= 2*numNodes; j++) {
-                    col.Add(new Node(new Vector2(i, j)));
+                    col.Add(new Node(new Vector2Int(i, j)));
                 }
                 grid.Add(col);
             }
@@ -762,7 +763,7 @@ public class DepthImage : MonoBehaviour
                     if (i == 0 && j == 0)
                         continue;
                     if (Mathf.Sqrt(i*i+j*j) <= personRadius / nodeSize)
-                        circleCells.Add(new Vector2(i, j));
+                        circleCells.Add(new Vector2Int(i, j));
                 }
             }
         }
@@ -779,32 +780,32 @@ public class DepthImage : MonoBehaviour
         }
 
         // For each blocking point in the grid, also block out nearby points within personRadius
-        List<Vector2> blocking = new List<Vector2>();
+        List<Vector2Int> blocking = new List<Vector2Int>();
         for (int i = 0; i <= numNodes2; i++) {
             for (int j = 0; j <= numNodes2; j++) {
                 if (grid[i][j].Sum >= Node.SumThreshold)
                     blocking.Add(grid[i][j].Position);
             }
         }
-        foreach (Vector2 b in blocking)
+        foreach (Vector2Int b in blocking)
             SetInCircle(b, Node.SumThreshold);
 
         // Unblock the person
-        SetInCircle(new Vector2(numNodes, numNodes), 0);
+        SetInCircle(new Vector2Int(numNodes, numNodes), 0);
 
         // Re-block original obstacles
-        foreach (Vector2 b in blocking) {
-            grid[(int) b.x][(int) b.y].Sum = Node.SumThreshold;
+        foreach (Vector2Int b in blocking) {
+            grid[b.x][b.y].Sum = Node.SumThreshold;
         }
 
         // Unblock the target
-        grid[(int) target.x][(int) target.y].Sum = 0;
+        grid[target.x][target.y].Sum = 0;
 
         float direction = 0;
-        Vector2 start = new Vector2(numNodes, numNodes);
+        Vector2Int start = new Vector2Int(numNodes, numNodes);
         Stack<Node> path = astar.FindPath(start, target);
         if (path != null) {
-            int index = Math.Min(2, path.Count-1);
+            int index = Math.Min(10, path.Count-1);
             Vector2 v = path.ElementAt(index).Position - start;
             direction = 90 - Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg;
         }
@@ -812,12 +813,12 @@ public class DepthImage : MonoBehaviour
         return direction;
     }
 
-    private void SetInCircle(Vector2 center, float val)
+    private void SetInCircle(Vector2Int center, float val)
     {
-        foreach (Vector2 circleCell in circleCells) {
-            int x = (int)(center.x + circleCell.x);
+        foreach (Vector2Int circleCell in circleCells) {
+            int x = center.x + circleCell.x;
             if (x < 0 || x > numNodes2) continue;
-            int y = (int)(center.y + circleCell.y);
+            int y = center.y + circleCell.y;
             if (y < 0 || y > numNodes2) continue;
             grid[x][y].Sum = val;
         }
