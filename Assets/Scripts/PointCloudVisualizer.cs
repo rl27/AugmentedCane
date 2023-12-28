@@ -112,7 +112,7 @@ public class PointCloudVisualizer : MonoBehaviour
                 }
             }
 
-            DepthImage.allPoints.AddLast(pos);
+            DepthImage.allPoints.Add(pos);
 
             particles[index].startSize = startSize;
             particles[index].position = pos;
