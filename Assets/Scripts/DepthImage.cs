@@ -655,7 +655,7 @@ public class DepthImage : MonoBehaviour
 
     public static float ground = -0.5f; // Ground elevation (in meters) relative to camera; default floor is 0.5m below camera
     private const float groundPadding = 0.35f; // Height to add to calculated ground level to count as ground
-    private const float groundRadius = 0.2f;
+    private const float groundRadius = 0.25f;
     private const float nodeSize = 0.05f;
     private const float gridRadius = 5f;
     private const int numNodes = (int) (gridRadius / nodeSize);
@@ -701,7 +701,7 @@ public class DepthImage : MonoBehaviour
             }
         }
         closest = Mathf.Sqrt(closest);
-        if (groundCount > 0)
+        if (groundCount >= 5)
             ground = Mathf.Min(-0.5f, groundSum/groundCount + groundPadding);
 
         // If there is an obstacle ahead, do A*
