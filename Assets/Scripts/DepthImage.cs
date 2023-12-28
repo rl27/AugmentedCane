@@ -594,7 +594,7 @@ public class DepthImage : MonoBehaviour
     }
 
     // Track all points in the environment
-    public static List<Vector3> allPoints = new List<Vector3>();
+    public static LinkedList<Vector3> allPoints = new LinkedList<Vector3>();
     private const float pointDeletionRange = 6f;
 
     // Remove points that are within view of camera or too far away
@@ -609,15 +609,16 @@ public class DepthImage : MonoBehaviour
         Plane left = new Plane(position, BL, TL);
         Plane top = new Plane(position, TL, TR);
         
-        List<Vector3> pointsToRemove = new List<Vector3>();
-        foreach (Vector3 pt in allPoints) {
+        LinkedListNode<Vector3> cur = allPoints.First;
+        while (cur != null) {
+            LinkedListNode<Vector3> nextNode = cur.Next;
+            Vector3 pt = cur.Value;
             if ((!right.GetSide(pt) && !left.GetSide(pt) && !bot.GetSide(pt) && !top.GetSide(pt)) ||
                 new Vector2(pt.x - position.x, pt.z - position.z).magnitude > pointDeletionRange) {
-                pointsToRemove.Add(pt);
+                allPoints.Remove(cur);
             }
+            cur = nextNode;
         }
-        foreach (Vector3 pt in pointsToRemove)
-            allPoints.Remove(pt);
     }
 
     public static float ground = -0.5f; // Ground elevation (in meters) relative to camera; default floor is 0.5m below camera
@@ -646,15 +647,15 @@ public class DepthImage : MonoBehaviour
         float groundSum = 0;
         float groundCount = 0;
         int blockingCount = 0;
-        foreach (Vector3 pt in allPoints) {
-            Vector3 translated = pt - position;
-            float rX = cos*translated.x - sin*translated.z;
-            float rZ = sin*translated.x + cos*translated.z;
-            float t = rX*rX+rZ*rZ;
+        for (LinkedListNode<Vector3> cur = allPoints.First; cur != null; cur = cur.Next) {
+            Vector3 translated = cur.Value - position;
             if (translated.y > ground && translated.y < (ground + personHeight)) { // Height check
                 // Distance & width check
+                float rX = cos*translated.x - sin*translated.z;
+                float rZ = sin*translated.x + cos*translated.z;
                 if (rZ > 0 && rZ < distanceToObstacle && rX > -personRadius && rX < personRadius) {
                     blockingCount++;
+                    float t = rX*rX+rZ*rZ;
                     if (t < closest) {
                         closest = t;
                     }
@@ -691,7 +692,7 @@ public class DepthImage : MonoBehaviour
                 float conf = GetConfidence(x, y);
                 if (conf / confidenceMax < depthConfidenceThreshold) continue;
                 Vector3 pos = TransformLocalToWorld(ComputeVertex(x, y, GetDepth(x, y)));
-                allPoints.Add(pos);
+                allPoints.AddLast(pos);
             }
         }
     }
@@ -734,10 +735,10 @@ public class DepthImage : MonoBehaviour
         }
 
         // Populate A* grid
-        foreach (Vector3 pt in allPoints) {
-            int x = (int) Mathf.Round((pt.x - position.x) / nodeSize + numNodes);
+        for (LinkedListNode<Vector3> cur = allPoints.First; cur != null; cur = cur.Next) {
+            int x = (int) Mathf.Round((cur.Value.x - position.x) / nodeSize + numNodes);
             if (x < 0 || x > numNodes2) continue;
-            int y = (int) Mathf.Round((pt.z - position.z) / nodeSize + numNodes);
+            int y = (int) Mathf.Round((cur.Value.z - position.z) / nodeSize + numNodes);
             if (y < 0 || y > numNodes2) continue;
             grid[x][y].Sum += 1;
         }
