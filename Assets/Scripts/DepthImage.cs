@@ -622,7 +622,7 @@ public class DepthImage : MonoBehaviour
     {
         List<Vector2> pointsToRemove = new List<Vector2>();
         foreach (Vector3 gridPt in grid3d.Keys) {
-            if ((new Vector2(gridPt.x - position.x, gridPt.z - position.z).magnitude > cellDeletionRange) {
+            if (new Vector2(gridPt.x - position.x, gridPt.z - position.z).magnitude > cellDeletionRange) {
                 pointsToRemove.Add(gridPt);
             }
         }
