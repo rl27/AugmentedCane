@@ -600,7 +600,7 @@ public class DepthImage : MonoBehaviour
     }
 
     // 3D grid for tracking points / potential obstacles
-    private static Dictionary<Vector3, int> grid3d = new Dictionary<Vector3, int>();
+    private static Dictionary<Vector3, ushort> grid3d = new Dictionary<Vector3, ushort>();
     public static void AddToGrid(Vector3 pointToAdd)
     {
         Vector3 gridPt = SnapToGrid(pointToAdd);
@@ -655,7 +655,7 @@ public class DepthImage : MonoBehaviour
     public static float ground = -0.5f; // Ground elevation (in meters) relative to camera; default floor is 0.5m below camera
     private const float groundPadding = 0.35f; // Height to add to calculated ground level to count as ground
     private const float groundRadius = 0.2f;
-    private const float nodeSize = 0.1f;
+    private const float nodeSize = 0.05f;
     private const float gridRadius = 5f;
     private const int numNodes = (int) (gridRadius / nodeSize);
     private const int numNodes2 = 2 * ((int) (gridRadius / nodeSize));
@@ -666,7 +666,7 @@ public class DepthImage : MonoBehaviour
     private float prevPersonRadius = 0; // This is for tracking when personRadius changes
     private List<Vector2> circleCells = new List<Vector2>(); // Cells to block off based on personRadius
 
-    private const int numPoints = 3;
+    private const int numPoints = 1; // Number of points required for a grid3d cell to be considered blocked
     (float, float) CheckForObstacle()
     {
         // For calculations
@@ -677,6 +677,7 @@ public class DepthImage : MonoBehaviour
         float closest = 999f;
         float groundSum = 0;
         float groundCount = 0;
+        int count = 0;
         foreach (Vector3 gridPt in grid3d.Keys) {
             if (grid3d[gridPt] >= numPoints) {
                 Vector3 translated = gridPt - position;
@@ -686,6 +687,7 @@ public class DepthImage : MonoBehaviour
                 if (translated.y > ground && translated.y < (ground + personHeight)) { // Height check
                     // Distance & width check
                     if (rZ > 0 && rZ < distanceToObstacle && rX > -personRadius && rX < personRadius) {
+                        count++;
                         if (t < closest) {
                             closest = t;
                         }
@@ -702,7 +704,7 @@ public class DepthImage : MonoBehaviour
             ground = Mathf.Min(-0.5f, groundSum/groundCount + groundPadding);
 
         // If there is an obstacle ahead, do A*
-        if (closest < 30f) {
+        if (count > 0) {
             // Update A* target
             target = new Vector2((int)(4 * sin / nodeSize) + numNodes,
                                  (int)(4 * cos / nodeSize) + numNodes);
@@ -742,7 +744,7 @@ public class DepthImage : MonoBehaviour
             }
             astar = new Astar(grid, numNodes);
         }
-        else {
+        else { // Empty the grid
             for (int i = 0; i <= numNodes2; i++) {
                 for (int j = 0; j <= numNodes2; j++) {
                     grid[i][j].Sum = 0;
