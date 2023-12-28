@@ -112,7 +112,7 @@ public class PointCloudVisualizer : MonoBehaviour
                 }
             }
 
-            DepthImage.allPoints.Add(pos);
+            DepthImage.AddToGrid(pos);
 
             particles[index].startSize = startSize;
             particles[index].position = pos;

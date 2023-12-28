@@ -287,9 +287,15 @@ public class DepthImage : MonoBehaviour
         // m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f))}");
         // m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f))}");
 
+        Vector2 cell = SnapToGrid2d(position);
+        if (currentGridCell != cell) {
+            currentGridCell = cell;
+            CleanupGrid();
+        }
+
         m_StringBuilder.AppendLine($"Ground: {ground.ToString("F2")}m");
 
-        CullPoints();
+        CullGrid();
         ProcessDepthImage();
         PointCloudVisualizer.ProcessPoints();
 
@@ -593,12 +599,39 @@ public class DepthImage : MonoBehaviour
         return new Vector2(v1.x * v2.x, v1.y * v2.y);
     }
 
-    // Track all points in the environment
-    public static List<Vector3> allPoints = new List<Vector3>();
-    private const float pointDeletionRange = 6f;
+    // 3D grid for tracking points / potential obstacles
+    // Using ushort to save memory
+    private static Dictionary<Vector3, ushort> grid3d = new Dictionary<Vector3, ushort>();
+    public static void AddToGrid(Vector3 pointToAdd)
+    {
+        Vector3 gridPt = SnapToGrid(pointToAdd);
+        if (!grid3d.ContainsKey(gridPt))
+            grid3d[gridPt] = 1;
+        else grid3d[gridPt] += 1;
+    }
+    private static Vector3 SnapToGrid(Vector3 v) {
+        return new Vector3(nodeSize * Mathf.Round(v.x / nodeSize), nodeSize * Mathf.Round(v.y / nodeSize), nodeSize * Mathf.Round(v.z / nodeSize));
+    }
+    private static Vector2 SnapToGrid2d(Vector3 v) {
+        return new Vector2(nodeSize * Mathf.Round(v.x / nodeSize), nodeSize * Mathf.Round(v.z / nodeSize));
+    }
 
-    // Remove points that are within view of camera or too far away
-    private void CullPoints()
+    // Delete any cells that are too far from user location
+    private float cellDeletionRange = 6f;
+    private void CleanupGrid()
+    {
+        List<Vector2> pointsToRemove = new List<Vector2>();
+        foreach (Vector3 gridPt in grid3d.Keys) {
+            if ((new Vector2(gridPt.x - position.x, gridPt.z - position.z).magnitude > cellDeletionRange) {
+                pointsToRemove.Add(gridPt);
+            }
+        }
+        foreach (Vector2 gridPt in pointsToRemove)
+            grid3d.Remove(gridPt);
+    }
+
+    // Reset counts for cells within view of the camera
+    private void CullGrid()
     {
         Vector3 TR = TransformLocalToWorld(ComputeVertex(0, 0, 1));
         Vector3 BR = TransformLocalToWorld(ComputeVertex(depthWidth-1, 0, 1));
@@ -609,32 +642,32 @@ public class DepthImage : MonoBehaviour
         Plane left = new Plane(position, BL, TL);
         Plane top = new Plane(position, TL, TR);
         
-        List<Vector3> pointsToRemove = new List<Vector3>();
-        foreach (Vector3 pt in allPoints) {
-            if ((!right.GetSide(pt) && !left.GetSide(pt) && !bot.GetSide(pt) && !top.GetSide(pt)) ||
-                new Vector2(pt.x - position.x, pt.z - position.z).magnitude > pointDeletionRange) {
-                pointsToRemove.Add(pt);
+        List<Vector3> toZero = new List<Vector3>();
+        foreach (Vector3 gridPt in grid3d.Keys) {
+            if (!right.GetSide(gridPt) && !left.GetSide(gridPt) && !bot.GetSide(gridPt) && !top.GetSide(gridPt)) {
+                toZero.Add(gridPt);
             }
         }
-        foreach (Vector3 pt in pointsToRemove)
-            allPoints.Remove(pt);
+        foreach (Vector3 gridPt in toZero) {
+            grid3d[gridPt] = 0;
+        }
     }
 
     public static float ground = -0.5f; // Ground elevation (in meters) relative to camera; default floor is 0.5m below camera
     private const float groundPadding = 0.35f; // Height to add to calculated ground level to count as ground
     private const float groundRadius = 0.25f;
-
-    private List<List<Node>> grid;
     private const float nodeSize = 0.05f;
     private const float gridRadius = 5f;
     private const int numNodes = (int) (gridRadius / nodeSize);
     private const int numNodes2 = 2 * ((int) (gridRadius / nodeSize));
+    private List<List<Node>> grid;
     private Astar astar;
     private Vector2Int target = Vector2Int.zero;
 
     private float prevPersonRadius = 0; // This is for tracking when personRadius changes
     private List<Vector2Int> circleCells = new List<Vector2Int>(); // Cells to block off based on personRadius
 
+    private const int numPoints = 1; // Number of points required for a grid3d cell to be considered blocked
     (float, float) CheckForObstacle()
     {
         // For calculations
@@ -646,22 +679,24 @@ public class DepthImage : MonoBehaviour
         float groundSum = 0;
         float groundCount = 0;
         int blockingCount = 0;
-        foreach (Vector3 pt in allPoints) {
-            Vector3 translated = pt - position;
-            float rX = cos*translated.x - sin*translated.z;
-            float rZ = sin*translated.x + cos*translated.z;
-            float t = rX*rX+rZ*rZ;
-            if (translated.y > ground && translated.y < (ground + personHeight)) { // Height check
-                // Distance & width check
-                if (rZ > 0 && rZ < distanceToObstacle && rX > -personRadius && rX < personRadius) {
-                    blockingCount++;
-                    if (t < closest) {
-                        closest = t;
+        foreach (Vector3 gridPt in grid3d.Keys) {
+            if (grid3d[gridPt] >= numPoints) {
+                Vector3 translated = gridPt - position;
+                float rX = cos*translated.x - sin*translated.z;
+                float rZ = sin*translated.x + cos*translated.z;
+                float t = rX*rX+rZ*rZ;
+                if (translated.y > ground && translated.y < (ground + personHeight)) { // Height check
+                    // Distance & width check
+                    if (rZ > 0 && rZ < distanceToObstacle && rX > -personRadius && rX < personRadius) {
+                        blockingCount++;
+                        if (t < closest) {
+                            closest = t;
+                        }
                     }
                 }
                 if (translated.y < 0 && (new Vector2(translated.x, translated.z)).magnitude < groundRadius) {
-                    groundSum += translated.y;
-                    groundCount += 1;
+                    groundSum += translated.y * grid3d[gridPt];
+                    groundCount += grid3d[gridPt];
                 }
             }
         }
@@ -672,15 +707,15 @@ public class DepthImage : MonoBehaviour
         // If there is an obstacle ahead, do A*
         if (blockingCount >= 3) {
             // Update A* target
-            target = new Vector2Int((int) Mathf.Round(4 * sin / nodeSize + numNodes),
-                                    (int) Mathf.Round(4 * cos / nodeSize + numNodes));
+            target = new Vector2Int((int)(4 * sin / nodeSize) + numNodes,
+                                    (int)(4 * cos / nodeSize) + numNodes);
             direction = RunAstar();
         }
 
         return (direction, closest);
     }
 
-    // Finds good (high-confidence) points in the depth image
+    // Populates the grid dictionary using the depth image.
     private void ProcessDepthImage()
     {
         float sin = Mathf.Sin(rotation.y * Mathf.Deg2Rad);
@@ -691,7 +726,7 @@ public class DepthImage : MonoBehaviour
                 float conf = GetConfidence(x, y);
                 if (conf / confidenceMax < depthConfidenceThreshold) continue;
                 Vector3 pos = TransformLocalToWorld(ComputeVertex(x, y, GetDepth(x, y)));
-                allPoints.Add(pos);
+                AddToGrid(pos);
             }
         }
     }
@@ -733,13 +768,15 @@ public class DepthImage : MonoBehaviour
             }
         }
 
-        // Populate A* grid
-        foreach (Vector3 pt in allPoints) {
-            int x = (int) Mathf.Round((pt.x - position.x) / nodeSize + numNodes);
-            if (x < 0 || x > numNodes2) continue;
-            int y = (int) Mathf.Round((pt.z - position.z) / nodeSize + numNodes);
-            if (y < 0 || y > numNodes2) continue;
-            grid[x][y].Sum += 1;
+        // Populate A* grid using grid3d
+        foreach (Vector3 gridPt in grid3d.Keys) {
+            if (grid3d[gridPt] >= numPoints) {
+                int x = (int)((gridPt.x - position.x) / nodeSize) + numNodes;
+                if (x < 0 || x > numNodes2) continue;
+                int y = (int)((gridPt.z - position.z) / nodeSize) + numNodes;
+                if (y < 0 || y > numNodes2) continue;
+                grid[x][y].Sum += 1;
+            }
         }
 
         // For each blocking point in the grid, also block out nearby points within personRadius
