@@ -622,7 +622,7 @@ public class DepthImage : MonoBehaviour
     {
         List<Vector2> pointsToRemove = new List<Vector2>();
         foreach (Vector3 gridPt in grid3d.Keys) {
-            if (Vector2.Distance(new Vector2(gridPt.x, gridPt.z), new Vector2(position.x, position.z)) > cellDeletionRange) {
+            if ((new Vector2(gridPt.x - position.x, gridPt.z - position.z).magnitude > cellDeletionRange) {
                 pointsToRemove.Add(gridPt);
             }
         }
@@ -771,9 +771,9 @@ public class DepthImage : MonoBehaviour
         // Populate A* grid using grid3d
         foreach (Vector3 gridPt in grid3d.Keys) {
             if (grid3d[gridPt] >= numPoints) {
-                int x = (int)((gridPt.x - position.x) / nodeSize + numNodes);
+                int x = (int)((gridPt.x - position.x) / nodeSize) + numNodes;
                 if (x < 0 || x > numNodes2) continue;
-                int y = (int)((gridPt.z - position.z) / nodeSize + numNodes);
+                int y = (int)((gridPt.z - position.z) / nodeSize) + numNodes;
                 if (y < 0 || y > numNodes2) continue;
                 grid[x][y].Sum += 1;
             }
