@@ -656,11 +656,12 @@ public class DepthImage : MonoBehaviour
     public static float ground = -0.5f; // Ground elevation (in meters) relative to camera; default floor is 0.5m below camera
     private const float groundPadding = 0.35f; // Height to add to calculated ground level to count as ground
     private const float groundRadius = 0.25f;
+
+    private List<List<Node>> grid;
     private const float nodeSize = 0.05f;
     private const float gridRadius = 5f;
     private const int numNodes = (int) (gridRadius / nodeSize);
     private const int numNodes2 = 2 * ((int) (gridRadius / nodeSize));
-    private List<List<Node>> grid;
     private Astar astar;
     private Vector2Int target = Vector2Int.zero;
 
@@ -682,13 +683,13 @@ public class DepthImage : MonoBehaviour
         foreach (Vector3 gridPt in grid3d.Keys) {
             if (grid3d[gridPt] >= numPoints) {
                 Vector3 translated = gridPt - position;
-                float rX = cos*translated.x - sin*translated.z;
-                float rZ = sin*translated.x + cos*translated.z;
-                float t = rX*rX+rZ*rZ;
                 if (translated.y > ground && translated.y < (ground + personHeight)) { // Height check
                     // Distance & width check
+                    float rX = cos*translated.x - sin*translated.z;
+                    float rZ = sin*translated.x + cos*translated.z;
                     if (rZ > 0 && rZ < distanceToObstacle && rX > -personRadius && rX < personRadius) {
                         blockingCount++;
+                        float t = rX*rX+rZ*rZ;
                         if (t < closest) {
                             closest = t;
                         }
@@ -707,8 +708,8 @@ public class DepthImage : MonoBehaviour
         // If there is an obstacle ahead, do A*
         if (blockingCount >= 3) {
             // Update A* target
-            target = new Vector2Int((int)(4 * sin / nodeSize) + numNodes,
-                                    (int)(4 * cos / nodeSize) + numNodes);
+            target = new Vector2Int((int) Mathf.Round(4 * sin / nodeSize + numNodes),
+                                    (int) Mathf.Round(4 * cos / nodeSize + numNodes));
             direction = RunAstar();
         }
 
