@@ -117,7 +117,6 @@ public class DepthImage : MonoBehaviour
 
     public static float personRadius = 0.3f; // Estimated half-width of a person
     public static float personHeight = 1.8f - groundPadding; // Estimated height of a person
-    private Vector2 currentGridCell = Vector2.zero;
 
     public enum Direction { Left, Right, None }
     public static Direction direction = Direction.None;
@@ -286,12 +285,6 @@ public class DepthImage : MonoBehaviour
         // m_StringBuilder.AppendLine($"(0.1,0.1): {GetDepth(new Vector2(0.1f, 0.1f))}");
         // m_StringBuilder.AppendLine($"(0.5,0.5): {GetDepth(new Vector2(0.5f, 0.5f))}");
         // m_StringBuilder.AppendLine($"(0.9,0.9): {GetDepth(new Vector2(0.9f, 0.9f))}");
-
-        Vector2 cell = SnapToGrid2d(position);
-        if (currentGridCell != cell) {
-            currentGridCell = cell;
-            CleanupGrid();
-        }
 
         m_StringBuilder.AppendLine($"Ground: {ground.ToString("F2")}m");
 
@@ -612,23 +605,9 @@ public class DepthImage : MonoBehaviour
     private static Vector3 SnapToGrid(Vector3 v) {
         return new Vector3(nodeSize * Mathf.Round(v.x / nodeSize), nodeSize * Mathf.Round(v.y / nodeSize), nodeSize * Mathf.Round(v.z / nodeSize));
     }
-    private static Vector2 SnapToGrid2d(Vector3 v) {
-        return new Vector2(nodeSize * Mathf.Round(v.x / nodeSize), nodeSize * Mathf.Round(v.z / nodeSize));
-    }
 
     // Delete any cells that are too far from user location
     private float cellDeletionRange = 6f;
-    private void CleanupGrid()
-    {
-        List<Vector3> pointsToRemove = new List<Vector3>();
-        foreach (Vector3 gridPt in grid3d.Keys) {
-            if (new Vector2(gridPt.x - position.x, gridPt.z - position.z).magnitude > cellDeletionRange) {
-                pointsToRemove.Add(gridPt);
-            }
-        }
-        foreach (Vector3 gridPt in pointsToRemove)
-            grid3d.Remove(gridPt);
-    }
 
     // Reset counts for cells that are either too far away or within view of the camera
     private void CullGrid()
@@ -642,15 +621,21 @@ public class DepthImage : MonoBehaviour
         Plane left = new Plane(position, BL, TL);
         Plane top = new Plane(position, TL, TR);
         
+        List<Vector3> toRemove = new List<Vector3>();
         List<Vector3> toZero = new List<Vector3>();
         foreach (Vector3 gridPt in grid3d.Keys) {
-            if (!right.GetSide(gridPt) && !left.GetSide(gridPt) && !bot.GetSide(gridPt) && !top.GetSide(gridPt)) {
-                toZero.Add(gridPt);
+            if (new Vector2(gridPt.x - position.x, gridPt.z - position.z).magnitude > cellDeletionRange)
+                toRemove.Add(gridPt);
+            else if (!right.GetSide(gridPt) && !left.GetSide(gridPt) && !bot.GetSide(gridPt) && !top.GetSide(gridPt)) {
+                if (grid3d[gridPt] == 0)
+                    toRemove.Add(gridPt);
+                else toZero.Add(gridPt);
             }
         }
-        foreach (Vector3 gridPt in toZero) {
+        foreach (Vector3 gridPt in toRemove)
+            grid3d.Remove(gridPt);
+        foreach (Vector3 gridPt in toZero)
             grid3d[gridPt] = 0;
-        }
     }
 
     public static float ground = -0.5f; // Ground elevation (in meters) relative to camera; default floor is 0.5m below camera
