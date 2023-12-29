@@ -593,17 +593,15 @@ public class DepthImage : MonoBehaviour
     }
 
     // 3D grid for tracking points / potential obstacles
-    // Using ushort to save memory
-    private static Dictionary<Vector3, ushort> grid3d = new Dictionary<Vector3, ushort>();
-    public static void AddToGrid(Vector3 pointToAdd)
+    private static Dictionary<Vector3, uint> grid3d = new Dictionary<Vector3, uint>();
+    public static void AddToGrid(Vector3 v)
     {
-        Vector3 gridPt = SnapToGrid(pointToAdd);
+        Vector3 gridPt = new Vector3(nodeSize * Mathf.Round(v.x / nodeSize),
+                                     nodeSize * Mathf.Round(v.y / nodeSize),
+                                     nodeSize * Mathf.Round(v.z / nodeSize));
         if (!grid3d.ContainsKey(gridPt))
             grid3d[gridPt] = 1;
         else grid3d[gridPt] += 1;
-    }
-    private static Vector3 SnapToGrid(Vector3 v) {
-        return new Vector3(nodeSize * Mathf.Round(v.x / nodeSize), nodeSize * Mathf.Round(v.y / nodeSize), nodeSize * Mathf.Round(v.z / nodeSize));
     }
 
     // Delete any cells that are too far from user location
