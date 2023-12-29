@@ -620,17 +620,17 @@ public class DepthImage : MonoBehaviour
     private float cellDeletionRange = 6f;
     private void CleanupGrid()
     {
-        List<Vector2> pointsToRemove = new List<Vector2>();
+        List<Vector3> pointsToRemove = new List<Vector3>();
         foreach (Vector3 gridPt in grid3d.Keys) {
             if (new Vector2(gridPt.x - position.x, gridPt.z - position.z).magnitude > cellDeletionRange) {
                 pointsToRemove.Add(gridPt);
             }
         }
-        foreach (Vector2 gridPt in pointsToRemove)
+        foreach (Vector3 gridPt in pointsToRemove)
             grid3d.Remove(gridPt);
     }
 
-    // Reset counts for cells within view of the camera
+    // Reset counts for cells that are either too far away or within view of the camera
     private void CullGrid()
     {
         Vector3 TR = TransformLocalToWorld(ComputeVertex(0, 0, 1));
