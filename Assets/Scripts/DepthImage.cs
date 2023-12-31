@@ -7,7 +7,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
-using AStarSharp;
+using AStar;
 
 // ARFoundation references:
 // https://github.com/Unity-Technologies/arfoundation-samples/blob/main/Assets/Scripts/Runtime/DisplayDepthImage.cs
@@ -189,6 +189,19 @@ public class DepthImage : MonoBehaviour
     // This is called every frame
     void Update()
     {
+        // var time1 = Time.realtimeSinceStartupAsDouble;
+        // Astar2 astar2 = new Astar2(astarRows);
+        // for (int i = 0; i < astarRows; i++) {
+        //     for (int j = 0; j < astarRows; j++) {
+        //         astar2.worldGrid[i,j] = 1;
+        //     }
+        // }
+        // Position[] path = astar2.Pathfind(new Position(0,0), new Position(astarRows-1, astarRows-1));
+        // Debug.Log(astarRows);
+        // Debug.Log(path.Length);
+        // Debug.Log(path[1]);
+        // Debug.Log(Time.realtimeSinceStartupAsDouble-time1);
+
         // Update timer for collision audio
         if (lastDSP != AudioSettings.dspTime) {
             lastDSP = AudioSettings.dspTime;
@@ -640,13 +653,13 @@ public class DepthImage : MonoBehaviour
     private const float groundPadding = 0.35f; // Height to add to calculated ground level to count as ground
     private const float groundRadius = 0.25f;
 
-    private List<List<Node>> grid;
     private const float nodeSize = 0.05f;
-    private const float gridRadius = 5f;
-    private const int numNodes = (int) (gridRadius / nodeSize);
-    private const int numNodes2 = 2 * ((int) (gridRadius / nodeSize));
-    private Astar astar;
-    private Vector2Int target = Vector2Int.zero;
+    private const float astarRadius = 5f;
+    private const int astarRowsHalf = (int) (astarRadius / nodeSize);
+    private const int astarRows = 1 + 2 * ((int) (astarRadius / nodeSize));
+    private Astar2 astar;
+    private int blockingThreshold = 1;
+    private Position target = new Position(0,0);
 
     private float prevPersonRadius = 0; // This is for tracking when personRadius changes
     private List<Vector2Int> circleCells = new List<Vector2Int>(); // Cells to block off based on personRadius
@@ -691,8 +704,8 @@ public class DepthImage : MonoBehaviour
         // If there is an obstacle ahead, do A*
         if (blockingCount >= 3) {
             // Update A* target
-            target = new Vector2Int((int) Mathf.Round(4 * sin / nodeSize + numNodes),
-                                    (int) Mathf.Round(4 * cos / nodeSize + numNodes));
+            target = new Position((int) Mathf.Round(4 * sin / nodeSize + astarRowsHalf),
+                                  (int) Mathf.Round(4 * cos / nodeSize + astarRowsHalf));
             direction = RunAstar();
         }
 
@@ -717,25 +730,18 @@ public class DepthImage : MonoBehaviour
 
     private float RunAstar()
     {
-        // Create grid and Astar object if they don't exist; otherwise, empty the grid
-        if (grid == null) {
-            grid = new List<List<Node>>();
-            for (int i = 0; i <= numNodes2; i++) {
-                List<Node> col = new List<Node>();
-                for (int j = 0; j <= 2*numNodes; j++) {
-                    col.Add(new Node(new Vector2Int(i, j)));
-                }
-                grid.Add(col);
-            }
-            astar = new Astar(grid, numNodes);
+        // Create Astar object if it doesn't exist
+        if (astar == null) {
+            astar = new Astar2(astarRows);
         }
-        else { // Empty the grid
-            for (int i = 0; i <= numNodes2; i++) {
-                for (int j = 0; j <= numNodes2; j++) {
-                    grid[i][j].Sum = 0;
+        else { // Otherwise, clear obstacles on the grid
+            for (int i = 0; i < astarRows; i++) {
+                for (int j = 0; j < astarRows; j++) {
+                    astar.worldGrid[i,j] = 1;
                 }
             }
         }
+        Debug.Log(astarRows);
 
         // Recalculate circle cells if personRadius has changed
         if (prevPersonRadius != personRadius) {
@@ -755,56 +761,56 @@ public class DepthImage : MonoBehaviour
         // Populate A* grid using grid3d
         foreach (Vector3 gridPt in grid3d.Keys) {
             if (grid3d[gridPt] >= numPoints) {
-                int x = (int)((gridPt.x - position.x) / nodeSize) + numNodes;
-                if (x < 0 || x > numNodes2) continue;
-                int y = (int)((gridPt.z - position.z) / nodeSize) + numNodes;
-                if (y < 0 || y > numNodes2) continue;
-                grid[x][y].Sum += 1;
+                int x = (int)((gridPt.x - position.x) / nodeSize) + astarRowsHalf;
+                if (x < 0 || x >= astarRows) continue;
+                int y = (int)((gridPt.z - position.z) / nodeSize) + astarRowsHalf;
+                if (y < 0 || y >= astarRows) continue;
+                astar.worldGrid[x, y] += 1;
             }
         }
 
-        // For each blocking point in the grid, also block out nearby points within personRadius
+        // Find all blocking points in the grid
         List<Vector2Int> blocking = new List<Vector2Int>();
-        for (int i = 0; i <= numNodes2; i++) {
-            for (int j = 0; j <= numNodes2; j++) {
-                if (grid[i][j].Sum >= Node.SumThreshold)
-                    blocking.Add(grid[i][j].Position);
+        for (int i = 0; i < astarRows; i++) {
+            for (int j = 0; j < astarRows; j++) {
+                if (astar.worldGrid[i, j] > blockingThreshold)
+                    blocking.Add(new Vector2Int(i, j));
             }
         }
+        // For each blocking point in the grid, also block out nearby points within personRadius
         foreach (Vector2Int b in blocking)
-            SetInCircle(b, Node.SumThreshold);
+            SetInCircle(b, 0);
 
         // Unblock the person
-        SetInCircle(new Vector2Int(numNodes, numNodes), 0);
+        SetInCircle(new Vector2Int(astarRowsHalf, astarRowsHalf), 1);
 
         // Re-block original obstacles
         foreach (Vector2Int b in blocking) {
-            grid[b.x][b.y].Sum = Node.SumThreshold;
+            astar.worldGrid[b.x, b.y] = 0;
         }
 
         // Unblock the target
-        grid[target.x][target.y].Sum = 0;
+        astar.worldGrid[target.Row, target.Column] = 1;
 
         float direction = 0;
-        Vector2Int start = new Vector2Int(numNodes, numNodes);
-        Stack<Node> path = astar.FindPath(start, target);
-        if (path != null) {
-            int index = Math.Min(10, path.Count-1);
-            Vector2 v = path.ElementAt(index).Position - start;
-            direction = 90 - Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg;
+        Position start = new Position(astarRowsHalf, astarRowsHalf);
+        Position[] path = astar.Pathfind(start, target);
+        if (path.Length != 0 && path[path.Length - 1] == target) {
+            int index = Math.Min(10, path.Length-1);
+            direction = 90 - Mathf.Atan2(path[index].Column - start.Column, path[index].Row - start.Row) * Mathf.Rad2Deg;
         }
 
         return direction;
     }
 
-    private void SetInCircle(Vector2Int center, float val)
+    private void SetInCircle(Vector2Int center, short val)
     {
         foreach (Vector2Int circleCell in circleCells) {
             int x = center.x + circleCell.x;
-            if (x < 0 || x > numNodes2) continue;
+            if (x < 0 || x >= astarRows) continue;
             int y = center.y + circleCell.y;
-            if (y < 0 || y > numNodes2) continue;
-            grid[x][y].Sum = val;
+            if (y < 0 || y >= astarRows) continue;
+            astar.worldGrid[x, y] = val;
         }
     }
 }
