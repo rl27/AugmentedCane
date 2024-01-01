@@ -7,7 +7,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
-using AStar;
 
 // ARFoundation references:
 // https://github.com/Unity-Technologies/arfoundation-samples/blob/main/Assets/Scripts/Runtime/DisplayDepthImage.cs
@@ -189,19 +188,6 @@ public class DepthImage : MonoBehaviour
     // This is called every frame
     void Update()
     {
-        // var time1 = Time.realtimeSinceStartupAsDouble;
-        // Astar2 astar2 = new Astar2(astarRows);
-        // for (int i = 0; i < astarRows; i++) {
-        //     for (int j = 0; j < astarRows; j++) {
-        //         astar2.worldGrid[i,j] = 1;
-        //     }
-        // }
-        // Position[] path = astar2.Pathfind(new Position(0,0), new Position(astarRows-1, astarRows-1));
-        // Debug.Log(astarRows);
-        // Debug.Log(path.Length);
-        // Debug.Log(path[1]);
-        // Debug.Log(Time.realtimeSinceStartupAsDouble-time1);
-
         // Update timer for collision audio
         if (lastDSP != AudioSettings.dspTime) {
             lastDSP = AudioSettings.dspTime;
@@ -654,12 +640,11 @@ public class DepthImage : MonoBehaviour
     private const float groundRadius = 0.25f;
 
     private const float nodeSize = 0.05f;
-    private const float astarRadius = 5f;
-    private const int astarRowsHalf = (int) (astarRadius / nodeSize);
-    private const int astarRows = 1 + 2 * ((int) (astarRadius / nodeSize));
-    private Astar2 astar;
+    private short[,] searchGrid;
+    private const float searchRadius = 5f;
+    private const int searchWidthHalf = (int) (searchRadius / nodeSize);
+    private const int searchWidth = 1 + 2 * ((int) (searchRadius / nodeSize));
     private int blockingThreshold = 1;
-    private Position target = new Position(0,0);
 
     private float prevPersonRadius = 0; // This is for tracking when personRadius changes
     private List<Vector2Int> circleCells = new List<Vector2Int>(); // Cells to block off based on personRadius
@@ -701,12 +686,9 @@ public class DepthImage : MonoBehaviour
         if (groundCount >= 5)
             ground = Mathf.Min(-0.5f, groundSum/groundCount + groundPadding);
 
-        // If there is an obstacle ahead, do A*
+        // If there is an obstacle ahead, search for direction
         if (blockingCount >= 3) {
-            // Update A* target
-            target = new Position((int) Mathf.Round(4 * sin / nodeSize + astarRowsHalf),
-                                  (int) Mathf.Round(4 * cos / nodeSize + astarRowsHalf));
-            direction = RunAstar();
+            direction = RunSearch();
         }
 
         return (direction, closest);
@@ -728,20 +710,21 @@ public class DepthImage : MonoBehaviour
         }
     }
 
-    private float RunAstar()
+    private const int numRaycasts = 30;
+    private const float radWidth = 0.5f * Mathf.PI / numRaycasts;
+    private float RunSearch()
     {
-        // Create Astar object if it doesn't exist
-        if (astar == null) {
-            astar = new Astar2(astarRows);
+        // Create search grid if it doesn't exist
+        if (searchGrid == null) {
+            searchGrid = new short[searchWidth, searchWidth];
         }
-        else { // Otherwise, clear obstacles on the grid
-            for (int i = 0; i < astarRows; i++) {
-                for (int j = 0; j < astarRows; j++) {
-                    astar.worldGrid[i,j] = 1;
+        else { // Clear obstacles on the grid
+            for (int i = 0; i < searchWidth; i++) {
+                for (int j = 0; j < searchWidth; j++) {
+                    searchGrid[i,j] = 0;
                 }
             }
         }
-        Debug.Log(astarRows);
 
         // Recalculate circle cells if personRadius has changed
         if (prevPersonRadius != personRadius) {
@@ -761,56 +744,84 @@ public class DepthImage : MonoBehaviour
         // Populate A* grid using grid3d
         foreach (Vector3 gridPt in grid3d.Keys) {
             if (grid3d[gridPt] >= numPoints) {
-                int x = (int)((gridPt.x - position.x) / nodeSize) + astarRowsHalf;
-                if (x < 0 || x >= astarRows) continue;
-                int y = (int)((gridPt.z - position.z) / nodeSize) + astarRowsHalf;
-                if (y < 0 || y >= astarRows) continue;
-                astar.worldGrid[x, y] += 1;
+                int i = (int)((gridPt.x - position.x) / nodeSize) + searchWidthHalf;
+                if (i < 0 || i >= searchWidth) continue;
+                int j = (int)((gridPt.z - position.z) / nodeSize) + searchWidthHalf;
+                if (j < 0 || j >= searchWidth) continue;
+                searchGrid[i, j] += 1;
             }
         }
 
         // Find all blocking points in the grid
         List<Vector2Int> blocking = new List<Vector2Int>();
-        for (int i = 0; i < astarRows; i++) {
-            for (int j = 0; j < astarRows; j++) {
-                if (astar.worldGrid[i, j] > blockingThreshold)
+        for (int i = 0; i < searchWidth; i++) {
+            for (int j = 0; j < searchWidth; j++) {
+                if (searchGrid[i, j] > blockingThreshold)
                     blocking.Add(new Vector2Int(i, j));
             }
         }
         // For each blocking point in the grid, also block out nearby points within personRadius
         foreach (Vector2Int b in blocking)
-            SetInCircle(b, 0);
+            SetInCircle(b, 1);
 
         // Unblock the person
-        SetInCircle(new Vector2Int(astarRowsHalf, astarRowsHalf), 1);
+        SetInCircle(new Vector2Int(searchWidthHalf, searchWidthHalf), 0);
 
         // Re-block original obstacles
         foreach (Vector2Int b in blocking) {
-            astar.worldGrid[b.x, b.y] = 0;
+            searchGrid[b.x, b.y] = 1;
         }
 
-        // Unblock the target
-        astar.worldGrid[target.Row, target.Column] = 1;
+        // Do raycasts to find best direction to guide user towards
+        float bestDirection = rotation.y;
+        float bestDist = float.MaxValue;
+        int ray = 1;
+        while (ray <= numRaycasts) {
+            (bool foundObstacle, float dist) = PerformRaycast(rotation.y * Mathf.Deg2Rad + ray * radWidth);
+            if (foundObstacle) {
+                bestDirection = ray * radWidth * Mathf.Rad2Deg;
+                break;
+            }
+            else if (dist < bestDist) {
+                bestDirection = ray * radWidth * Mathf.Rad2Deg;
+                bestDist = dist;
+            }
 
-        float direction = 0;
-        Position start = new Position(astarRowsHalf, astarRowsHalf);
-        Position[] path = astar.Pathfind(start, target);
-        if (path.Length != 0 && path[path.Length - 1] == target) {
-            int index = Math.Min(10, path.Length-1);
-            direction = 90 - Mathf.Atan2(path[index].Column - start.Column, path[index].Row - start.Row) * Mathf.Rad2Deg;
+            ray *= -1;
+            if (ray > 0) ray++;
         }
 
-        return direction;
+        return bestDirection;
+    }
+
+    private (bool, float) PerformRaycast(float rad)
+    {
+        float dx = Mathf.Sin(rad);
+        float dy = Mathf.Cos(rad);
+        float x = searchWidthHalf;
+        float y = searchWidthHalf;
+        float dist = 0;
+        bool foundObstacle = false;
+        while (x >= 0 && y >= 0 && x < searchWidth && y < searchWidth) {
+            if (searchGrid[(int) x, (int) y] == 1) {
+                foundObstacle = true;
+                break;
+            }
+            x += dx;
+            y += dy;
+            dist++;
+        }
+        return (foundObstacle, dist);
     }
 
     private void SetInCircle(Vector2Int center, short val)
     {
         foreach (Vector2Int circleCell in circleCells) {
             int x = center.x + circleCell.x;
-            if (x < 0 || x >= astarRows) continue;
+            if (x < 0 || x >= searchWidth) continue;
             int y = center.y + circleCell.y;
-            if (y < 0 || y >= astarRows) continue;
-            astar.worldGrid[x, y] = val;
+            if (y < 0 || y >= searchWidth) continue;
+            searchGrid[x, y] = val;
         }
     }
 }
