@@ -644,12 +644,11 @@ public class DepthImage : MonoBehaviour
     private const float searchRadius = 5f;
     private const int searchWidthHalf = (int) (searchRadius / nodeSize);
     private const int searchWidth = 1 + 2 * ((int) (searchRadius / nodeSize));
-    private int blockingThreshold = 1;
 
     private float prevPersonRadius = 0; // This is for tracking when personRadius changes
     private List<Vector2Int> circleCells = new List<Vector2Int>(); // Cells to block off based on personRadius
 
-    private const int numPoints = 1; // Number of points required for a grid3d cell to be considered blocked
+    private const int numPoints = 0; // Number of points required for a grid3d cell to be considered blocked
     (float, float) CheckForObstacle()
     {
         // For calculations
@@ -687,7 +686,7 @@ public class DepthImage : MonoBehaviour
             ground = Mathf.Min(-0.5f, groundSum/groundCount + groundPadding);
 
         // If there is an obstacle ahead, search for direction
-        if (blockingCount >= 3) {
+        if (blockingCount >= 2) {
             direction = RunSearch();
         }
 
@@ -710,8 +709,6 @@ public class DepthImage : MonoBehaviour
         }
     }
 
-    private const int numRaycasts = 30;
-    private const float radWidth = 0.5f * Mathf.PI / numRaycasts;
     private float RunSearch()
     {
         // Create search grid if it doesn't exist
@@ -741,23 +738,19 @@ public class DepthImage : MonoBehaviour
             }
         }
 
-        // Populate A* grid using grid3d
+        // Populate search grid using grid3d; Track blocking points in the search grid
+        List<Vector2Int> blocking = new List<Vector2Int>();
         foreach (Vector3 gridPt in grid3d.Keys) {
             if (grid3d[gridPt] >= numPoints) {
-                int i = (int)((gridPt.x - position.x) / nodeSize) + searchWidthHalf;
-                if (i < 0 || i >= searchWidth) continue;
-                int j = (int)((gridPt.z - position.z) / nodeSize) + searchWidthHalf;
-                if (j < 0 || j >= searchWidth) continue;
-                searchGrid[i, j] += 1;
-            }
-        }
-
-        // Find all blocking points in the grid
-        List<Vector2Int> blocking = new List<Vector2Int>();
-        for (int i = 0; i < searchWidth; i++) {
-            for (int j = 0; j < searchWidth; j++) {
-                if (searchGrid[i, j] > blockingThreshold)
+                float yDiff = gridPt.y - position.y;
+                if (yDiff > ground && yDiff < (ground + personHeight)) { // Height check
+                    int i = (int)((gridPt.x - position.x) / nodeSize) + searchWidthHalf;
+                    if (i < 0 || i >= searchWidth) continue;
+                    int j = (int)((gridPt.z - position.z) / nodeSize) + searchWidthHalf;
+                    if (j < 0 || j >= searchWidth) continue;
+                    searchGrid[i, j] += 1;
                     blocking.Add(new Vector2Int(i, j));
+                }
             }
         }
         // For each blocking point in the grid, also block out nearby points within personRadius
@@ -772,18 +765,26 @@ public class DepthImage : MonoBehaviour
             searchGrid[b.x, b.y] = 1;
         }
 
+        return BestDirection();
+    }
+
+    private const int numRaycasts = 30;
+    private const float radWidth = 0.5f * Mathf.PI / numRaycasts;
+    private float BestDirection()
+    {
         // Do raycasts to find best direction to guide user towards
         float bestDirection = rotation.y;
-        float bestDist = float.MaxValue;
+        float bestDist = -1;
         int ray = 1;
         while (ray <= numRaycasts) {
-            (bool foundObstacle, float dist) = PerformRaycast(rotation.y * Mathf.Deg2Rad + ray * radWidth);
-            if (foundObstacle) {
-                bestDirection = ray * radWidth * Mathf.Rad2Deg;
+            float rad = rotation.y * Mathf.Deg2Rad + ray * radWidth;
+            (bool foundObstacle, float dist) = PerformRaycast(rad);
+            if (!foundObstacle) {
+                bestDirection = rad * Mathf.Rad2Deg;
                 break;
             }
-            else if (dist < bestDist) {
-                bestDirection = ray * radWidth * Mathf.Rad2Deg;
+            else if (dist >= bestDist) {
+                bestDirection = rad * Mathf.Rad2Deg;
                 bestDist = dist;
             }
 
@@ -803,7 +804,7 @@ public class DepthImage : MonoBehaviour
         float dist = 0;
         bool foundObstacle = false;
         while (x >= 0 && y >= 0 && x < searchWidth && y < searchWidth) {
-            if (searchGrid[(int) x, (int) y] == 1) {
+            if (searchGrid[(int) x, (int) y] != 0) {
                 foundObstacle = true;
                 break;
             }
