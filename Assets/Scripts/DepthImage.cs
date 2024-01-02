@@ -651,7 +651,7 @@ public class DepthImage : MonoBehaviour
     private float prevPersonRadius = 0; // This is for tracking when personRadius changes
     private List<Vector2Int> circleCells = new List<Vector2Int>(); // Cells to block off based on personRadius
 
-    private const int numPoints = 0; // Number of points required for a grid3d cell to be considered blocked
+    private const int numPoints = 1; // Number of points required for a grid3d cell to be considered blocked
     (float, float) CheckForObstacle()
     {
         // For calculations
