@@ -724,7 +724,7 @@ public class DepthImage : MonoBehaviour
         else { // Clear obstacles on the grid
             for (int i = 0; i < searchWidth; i++) {
                 for (int j = 0; j < searchWidth; j++) {
-                    astar.worldGrid[i,j] = 1;
+                    astar.worldGrid[i,j] = 0;
                 }
             }
         }
@@ -754,21 +754,21 @@ public class DepthImage : MonoBehaviour
                     if (i < 0 || i >= searchWidth) continue;
                     int j = (int)((gridPt.z - position.z) / nodeSize) + searchWidthHalf;
                     if (j < 0 || j >= searchWidth) continue;
-                    astar.worldGrid[i, j] = 0;
+                    astar.worldGrid[i, j] += 1;
                     blocking.Add(new Vector2Int(i, j));
                 }
             }
         }
         // For each blocking point in the grid, also block out nearby points within personRadius
         foreach (Vector2Int b in blocking)
-            SetInCircle(b, 0);
+            SetInCircle(b, 1);
 
         // Unblock the person
-        SetInCircle(new Vector2Int(searchWidthHalf, searchWidthHalf), 1);
+        SetInCircle(new Vector2Int(searchWidthHalf, searchWidthHalf), 0);
 
         // Re-block original obstacles
         foreach (Vector2Int b in blocking) {
-            astar.worldGrid[b.x, b.y] = 0;
+            astar.worldGrid[b.x, b.y] = 1;
         }
 
         return AstarDirection();
