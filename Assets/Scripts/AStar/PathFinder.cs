@@ -5,12 +5,13 @@ using System.Linq;
 using AStar.Collections.PathFinder;
 using AStar.Heuristics;
 using AStar.Options;
+using UnityEngine;
 
 namespace AStar
 {
     public class PathFinder : IFindAPath
     {
-        private const int OpenValue = 0;
+        private const short OpenValue = 0;
         private const int DistanceBetweenNodes = 1;
         private readonly PathFinderOptions _options;
         private readonly WorldGrid _world;

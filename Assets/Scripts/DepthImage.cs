@@ -292,11 +292,8 @@ public class DepthImage : MonoBehaviour
         ProcessDepthImage();
         PointCloudVisualizer.ProcessPoints();
 
-        (float dir, float closest) = CheckForObstacle();
+        (float relHeading, float closest) = CheckForObstacle();
         if (closest < 30) {
-            float relHeading = (dir - rotation.y + 360) % 360;
-            if (relHeading > 180) relHeading -= 360;
-
             m_StringBuilder.AppendLine("Obstacle ahead");
             direction = Direction.Left;
             float rate = (closest - collisionAudioCapDistance) / (distanceToObstacle - collisionAudioCapDistance);
@@ -691,8 +688,8 @@ public class DepthImage : MonoBehaviour
         // If there is an obstacle ahead, search for direction
         if (blockingCount >= 2) {
             // Update A* target
-            target = new Position((int) Mathf.Round(4 * sin / nodeSize + searchWidthHalf),
-                                  (int) Mathf.Round(4 * cos / nodeSize + searchWidthHalf));
+            target = new Position(searchWidthHalf,
+                                  (int) (4 / nodeSize) + searchWidthHalf);
             direction = RunSearch();
         }
 
@@ -702,9 +699,6 @@ public class DepthImage : MonoBehaviour
     // Populates the grid dictionary using the depth image.
     private void ProcessDepthImage()
     {
-        float sin = Mathf.Sin(rotation.y * Mathf.Deg2Rad);
-        float cos = Mathf.Cos(rotation.y * Mathf.Deg2Rad);
-
         for (int y = 0; y < depthHeight; y++) {
             for (int x = 0; x < depthWidth; x++) {
                 float conf = GetConfidence(x, y);
@@ -745,20 +739,25 @@ public class DepthImage : MonoBehaviour
         }
 
         // Populate search grid using grid3d; Track blocking points in the search grid
-        List<Vector2Int> blocking = new List<Vector2Int>();
+        float sin = Mathf.Sin(rotation.y * Mathf.Deg2Rad);
+        float cos = Mathf.Cos(rotation.y * Mathf.Deg2Rad);
+        HashSet<Vector2Int> blocking = new HashSet<Vector2Int>();
         foreach (Vector3 gridPt in grid3d.Keys) {
             if (grid3d[gridPt] >= numPoints) {
                 float yDiff = gridPt.y - position.y;
                 if (yDiff > ground && yDiff < (ground + personHeight)) { // Height check
-                    int i = (int)((gridPt.x - position.x) / nodeSize) + searchWidthHalf;
+                    float x = gridPt.x - position.x;
+                    float y = gridPt.z - position.z;
+                    int i = (int) ((x * cos - y * sin) / nodeSize) + searchWidthHalf;
                     if (i < 0 || i >= searchWidth) continue;
-                    int j = (int)((gridPt.z - position.z) / nodeSize) + searchWidthHalf;
+                    int j = (int) ((x * sin + y * cos) / nodeSize) + searchWidthHalf;
                     if (j < 0 || j >= searchWidth) continue;
                     astar.worldGrid[i, j] += 1;
                     blocking.Add(new Vector2Int(i, j));
                 }
             }
         }
+
         // For each blocking point in the grid, also block out nearby points within personRadius
         foreach (Vector2Int b in blocking)
             SetInCircle(b, 1);
@@ -780,9 +779,16 @@ public class DepthImage : MonoBehaviour
         float direction = 0;
         Position start = new Position(searchWidthHalf, searchWidthHalf);
         Position[] path = astar.Pathfind(start, target);
-        if (path.Length != 0 && path[path.Length - 1] == target) {
-            int index = Math.Min(10, path.Length-1);
-            direction = 90 - Mathf.Atan2(path[index].Column - start.Column, path[index].Row - start.Row) * Mathf.Rad2Deg;
+        if (path.Length != 0) { // Found a path
+            // Go through path until we find a position that borders an obstacle; use that position to determine direction
+            foreach (Position p in path) {
+                foreach (Position p2 in astar.worldGrid.GetSuccessorPositions(p, true)) {
+                    if (astar.worldGrid[p2.Row, p2.Column] != 0) {
+                        direction = 90 - Mathf.Atan2(p.Column - start.Column, p.Row - start.Row) * Mathf.Rad2Deg;
+                        break;
+                    }
+                }
+            }
         }
 
         return direction;
