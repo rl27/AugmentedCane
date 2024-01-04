@@ -10,7 +10,7 @@ namespace AStar
 {
     public class PathFinder : IFindAPath
     {
-        private const int ClosedValue = 1;
+        private const int OpenValue = 0;
         private const int DistanceBetweenNodes = 1;
         private readonly PathFinderOptions _options;
         private readonly WorldGrid _world;
@@ -56,7 +56,7 @@ namespace AStar
 
                 foreach (var successor in graph.GetSuccessors(q))
                 {
-                    if (_world[successor.Position] == ClosedValue)
+                    if (_world[successor.Position] != OpenValue)
                     {
                         continue;
                     }
