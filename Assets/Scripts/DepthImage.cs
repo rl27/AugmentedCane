@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
+using Priority_Queue;
 
 // ARFoundation references:
 // https://github.com/Unity-Technologies/arfoundation-samples/blob/main/Assets/Scripts/Runtime/DisplayDepthImage.cs
@@ -746,7 +747,7 @@ public class DepthImage : MonoBehaviour
                     if (i < 0 || i >= searchWidth) continue;
                     int j = (int) ((x * sin + y * cos) / nodeSize) + searchWidthHalf;
                     if (j < 0 || j >= searchWidth) continue;
-                    searchGrid[i, j] += 1;
+                    searchGrid[i, j] = 1;
                     blocking.Add(new Vector2Int(i, j));
                 }
             }
@@ -767,51 +768,106 @@ public class DepthImage : MonoBehaviour
         return BestDirection();
     }
 
-    private const int numRaycasts = 30;
-    private const float radWidth = 0.5f * Mathf.PI / numRaycasts;
-    private float BestDirection()
-    {
-        // Do raycasts to find best direction to guide user towards
-        float bestDirection = 0;
-        float bestDist = -1;
-        int ray = 1;
-        while (ray <= numRaycasts) {
-            float rad = ray * radWidth;
-            (bool foundObstacle, float dist) = PerformRaycast(rad);
-            if (!foundObstacle) {
-                bestDirection = rad * Mathf.Rad2Deg;
-                break;
-            }
-            else if (dist >= bestDist) {
-                bestDirection = rad * Mathf.Rad2Deg;
-                bestDist = dist;
-            }
-
-            ray *= -1;
-            if (ray > 0) ray++;
+    private class Node {
+        public Node parent;
+        public int x;
+        public int y;
+        public Node(int x2, int y2, Node par) {
+            x = x2;
+            y = y2;
+            parent = par;
         }
-
-        return bestDirection;
     }
 
-    private (bool, float) PerformRaycast(float rad)
+    SimplePriorityQueue<Node> priorityQueue = new SimplePriorityQueue<Node>();
+    private float BestDirection()
     {
-        float dx = Mathf.Sin(rad);
-        float dy = Mathf.Cos(rad);
-        float x = searchWidthHalf;
-        float y = searchWidthHalf;
-        float dist = 0;
-        bool foundObstacle = false;
-        while (x >= 0 && y >= 0 && x < searchWidth && y < searchWidth) {
-            if (searchGrid[(int) x, (int) y] != 0) {
-                foundObstacle = true;
+        priorityQueue.Clear();
+
+        CheckAndEnqueue(searchWidthHalf, searchWidthHalf, null);
+
+        int curX, curY;
+        Node best = null;
+        while (priorityQueue.Count != 0) {
+            Node curNode = priorityQueue.Dequeue();
+            curX = curNode.x;
+            curY = curNode.y;
+            if (best == null || curY > best.y)
+                best = curNode;
+
+            // Attempt to move up
+            if (CheckAndEnqueue(curX, curY + 1, curNode)) {
+                // Node above is blocked; check top left and top right
+                if (CheckAndEnqueue(curX + 1, curY + 1, curNode)) { // top right
+                    if (CheckAndEnqueue(curX + 1, curY, curNode)) { // right
+                        if (CheckAndEnqueue(curX + 1, curY - 1, curNode)) { // bot right
+                            CheckAndEnqueue(curX, curY - 1, curNode); // bot
+                        }
+                    }
+                }
+                if (CheckAndEnqueue(curX - 1, curY + 1, curNode)) { // top left
+                    if (CheckAndEnqueue(curX - 1, curY, curNode)) { // left
+                        if (CheckAndEnqueue(curX - 1, curY - 1, curNode)) { // bot left
+                            CheckAndEnqueue(curX, curY - 1, curNode); // bot
+                        }
+                    }
+                }
+            }
+        }
+
+        while (best != null) {
+            if (AttemptLine(best.x, best.y)) {
                 break;
             }
-            x += dx;
-            y += dy;
-            dist++;
+            best = best.parent;
         }
-        return (foundObstacle, dist);
+        if (best != null) {
+            return 90 - Mathf.Atan2(best.y - searchWidthHalf, best.x - searchWidthHalf) * Mathf.Rad2Deg;
+        }
+
+        return 0;
+    }
+
+    // Attempt to draw straight lines from user to target location
+    // Returns true if target was successfully reached; returns false if encountered an obstacle
+    private bool AttemptLine(int targetX, int targetY)
+    {
+        // http://www.cse.yorku.ca/~amana/research/grid.pdf
+        int x = searchWidthHalf, y = searchWidthHalf;
+        int dX = targetX - x, dY = targetY - y;
+        int stepX = (dX > 0) ? 1 : -1, stepY = (dY > 0) ? 1 : -1;
+        float dist = Mathf.Sqrt(dX*dX+dY*dY);
+        float tDeltaX = Mathf.Abs(dist / (dX + 1E-6f)), tDeltaY = Mathf.Abs(dist / (dY + 1E-6f));
+        float tMaxX = tDeltaX, tMaxY = tDeltaY;
+        bool hitObstacle = false;
+        while (x != targetX && y != targetY) {
+            if (tMaxX < tMaxY) {
+                tMaxX += tDeltaX;
+                x += stepX;
+            }
+            else {
+                tMaxY += tDeltaY;
+                y += stepY;
+            }
+            if (searchGrid[x, y] == 1) {
+                hitObstacle = true;
+                break;
+            }
+        }
+        return hitObstacle;
+    }
+
+    // Return value indicates whether to continue checking. True means continue checking, false means stop
+    private bool CheckAndEnqueue(int x, int y, Node parent)
+    {
+        if (x >= 0 && x < searchWidth && y >= 0 && y < searchWidth && searchGrid[x, y] != 1) {
+            if (searchGrid[x, y] == 0) {
+                searchGrid[x, y] = 2;
+                priorityQueue.Enqueue(new Node(x, y, parent), -y);
+            }
+            return false;
+        }
+        return true;
     }
 
     private void SetInCircle(Vector2Int center, short val)
