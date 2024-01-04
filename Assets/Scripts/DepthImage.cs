@@ -7,7 +7,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
-using AStar;
 
 // ARFoundation references:
 // https://github.com/Unity-Technologies/arfoundation-samples/blob/main/Assets/Scripts/Runtime/DisplayDepthImage.cs
@@ -642,8 +641,6 @@ public class DepthImage : MonoBehaviour
     private const float searchRadius = 5f;
     private const int searchWidthHalf = (int) (searchRadius / nodeSize);
     private const int searchWidth = 1 + 2 * ((int) (searchRadius / nodeSize));
-    private Astar2 astar;
-    private Position target = new Position(0,0);
 
     private float prevPersonRadius = 0; // This is for tracking when personRadius changes
     private List<Vector2Int> circleCells = new List<Vector2Int>(); // Cells to block off based on personRadius
@@ -687,9 +684,6 @@ public class DepthImage : MonoBehaviour
 
         // If there is an obstacle ahead, search for direction
         if (blockingCount >= 2) {
-            // Update A* target
-            target = new Position(searchWidthHalf,
-                                  (int) (4 / nodeSize) + searchWidthHalf);
             direction = RunSearch();
         }
 
@@ -712,13 +706,13 @@ public class DepthImage : MonoBehaviour
     private float RunSearch()
     {
         // Create search grid if it doesn't exist
-        if (astar == null) {
-            astar = new Astar2(searchWidth);
+        if (searchGrid == null) {
+            searchGrid = new short[searchWidth, searchWidth];
         }
         else { // Clear obstacles on the grid
             for (int i = 0; i < searchWidth; i++) {
                 for (int j = 0; j < searchWidth; j++) {
-                    astar.worldGrid[i,j] = 0;
+                    searchGrid[i,j] = 0;
                 }
             }
         }
@@ -752,7 +746,7 @@ public class DepthImage : MonoBehaviour
                     if (i < 0 || i >= searchWidth) continue;
                     int j = (int) ((x * sin + y * cos) / nodeSize) + searchWidthHalf;
                     if (j < 0 || j >= searchWidth) continue;
-                    astar.worldGrid[i, j] += 1;
+                    searchGrid[i, j] += 1;
                     blocking.Add(new Vector2Int(i, j));
                 }
             }
@@ -767,31 +761,10 @@ public class DepthImage : MonoBehaviour
 
         // Re-block original obstacles
         foreach (Vector2Int b in blocking) {
-            astar.worldGrid[b.x, b.y] = 1;
+            searchGrid[b.x, b.y] = 1;
         }
 
-        return AstarDirection();
-        // return BestDirection();
-    }
-
-    private float AstarDirection()
-    {
-        float direction = 0;
-        Position start = new Position(searchWidthHalf, searchWidthHalf);
-        Position[] path = astar.Pathfind(start, target);
-        if (path.Length != 0) { // Found a path
-            // Go through path until we find a position that borders an obstacle; use that position to determine direction
-            foreach (Position p in path) {
-                foreach (Position p2 in astar.worldGrid.GetSuccessorPositions(p, true)) {
-                    if (astar.worldGrid[p2.Row, p2.Column] != 0) {
-                        direction = 90 - Mathf.Atan2(p.Column - start.Column, p.Row - start.Row) * Mathf.Rad2Deg;
-                        break;
-                    }
-                }
-            }
-        }
-
-        return direction;
+        return BestDirection();
     }
 
     private const int numRaycasts = 30;
@@ -799,11 +772,11 @@ public class DepthImage : MonoBehaviour
     private float BestDirection()
     {
         // Do raycasts to find best direction to guide user towards
-        float bestDirection = rotation.y;
+        float bestDirection = 0;
         float bestDist = -1;
         int ray = 1;
         while (ray <= numRaycasts) {
-            float rad = rotation.y * Mathf.Deg2Rad + ray * radWidth;
+            float rad = ray * radWidth;
             (bool foundObstacle, float dist) = PerformRaycast(rad);
             if (!foundObstacle) {
                 bestDirection = rad * Mathf.Rad2Deg;
@@ -830,7 +803,7 @@ public class DepthImage : MonoBehaviour
         float dist = 0;
         bool foundObstacle = false;
         while (x >= 0 && y >= 0 && x < searchWidth && y < searchWidth) {
-            if (astar.worldGrid[(int) x, (int) y] != 0) {
+            if (searchGrid[(int) x, (int) y] != 0) {
                 foundObstacle = true;
                 break;
             }
@@ -848,7 +821,7 @@ public class DepthImage : MonoBehaviour
             if (x < 0 || x >= searchWidth) continue;
             int y = center.y + circleCell.y;
             if (y < 0 || y >= searchWidth) continue;
-            astar.worldGrid[x, y] = val;
+            searchGrid[x, y] = val;
         }
     }
 }
