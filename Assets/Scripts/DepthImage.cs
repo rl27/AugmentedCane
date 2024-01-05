@@ -638,7 +638,7 @@ public class DepthImage : MonoBehaviour
     private const float groundRadius = 0.25f;
 
     private const float nodeSize = 0.05f;
-    private short[,] searchGrid;
+    private byte[,] searchGrid;
     private const float searchRadius = 5f;
     private const int searchWidthHalf = (int) (searchRadius / nodeSize);
     private const int searchWidth = 1 + 2 * ((int) (searchRadius / nodeSize));
@@ -708,7 +708,7 @@ public class DepthImage : MonoBehaviour
     {
         // Create search grid if it doesn't exist
         if (searchGrid == null) {
-            searchGrid = new short[searchWidth, searchWidth];
+            searchGrid = new byte[searchWidth, searchWidth];
         }
         else { // Clear obstacles on the grid
             for (int i = 0; i < searchWidth; i++) {
@@ -744,9 +744,9 @@ public class DepthImage : MonoBehaviour
                     float x = gridPt.x - position.x;
                     float y = gridPt.z - position.z;
                     int i = (int) ((x * cos - y * sin) / nodeSize) + searchWidthHalf;
-                    if (i < 0 || i >= searchWidth) continue;
+                    if (i <= 0 || i >= searchWidth - 1) continue;
                     int j = (int) ((x * sin + y * cos) / nodeSize) + searchWidthHalf;
-                    if (j < 0 || j >= searchWidth) continue;
+                    if (j <= 0 || j >= searchWidth - 1) continue;
                     searchGrid[i, j] = 1;
                     blocking.Add(new Vector2Int(i, j));
                 }
@@ -870,7 +870,7 @@ public class DepthImage : MonoBehaviour
         return true;
     }
 
-    private void SetInCircle(Vector2Int center, short val)
+    private void SetInCircle(Vector2Int center, byte val)
     {
         foreach (Vector2Int circleCell in circleCells) {
             int x = center.x + circleCell.x;
