@@ -602,7 +602,7 @@ public class DepthImage : MonoBehaviour
     }
 
     // Delete any cells that are too far from user location
-    private float cellDeletionRange = 6f;
+    private float cellDeletionRange = searchRadius + 1;
 
     // Reset counts for cells that are either too far away or within view of the camera
     private void CullGrid()
@@ -639,7 +639,7 @@ public class DepthImage : MonoBehaviour
 
     private const float nodeSize = 0.05f;
     private byte[,] searchGrid;
-    private const float searchRadius = 5f;
+    private const float searchRadius = 6f;
     private const int searchWidthHalf = (int) (searchRadius / nodeSize);
     private const int searchWidth = 1 + 2 * ((int) (searchRadius / nodeSize));
 
@@ -711,11 +711,7 @@ public class DepthImage : MonoBehaviour
             searchGrid = new byte[searchWidth, searchWidth];
         }
         else { // Clear obstacles on the grid
-            for (int i = 0; i < searchWidth; i++) {
-                for (int j = 0; j < searchWidth; j++) {
-                    searchGrid[i,j] = 0;
-                }
-            }
+            Array.Clear(searchGrid, 0, searchGrid.Length);
         }
 
         // Recalculate circle cells if personRadius has changed
