@@ -834,10 +834,10 @@ public class DepthImage : MonoBehaviour
     {
         // http://www.cse.yorku.ca/~amana/research/grid.pdf
         int x = searchWidthHalf, y = searchWidthHalf;
-        int dX = targetX - x, dY = targetY - y;
+        float dX = targetX - x + 1E-6f, dY = targetY - y + 1E-6f;
         int stepX = (dX > 0) ? 1 : -1, stepY = (dY > 0) ? 1 : -1;
         float dist = Mathf.Sqrt(dX*dX+dY*dY);
-        float tDeltaX = Mathf.Abs(dist / (dX + 1E-6f)), tDeltaY = Mathf.Abs(dist / (dY + 1E-6f));
+        float tDeltaX = Mathf.Abs(dist / dX), tDeltaY = Mathf.Abs(dist / dY);
         float tMaxX = tDeltaX, tMaxY = tDeltaY;
         bool hitObstacle = false;
         while (x != targetX && y != targetY) {
