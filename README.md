@@ -7,7 +7,7 @@ A smartphone-based navigation system for people with blindness or visual impairm
 
 To get started, download the project files, install Unity Hub and open the project folder in Unity Hub.
 
-This project was built using Unity version 2023.1.0b14 with Android Build Support and iOS Build Support. Later versions of Unity may introduce issues.
+This project was built using Unity version 2023.1.0b14 with Android Build Support and iOS Build Support installed. Later versions of Unity may introduce issues.
 
 ***
 

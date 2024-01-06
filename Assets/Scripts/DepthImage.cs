@@ -478,7 +478,7 @@ public class DepthImage : MonoBehaviour
         if (depthStride == 4) // DepthFloat32
             depthInMeters = BitConverter.ToSingle(depthArray, depthStride * index);
         else if (depthStride == 2) // DepthUInt16
-            depthInMeters = BitConverter.ToUInt16(depthArray, depthStride * index) / 1000f;
+            depthInMeters = BitConverter.ToUInt16(depthArray, depthStride * index) * 0.001f;
 
         if (depthInMeters > 0) {
             // Do not factor in focalLength and principalPoint if only measuring forward distance from camera
@@ -524,7 +524,7 @@ public class DepthImage : MonoBehaviour
     }
 
     // Transforms a vertex in local space to world space
-    // NOTE: Is not quite the same as using camera.ScreenToWorldPoint.
+    // NOTE: Is not the same as using camera.ScreenToWorldPoint.
     // https://forum.unity.com/threads/how-to-get-point-cloud-in-arkit.967681/#post-6340404
     public Vector3 TransformLocalToWorld(Vector3 vertex)
     {
