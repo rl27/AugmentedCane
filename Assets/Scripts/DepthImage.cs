@@ -694,14 +694,17 @@ public class DepthImage : MonoBehaviour
     // Populates the grid dictionary using the depth image.
     private void ProcessDepthImage()
     {
+        int count = 0;
         for (int y = 0; y < depthHeight; y++) {
             for (int x = 0; x < depthWidth; x++) {
                 float conf = GetConfidence(x, y);
                 if (conf / confidenceMax < depthConfidenceThreshold) continue;
+                count++;
                 Vector3 pos = TransformLocalToWorld(ComputeVertex(x, y, GetDepth(x, y)));
                 AddToGrid(pos);
             }
         }
+        m_StringBuilder.AppendLine($"Points used: {(((float) count) / (depthWidth * depthHeight)).ToString("F3")}");
     }
 
     private float RunSearch()
