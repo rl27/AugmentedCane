@@ -821,11 +821,9 @@ public class DepthImage : MonoBehaviour
             }
 
             // This node is stuck; backtrack and retry parent node
-            if (visitedNeighbors == 1) {
+            if (visitedNeighbors == 1 && curNode.parent != null) {
                 searchGrid[curX, curY] = 3;
-                if (curNode.parent != null)
-                    priorityQueue.Enqueue(curNode.parent, -9999f);
-                else Debug.unityLogger.Log("mytag", "po");
+                priorityQueue.Enqueue(curNode.parent, -9999f);
             }
         }
 
