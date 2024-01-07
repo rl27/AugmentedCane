@@ -294,13 +294,13 @@ public class DepthImage : MonoBehaviour
 
         (float relHeading, float closest) = CheckForObstacle();
         if (closest < 30) {
-            m_StringBuilder.AppendLine("Obstacle ahead");
+            m_StringBuilder.AppendLine($"Obstacle {closest.ToString("F2")}m ahead");
             direction = Direction.Left;
             float rate = (closest - collisionAudioCapDistance) / (distanceToObstacle - collisionAudioCapDistance);
             rate = Mathf.Lerp(collisionAudioMaxRate, collisionAudioMinRate, rate);
             PlayCollision(relHeading * Mathf.Deg2Rad, 1/rate - audioDuration);
 
-            m_StringBuilder.AppendLine($" Closest {closest.ToString("F2")}m; Beep rate {rate.ToString("F2")}; Dir {relHeading.ToString("F2")}");
+            m_StringBuilder.AppendLine($" Beep rate {rate.ToString("F2")}; Dir {relHeading.ToString("F2")}");
         }
     }
 
