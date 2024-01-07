@@ -638,7 +638,7 @@ public class DepthImage : MonoBehaviour
     private const float groundRadius = 0.25f;
 
     private const float nodeSize = 0.1f;
-    private byte[,] searchGrid;
+    private byte[,] searchGrid; // For each cell, 0 = open, 1 = blocked, 2 = visited during pathfinding, 3 = visited & backtracked
     private const float searchRadius = 6f;
     private const int searchWidthHalf = (int) (searchRadius / nodeSize);
     private const int searchWidth = 1 + 2 * ((int) (searchRadius / nodeSize));
@@ -779,7 +779,7 @@ public class DepthImage : MonoBehaviour
     }
 
     SimplePriorityQueue<Node> priorityQueue = new SimplePriorityQueue<Node>();
-    bool retry;
+    int visitedNeighbors;
     private float BestDirection()
     {
         priorityQueue.Clear();
@@ -795,7 +795,9 @@ public class DepthImage : MonoBehaviour
             if (best == null || curY > best.y)
                 best = curNode;
 
-            retry = true;
+            visitedNeighbors = 0;
+
+            bool checkedBot = false;
 
             // Attempt to move up
             if (CheckAndEnqueue(curX, curY + 1, curNode)) {
@@ -804,23 +806,26 @@ public class DepthImage : MonoBehaviour
                     if (CheckAndEnqueue(curX + 1, curY, curNode)) { // right
                         if (CheckAndEnqueue(curX + 1, curY - 1, curNode)) { // bot right
                             CheckAndEnqueue(curX, curY - 1, curNode); // bot
+                            checkedBot = true;
                         }
                     }
                 }
                 if (CheckAndEnqueue(curX - 1, curY + 1, curNode)) { // top left
                     if (CheckAndEnqueue(curX - 1, curY, curNode)) { // left
                         if (CheckAndEnqueue(curX - 1, curY - 1, curNode)) { // bot left
-                            CheckAndEnqueue(curX, curY - 1, curNode); // bot
+                            if (!checkedBot)
+                                CheckAndEnqueue(curX, curY - 1, curNode); // bot
                         }
                     }
                 }
             }
 
-            // No possible move found; backtrack and retry parent node
-            if (retry) {
-                retry = false;
-                searchGrid[curX, curY] = 1; // Set this to 1 so it doesn't stop scan from parent
-                priorityQueue.Enqueue(curNode.parent, -9999f);
+            // This node is stuck; backtrack and retry parent node
+            if (visitedNeighbors == 1) {
+                searchGrid[curX, curY] = 3;
+                if (curNode.parent != null)
+                    priorityQueue.Enqueue(curNode.parent, -9999f);
+                else Debug.unityLogger.Log("mytag", "po");
             }
         }
 
@@ -840,13 +845,23 @@ public class DepthImage : MonoBehaviour
     // Return value indicates whether to continue checking. True means continue checking, false means stop
     private bool CheckAndEnqueue(int x, int y, Node parent)
     {
-        if (x >= 0 && x < searchWidth && y >= 0 && y < searchWidth && searchGrid[x, y] != 1) {
-            if (searchGrid[x, y] == 0) {
-                searchGrid[x, y] = 2;
-                priorityQueue.Enqueue(new Node(x, y, parent), -y);
-                retry = false;
+        if (x >= 0 && x < searchWidth && y >= 0 && y < searchWidth) {
+            switch (searchGrid[x, y]) {
+                case 0:
+                    searchGrid[x, y] = 2;
+                    priorityQueue.Enqueue(new Node(x, y, parent), -y);
+                    return false;
+                case 1:
+                    return true;
+                case 2:
+                    visitedNeighbors++;
+                    return false;
+                case 3:
+                    visitedNeighbors++;
+                    return true;
+                default:
+                    return true;
             }
-            return false;
         }
         return true;
     }
