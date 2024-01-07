@@ -794,9 +794,10 @@ public class DepthImage : MonoBehaviour
             curY = curNode.y;
             if (best == null || curY > best.y)
                 best = curNode;
+            if (best.y == searchWidth - 1) // Reached the top of the grid
+                break;
 
             visitedNeighbors = 0;
-
             bool checkedBot = false;
 
             // Attempt to move up
