@@ -113,7 +113,7 @@ public class DepthImage : MonoBehaviour
     private bool doObstacleAvoidance = true;
     public static float distanceToObstacle = 2.5f; // Distance in meters at which to alert for obstacles
     private int confidenceMax = 255;
-    private float depthConfidenceThreshold = 0.3f;
+    private float depthConfidenceThreshold = 0.1f;
 
     public static float personRadius = 0.3f; // Estimated half-width of a person
     public static float personHeight = 1.8f - groundPadding; // Estimated height of a person
@@ -637,7 +637,7 @@ public class DepthImage : MonoBehaviour
     private const float groundPadding = 0.35f; // Height to add to calculated ground level to count as ground
     private const float groundRadius = 0.25f;
 
-    private const float nodeSize = 0.05f;
+    private const float nodeSize = 0.1f;
     private byte[,] searchGrid;
     private const float searchRadius = 6f;
     private const int searchWidthHalf = (int) (searchRadius / nodeSize);
@@ -796,7 +796,7 @@ public class DepthImage : MonoBehaviour
 
             // Attempt to move up
             if (CheckAndEnqueue(curX, curY + 1, curNode)) {
-                // Node above is blocked; check top left and top right
+                // Node above is blocked; check left and right
                 if (CheckAndEnqueue(curX + 1, curY + 1, curNode)) { // top right
                     if (CheckAndEnqueue(curX + 1, curY, curNode)) { // right
                         if (CheckAndEnqueue(curX + 1, curY - 1, curNode)) { // bot right
@@ -827,6 +827,19 @@ public class DepthImage : MonoBehaviour
         return 0;
     }
 
+    // Return value indicates whether to continue checking. True means continue checking, false means stop
+    private bool CheckAndEnqueue(int x, int y, Node parent)
+    {
+        if (x >= 0 && x < searchWidth && y >= 0 && y < searchWidth && searchGrid[x, y] != 1) {
+            if (searchGrid[x, y] == 0) {
+                searchGrid[x, y] = 2;
+                priorityQueue.Enqueue(new Node(x, y, parent), -y);
+            }
+            return false;
+        }
+        return true;
+    }
+
     // Attempt to draw straight lines from user to target location
     // Returns true if target was successfully reached; returns false if encountered an obstacle
     private bool AttemptLine(int targetX, int targetY)
@@ -854,19 +867,6 @@ public class DepthImage : MonoBehaviour
             }
         }
         return hitObstacle;
-    }
-
-    // Return value indicates whether to continue checking. True means continue checking, false means stop
-    private bool CheckAndEnqueue(int x, int y, Node parent)
-    {
-        if (x >= 0 && x < searchWidth && y >= 0 && y < searchWidth && searchGrid[x, y] != 1) {
-            if (searchGrid[x, y] == 0) {
-                searchGrid[x, y] = 2;
-                priorityQueue.Enqueue(new Node(x, y, parent), -y);
-            }
-            return false;
-        }
-        return true;
     }
 
     private void SetInCircle(Vector2Int center, byte val)
