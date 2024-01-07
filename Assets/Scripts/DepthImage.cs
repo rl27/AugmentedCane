@@ -779,6 +779,7 @@ public class DepthImage : MonoBehaviour
     }
 
     SimplePriorityQueue<Node> priorityQueue = new SimplePriorityQueue<Node>();
+    bool retry;
     private float BestDirection()
     {
         priorityQueue.Clear();
@@ -793,6 +794,8 @@ public class DepthImage : MonoBehaviour
             curY = curNode.y;
             if (best == null || curY > best.y)
                 best = curNode;
+
+            retry = true;
 
             // Attempt to move up
             if (CheckAndEnqueue(curX, curY + 1, curNode)) {
@@ -811,6 +814,13 @@ public class DepthImage : MonoBehaviour
                         }
                     }
                 }
+            }
+
+            // No possible move found; backtrack and retry parent node
+            if (retry) {
+                retry = false;
+                searchGrid[curX, curY] = 1; // Set this to 1 so it doesn't stop scan from parent
+                priorityQueue.Enqueue(curNode.parent, -9999f);
             }
         }
 
@@ -834,6 +844,7 @@ public class DepthImage : MonoBehaviour
             if (searchGrid[x, y] == 0) {
                 searchGrid[x, y] = 2;
                 priorityQueue.Enqueue(new Node(x, y, parent), -y);
+                retry = false;
             }
             return false;
         }
